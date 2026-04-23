@@ -13,7 +13,7 @@ export default function AuthNav() {
     ]
 
     if (user?.type === 'empresa') {
-      items.push({ to: '/desafios/novo', label: 'Desafios' })
+      items.push({ to: '/desafios/novo', label: 'Pesquisas' })
     }
 
     return items
@@ -31,11 +31,11 @@ export default function AuthNav() {
           <div className="logo-icon">PD</div>
           <div>
             <div className="auth-nav__brand-title">P&amp;D Connect</div>
-            <div className="auth-nav__brand-subtitle">Área autenticada</div>
+            <div className="auth-nav__brand-subtitle">Area autenticada</div>
           </div>
         </div>
 
-        <nav className="auth-nav__links" aria-label="Navegação autenticada">
+        <nav className="auth-nav__links" aria-label="Navegacao autenticada">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

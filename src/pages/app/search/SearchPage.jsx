@@ -5,39 +5,39 @@ import PageFaq from '../../../components/PageFaq'
 import {
   getResearcherResume,
   listCompanies,
+  listResearchAreas,
   listResearchers,
   listUniversities,
 } from '../../../services/pdConnectApi'
 import './SearchPage.scss'
 
-const defaultQuery = 'pesquisar por nome, universidade, cnpj ou status'
+const defaultQuery = 'pesquisar por nome, universidade, cnpj, area ou status'
 
 const searchFaqSections = [
   {
-    title: 'O que esta página usa hoje',
-    text: 'A busca atual trabalha com leitura real da API e filtro textual local no front.',
+    title: 'O que esta pagina usa hoje',
+    text: 'A busca trabalha com leitura real da API protegida por JWT e filtro textual local no front.',
     items: [
       'GET /api/companies/',
       'GET /api/researchers/',
+      'GET /api/research/area/',
       'GET /api/universities/',
       'GET /api/researchers/{id}/resume/',
     ],
   },
   {
-    title: 'O que ainda depende de backend',
-    text: 'Alguns fluxos previstos no projeto ainda não têm rota real disponível e, por isso, não aparecem como funcionalidade completa aqui.',
+    title: 'O que continua fora do escopo',
+    text: 'Alguns fluxos previstos no projeto ainda nao tem rota real disponivel e, por isso, nao aparecem como funcionalidade completa aqui.',
     items: [
-      'Login e sessão no backend',
-      'Busca semântica',
+      'Busca semantica',
       'Match por IA',
-      'Desafios tecnológicos',
-      'Propostas e atualização de status',
-      'Notificações',
+      'Propostas e atualizacao de status',
+      'Notificacoes',
     ],
   },
   {
     title: 'Como esta tela se comporta',
-    text: 'Empresas e pesquisadores veem a mesma base integrada, mas a aba inicial muda conforme o perfil autenticado para priorizar o tipo de exploração mais útil naquele contexto.',
+    text: 'Empresas e pesquisadores veem a mesma base integrada, mas a aba inicial muda conforme o perfil autenticado para priorizar o tipo de exploracao mais util naquele contexto.',
   },
 ]
 
@@ -63,6 +63,13 @@ function buildUniversityLookup(universities) {
   }, {})
 }
 
+function buildResearchAreaLookup(researchAreas) {
+  return researchAreas.reduce((lookup, item) => {
+    lookup[item.id_area] = item
+    return lookup
+  }, {})
+}
+
 export default function SearchPage() {
   const { user } = useAuth()
   const [query, setQuery] = useState('')
@@ -74,6 +81,7 @@ export default function SearchPage() {
   const [catalog, setCatalog] = useState({
     companies: [],
     researchers: [],
+    researchAreas: [],
     universities: [],
     resumeLookup: {},
   })
@@ -90,9 +98,10 @@ export default function SearchPage() {
       setError('')
 
       try {
-        const [companies, researchers, universities] = await Promise.all([
+        const [companies, researchers, researchAreas, universities] = await Promise.all([
           listCompanies(),
           listResearchers(),
+          listResearchAreas(),
           listUniversities(),
         ])
 
@@ -107,6 +116,7 @@ export default function SearchPage() {
         setCatalog({
           companies,
           researchers,
+          researchAreas,
           universities,
           resumeLookup: buildResumeLookup(researchers, resumeResults),
         })
@@ -116,7 +126,7 @@ export default function SearchPage() {
         }
 
         setError(
-          loadFailure.message || 'Não foi possível carregar os dados reais da API para o painel.'
+          loadFailure.message || 'Nao foi possivel carregar os dados reais da API para o painel.'
         )
       } finally {
         if (isMounted) {
@@ -137,6 +147,11 @@ export default function SearchPage() {
     [catalog.universities]
   )
 
+  const researchAreaLookup = useMemo(
+    () => buildResearchAreaLookup(catalog.researchAreas),
+    [catalog.researchAreas]
+  )
+
   const companyItems = useMemo(() => (
     catalog.companies.map((company) => ({
       id: `company-${company.id_company}`,
@@ -144,14 +159,14 @@ export default function SearchPage() {
       title: company.name,
       subtitle: company.cnpj,
       description:
-        `Situação cadastral: ${company.registration_status || 'não informada'}. ` +
+        `Situacao cadastral: ${company.registration_status || 'nao informada'}. ` +
         `Status do cadastro: ${formatBooleanLabel(company.status, {
           trueLabel: 'ativo',
           falseLabel: 'inativo',
-          nullLabel: 'não informado',
+          nullLabel: 'nao informado',
         })}.`,
       tags: [
-        company.registration_status || 'Sem situação',
+        company.registration_status || 'Sem situacao',
         company.status ? 'Ativa' : 'Inativa',
       ],
     }))
@@ -161,32 +176,36 @@ export default function SearchPage() {
     catalog.researchers.map((researcher) => {
       const university = universityLookup[researcher.university]
       const resume = catalog.resumeLookup[researcher.id_researcher]
+      const areaTags = (researcher.area || [])
+        .map((areaId) => researchAreaLookup[areaId]?.name)
+        .filter(Boolean)
 
       return {
         id: `researcher-${researcher.id_researcher}`,
         type: 'pesquisador',
         title: researcher.name,
-        subtitle: university?.name || 'Universidade não identificada',
+        subtitle: university?.name || 'Universidade nao identificada',
         description:
           `Disponibilidade: ${formatBooleanLabel(researcher.availability, {
-            trueLabel: 'disponível',
-            falseLabel: 'indisponível',
-            nullLabel: 'não informada',
+            trueLabel: 'disponivel',
+            falseLabel: 'indisponivel',
+            nullLabel: 'nao informada',
           })}. ` +
           `Status do cadastro: ${formatBooleanLabel(researcher.status, {
             trueLabel: 'ativo',
             falseLabel: 'inativo',
-            nullLabel: 'não informado',
+            nullLabel: 'nao informado',
           })}.`,
         tags: [
-          university?.name || 'Universidade não localizada',
-          `${resume?.education?.length || 0} formações`,
-          `${resume?.experience?.length || 0} experiências`,
+          university?.name || 'Universidade nao localizada',
+          `${resume?.education?.length || 0} formacoes`,
+          `${resume?.experience?.length || 0} experiencias`,
+          ...areaTags,
           ...(resume?.skill || []).slice(0, 2).map((item) => item.description),
         ],
       }
     })
-  ), [catalog.researchers, catalog.resumeLookup, universityLookup])
+  ), [catalog.researchers, catalog.resumeLookup, researchAreaLookup, universityLookup])
 
   const universityItems = useMemo(() => (
     catalog.universities.map((university) => {
@@ -202,7 +221,7 @@ export default function SearchPage() {
         description:
           linkedResearchers.length > 0
             ? `Cadastros ligados: ${linkedResearchers.map((item) => item.name).join(', ')}.`
-            : 'Nenhum pesquisador está vinculado a esta universidade no backend atual.',
+            : 'Nenhum pesquisador esta vinculado a esta universidade no backend atual.',
         tags: ['Universidade', `${linkedResearchers.length} vinculados`],
       }
     })
@@ -241,18 +260,19 @@ export default function SearchPage() {
         <header className="app-page__header">
           <div>
             <span className="section-label">Painel integrado</span>
-            <h1 className="app-page__title">Exploração dos dados reais da plataforma</h1>
+            <h1 className="app-page__title">Exploracao dos dados reais da plataforma</h1>
           </div>
           <div className="app-page__header-actions">
             <p className="app-page__subtitle">
-              Explore empresas, pesquisadores e universidades com base nos dados disponíveis hoje.
+              Explore empresas, pesquisadores, areas de pesquisa e universidades com base nos dados
+              autenticados disponiveis hoje.
             </p>
             <button
               type="button"
               className="btn btn-outline page-faq-trigger"
               onClick={() => setIsFaqOpen(true)}
             >
-              FAQ da página
+              FAQ da pagina
             </button>
           </div>
         </header>
@@ -262,8 +282,8 @@ export default function SearchPage() {
             <span className="search-hero-card__eyebrow">Busca integrada</span>
             <h2 className="search-hero-card__title">Explore a base atual sem sair do fluxo principal</h2>
             <p className="search-hero-card__text">
-              Use o filtro para localizar perfis e instituições com rapidez. Os detalhes técnicos
-              da integração ficam disponíveis no FAQ desta página.
+              Use o filtro para localizar perfis e instituicoes com rapidez. Os detalhes tecnicos da
+              integracao ficam disponiveis no FAQ desta pagina.
             </p>
           </div>
 
@@ -292,13 +312,13 @@ export default function SearchPage() {
               <p className="semantic-panel__query">{user?.displayName}</p>
               <p className="semantic-panel__text">
                 {user?.type === 'empresa'
-                  ? 'Empresa logada: priorizamos a exploração de pesquisadores e currículos.'
-                  : 'Pesquisador logado: priorizamos a exploração de empresas e universidades.'}
+                  ? 'Empresa logada: priorizamos a exploracao de pesquisadores, areas e curriculos.'
+                  : 'Pesquisador logado: priorizamos a exploracao de empresas e universidades.'}
               </p>
             </div>
 
             <div className="semantic-panel__block">
-              <h3 className="semantic-panel__title">Coleções disponíveis</h3>
+              <h3 className="semantic-panel__title">Colecoes disponiveis</h3>
               <div className="semantic-panel__chips">
                 <button
                   type="button"
@@ -359,7 +379,7 @@ export default function SearchPage() {
             {loading ? (
               <div className="search-feedback-card">
                 <h3>Carregando dados da API</h3>
-                <p>Estamos consultando os endpoints reais para montar o painel integrado.</p>
+                <p>Estamos consultando os endpoints protegidos para montar o painel integrado.</p>
               </div>
             ) : null}
 
@@ -374,8 +394,8 @@ export default function SearchPage() {
               <div className="search-feedback-card">
                 <h3>Nenhum resultado encontrado</h3>
                 <p>
-                  Ajuste o filtro textual ou troque a coleção ativa para explorar outra parte da
-                  base integrada.
+                  Ajuste o filtro textual ou troque a colecao ativa para explorar outra parte da base
+                  integrada.
                 </p>
               </div>
             ) : null}
@@ -417,7 +437,7 @@ export default function SearchPage() {
         isOpen={isFaqOpen}
         onClose={() => setIsFaqOpen(false)}
         title="Busca integrada"
-        intro="Este FAQ resume o que a página já consome do backend e o que ainda está fora do escopo porque depende de rotas que não existem hoje."
+        intro="Este FAQ resume o que a pagina ja consome do backend autenticado e o que ainda esta fora do escopo porque depende de rotas que nao existem hoje."
         sections={searchFaqSections}
       />
     </section>

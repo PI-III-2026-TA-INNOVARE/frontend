@@ -4,50 +4,50 @@ import './SobrePage.scss'
 
 const aboutHighlights = [
   {
-    title: 'Desafios com contexto',
-    text: 'Demandas ficam mais claras, priorizadas e aderentes ao problema real.',
+    title: 'Perfis com dados reais',
+    text: 'Empresas, pesquisadores, universidades e curriculos agora refletem a base real da API.',
   },
   {
-    title: 'Especialistas com aderência',
-    text: 'Perfis aparecem por área, experiência e potencial de colaboração.',
+    title: 'Publicacao autenticada',
+    text: 'Empresas autenticadas ja conseguem publicar pesquisas usando o recurso real do backend.',
   },
   {
-    title: 'Decisão com apoio',
-    text: 'Indicadores e sinais do ecossistema ajudam a transformar busca em parceria.',
+    title: 'Roadmap explicito',
+    text: 'Propostas, notificacoes e IA continuam visiveis como evolucao, sem simulacao no front.',
   },
 ]
 
 const aboutPillars = [
   {
-    eyebrow: 'Conexão qualificada',
-    title: 'Empresas e pesquisadores no mesmo fluxo.',
-    text: 'Organiza problema, setor e perfil técnico para tornar a conexão mais objetiva.',
+    eyebrow: 'Conexao qualificada',
+    title: 'Empresas e pesquisadores no mesmo ambiente autenticado.',
+    text: 'A plataforma organiza perfis reais e usa o backend como fonte de verdade para a integracao.',
   },
   {
-    eyebrow: 'Desafios tecnológicos',
-    title: 'Demandas reais ganham clareza e direção.',
-    text: 'Estrutura desafios e ajuda a priorizar parceiros mais aderentes.',
+    eyebrow: 'Pesquisas autenticadas',
+    title: 'Demandas reais agora usam o recurso de pesquisa do backend.',
+    text: 'A publicacao autentica trabalha com titulo, escopo, objetivo, justificativa, resultados, prazo e orcamento.',
   },
   {
-    eyebrow: 'Propostas e soluções',
-    title: 'A colaboração evolui para proposta concreta.',
-    text: 'Permite responder demandas com método, proposta e parceria aplicada.',
+    eyebrow: 'Evolucao controlada',
+    title: 'O front nao finge fluxos que o backend ainda nao sustenta.',
+    text: 'Propostas, notificacoes, status e IA continuam fora da entrega real enquanto o contrato nao existir.',
   },
   {
     eyebrow: 'Dados e indicadores',
-    title: 'Decisões ficam mais maduras e seguras.',
-    text: 'Amplia o contexto da busca e orienta próximos passos com mais segurança.',
+    title: 'Leituras reais exigem contexto autenticado.',
+    text: 'Indicadores e consultas protegidas aparecem com base na sessao JWT e nas respostas atuais da API.',
   },
 ]
 
 const aboutOdsFacts = [
   {
     label: 'Meta 9.5',
-    text: 'Fortalecer a pesquisa científica e ampliar capacidades tecnológicas com incentivo à inovação.',
+    text: 'Fortalecer a pesquisa cientifica e ampliar capacidades tecnologicas com incentivo a inovacao.',
   },
   {
     label: 'Impacto esperado',
-    text: 'Aproximar universidade e mercado para ampliar a aplicação prática do conhecimento.',
+    text: 'Aproximar universidade e mercado para ampliar a aplicacao pratica do conhecimento.',
   },
 ]
 
@@ -67,19 +67,19 @@ export default function SobrePage() {
                   Sobre a P&amp;D Connect
                 </div>
 
-                <h1 className="about-hero__title">Pesquisa aplicada conectada à indústria.</h1>
+                <h1 className="about-hero__title">Pesquisa aplicada conectada a industria.</h1>
 
                 <div className="about-hero__body">
                   <p className="about-hero__text">
-                    A P&amp;D Connect aproxima empresas com desafios tecnológicos de pesquisadores
-                    capazes de responder com conhecimento e proposta aplicada.
+                    A P&amp;D Connect aproxima empresas e pesquisadores com base em contratos reais
+                    da API e evolucao gradual do produto.
                   </p>
 
                   <div className="about-hero__support-block">
-                    <span className="about-hero__support-label">Menos dispersão, mais clareza</span>
+                    <span className="about-hero__support-label">Menos dispersao, mais clareza</span>
                     <p className="about-hero__support">
                       Problema, especialista e oportunidade passam a coexistir em um fluxo mais
-                      claro de descoberta e colaboração.
+                      claro de descoberta e colaboracao.
                     </p>
                   </div>
                 </div>
@@ -107,7 +107,7 @@ export default function SobrePage() {
         <div className="container">
           <Reveal className="text-center">
             <span className="section-label">Pilares da plataforma</span>
-            <h2 className="section-title">Problema, expertise e decisão no mesmo fluxo.</h2>
+            <h2 className="section-title">Problema, expertise e decisao no mesmo fluxo.</h2>
             <p className="section-subtitle">
               A plataforma organiza demanda, parceria e direcionamento em uma leitura mais
               objetiva.
@@ -141,19 +141,19 @@ export default function SobrePage() {
               <div className="about-ods-panel__intro">
                 <span className="section-label">ODS 9</span>
                 <h2 className="section-title about-ods-panel__title">
-                  Alinhada à indústria e à pesquisa aplicada.
+                  Alinhada a industria e a pesquisa aplicada.
                 </h2>
               </div>
 
               <div className="about-ods-panel__body">
                 <div className="about-ods-panel__content">
                   <p className="section-subtitle about-ods-panel__text">
-                    A plataforma reduz a distância entre produção científica e demanda produtiva ao
+                    A plataforma reduz a distancia entre producao cientifica e demanda produtiva ao
                     aproximar empresas, pesquisadores e oportunidades com mais contexto.
                   </p>
                   <p className="about-ods-panel__text about-ods-panel__text--secondary">
-                    Esse movimento se conecta à Meta 9.5 da ODS 9, fortalecendo pesquisa
-                    científica, capacidade tecnológica e inovação com impacto.
+                    Esse movimento se conecta a Meta 9.5 da ODS 9, fortalecendo pesquisa
+                    cientifica, capacidade tecnologica e inovacao com impacto.
                   </p>
                 </div>
 
@@ -180,11 +180,12 @@ export default function SobrePage() {
                 <span className="text-gradient">conectado</span>
               </h2>
               <p className="cta-box__subtitle">
-                Cadastre-se e transforme desafio, expertise e oportunidade em colaboração aplicada.
+                Entre na plataforma ou cadastre uma empresa. O acesso de pesquisador depende de
+                conta ja provisionada no backend atual.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">
-                  Cadastrar Agora
+                  Entrar na plataforma
                 </Link>
               </div>
             </div>

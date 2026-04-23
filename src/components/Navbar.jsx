@@ -78,7 +78,7 @@ export default function Navbar() {
             ) : (
               <>
                 <Link to="/login" className="btn btn-ghost">Entrar</Link>
-                <Link to="/login#cadastro" className="btn btn-primary">Cadastrar</Link>
+                <Link to="/login#cadastro" className="btn btn-primary">Cadastrar empresa</Link>
               </>
             )}
           </div>
@@ -95,7 +95,7 @@ export default function Navbar() {
           ) : (
             <>
               <Link to="/login" className="btn btn-ghost">Entrar</Link>
-              <Link to="/login#cadastro" className="btn btn-primary">Cadastrar</Link>
+              <Link to="/login#cadastro" className="btn btn-primary">Cadastrar empresa</Link>
             </>
           )}
         </div>

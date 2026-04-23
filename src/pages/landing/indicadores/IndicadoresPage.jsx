@@ -79,7 +79,7 @@ function DistributionChart({ eyebrow, title, subtitle, items, secondary = false,
 
 export default function IndicadoresPage() {
   const shouldReduceMotion = useReducedMotion()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isBootstrapping } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [metrics, setMetrics] = useState({
@@ -94,6 +94,23 @@ export default function IndicadoresPage() {
 
   useEffect(() => {
     let isMounted = true
+
+    if (!isAuthenticated) {
+      setLoading(false)
+      setError('')
+      setMetrics({
+        companies: [],
+        researchers: [],
+        universities: [],
+        resumes: [],
+        educations: [],
+        experiences: [],
+        skills: [],
+      })
+      return () => {
+        isMounted = false
+      }
+    }
 
     const loadMetrics = async () => {
       setLoading(true)
@@ -137,7 +154,7 @@ export default function IndicadoresPage() {
         }
 
         setError(
-          loadFailure.message || 'Não foi possível consolidar os indicadores com a base atual da API.'
+          loadFailure.message || 'Nao foi possivel consolidar os indicadores com a base atual da API.'
         )
       } finally {
         if (isMounted) {
@@ -151,7 +168,7 @@ export default function IndicadoresPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [isAuthenticated])
 
   const companyCount = metrics.companies.length
   const researcherCount = metrics.researchers.length
@@ -164,52 +181,52 @@ export default function IndicadoresPage() {
     {
       eyebrow: 'Empresas',
       value: formatMetric(companyCount),
-      label: 'Cadastros disponíveis em `GET /api/companies/`',
+      label: 'Cadastros disponiveis em GET /api/companies/',
       progress: companyCount ? 100 : 16,
     },
     {
       eyebrow: 'Pesquisadores',
       value: formatMetric(researcherCount),
-      label: 'Cadastros disponíveis em `GET /api/researchers/`',
+      label: 'Cadastros disponiveis em GET /api/researchers/',
       progress: researcherCount ? 100 : 16,
     },
     {
       eyebrow: 'Universidades',
       value: formatMetric(universityCount),
-      label: 'Instituições registradas em `GET /api/universities/`',
+      label: 'Instituicoes registradas em GET /api/universities/',
       progress: universityCount ? 100 : 16,
     },
     {
-      eyebrow: 'Currículos',
+      eyebrow: 'Curriculos',
       value: formatMetric(metrics.resumes.length),
-      label: 'Currículos retornados por `GET /api/resumes/`',
+      label: 'Curriculos retornados por GET /api/resumes/',
       progress: metrics.resumes.length ? 100 : 16,
     },
   ]), [companyCount, metrics.resumes.length, researcherCount, universityCount])
 
   const secondaryIndicators = useMemo(() => ([
     {
-      eyebrow: 'Formações',
+      eyebrow: 'Formacoes',
       value: formatMetric(metrics.educations.length),
-      label: 'Itens em `GET /api/educations/`',
+      label: 'Itens em GET /api/educations/',
       progress: metrics.educations.length ? 100 : 16,
     },
     {
-      eyebrow: 'Experiências',
+      eyebrow: 'Experiencias',
       value: formatMetric(metrics.experiences.length),
-      label: 'Itens em `GET /api/experiences/`',
+      label: 'Itens em GET /api/experiences/',
       progress: metrics.experiences.length ? 100 : 16,
     },
     {
       eyebrow: 'Habilidades',
       value: formatMetric(metrics.skills.length),
-      label: 'Itens em `GET /api/skills/`',
+      label: 'Itens em GET /api/skills/',
       progress: metrics.skills.length ? 100 : 16,
     },
     {
       eyebrow: 'Disponibilidade',
       value: `${researcherCount ? Math.round((availableResearchers / researcherCount) * 100) : 0}%`,
-      label: 'Pesquisadores marcados como disponíveis',
+      label: 'Pesquisadores marcados como disponiveis',
       progress: researcherCount ? Math.round((availableResearchers / researcherCount) * 100) : 16,
     },
   ]), [
@@ -265,12 +282,12 @@ export default function IndicadoresPage() {
         raw: activeResearchers,
       },
       {
-        label: 'Pesquisadores disponíveis',
+        label: 'Pesquisadores disponiveis',
         value: `${availableResearchers}`,
         raw: availableResearchers,
       },
       {
-        label: 'Pesquisadores indisponíveis',
+        label: 'Pesquisadores indisponiveis',
         value: `${unavailableResearchers}`,
         raw: unavailableResearchers,
       },
@@ -285,6 +302,8 @@ export default function IndicadoresPage() {
     }))
   }, [activeCompanies, activeResearchers, availableResearchers, companyCount, researcherCount])
 
+  const showPublicFallback = !isAuthenticated && !isBootstrapping
+
   return (
     <>
       <section className="page-header">
@@ -294,29 +313,46 @@ export default function IndicadoresPage() {
             Leituras reais da <span className="text-gradient">base atual</span> do P&amp;D Connect
           </h1>
           <p className="page-header__text">
-            Esta página deixou de usar números estáticos e passou a consolidar apenas o que a API
-            realmente entrega hoje.
+            Com o backend protegido por JWT, os numeros reais da base agora ficam disponiveis apenas
+            na area autenticada.
           </p>
         </div>
       </section>
 
       <section className="section indicators-stage">
         <div className="container">
-          {loading ? (
+          {isBootstrapping ? (
             <div className="indicators-feedback">
-              <h2>Carregando indicadores</h2>
-              <p>Consultando os endpoints reais do backend para montar os cards e gráficos.</p>
+              <h2>Preparando sessao</h2>
+              <p>Estamos verificando se existe uma sessao autenticada valida antes de consultar a API.</p>
             </div>
           ) : null}
 
-          {!loading && error ? (
+          {showPublicFallback ? (
+            <div className="indicators-feedback">
+              <h2>Indicadores reais exigem autenticacao</h2>
+              <p>
+                O backend passou a proteger globalmente os endpoints de dados. Para consultar as
+                metricas reais, entre com um usuario autenticado.
+              </p>
+            </div>
+          ) : null}
+
+          {isAuthenticated && loading ? (
+            <div className="indicators-feedback">
+              <h2>Carregando indicadores</h2>
+              <p>Consultando os endpoints reais do backend para montar os cards e graficos.</p>
+            </div>
+          ) : null}
+
+          {isAuthenticated && !loading && error ? (
             <div className="indicators-feedback indicators-feedback--error">
               <h2>Falha ao carregar indicadores</h2>
               <p>{error}</p>
             </div>
           ) : null}
 
-          {!loading && !error ? (
+          {isAuthenticated && !loading && !error ? (
             <>
               <div className="indicadores__grid">
                 {overviewIndicators.map((item) => (
@@ -331,7 +367,7 @@ export default function IndicadoresPage() {
                   <DistributionChart
                     eyebrow="Universidades vinculadas"
                     title="Pesquisadores por universidade"
-                    subtitle="Top 5 instituições pelo número de pesquisadores associados na base atual."
+                    subtitle="Top 5 instituicoes pelo numero de pesquisadores associados na base atual."
                     items={researchersByUniversity.length > 0 ? researchersByUniversity : [
                       { label: 'Sem dados', value: '0', height: '22%' },
                     ]}
@@ -351,7 +387,7 @@ export default function IndicadoresPage() {
                 </Reveal>
               </div>
 
-              <div className="indicadores__grid indicators__grid--secondary">
+              <div className="indicadores__grid indicadores__grid--secondary">
                 {secondaryIndicators.map((item) => (
                   <Reveal key={item.label}>
                     <IndicatorCard item={item} shouldReduceMotion={shouldReduceMotion} />
@@ -368,11 +404,10 @@ export default function IndicadoresPage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Continue a navegação com o <span className="text-gradient">backend real</span>
+                Continue a navegacao com o <span className="text-gradient">backend real</span>
               </h2>
               <p className="cta-box__subtitle">
-                Os próximos passos prontos hoje são cadastro, exploração da base e edição de
-                perfil conforme os endpoints existentes.
+                A autenticacao JWT libera o painel integrado, o perfil e os indicadores reais da base.
               </p>
               <div className="cta-box__buttons">
                 {isAuthenticated ? (

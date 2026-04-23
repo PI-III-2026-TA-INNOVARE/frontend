@@ -1,5 +1,27 @@
 import { apiRequest, fetchPaginatedCollection } from '../lib/api'
 
+export function requestAuthToken(payload) {
+  return apiRequest('/auth/token/', {
+    method: 'POST',
+    body: payload,
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
+}
+
+export function registerUser(payload) {
+  return apiRequest('/auth/register/', {
+    method: 'POST',
+    body: payload,
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
+}
+
+export function getAuthenticatedProfile() {
+  return apiRequest('/auth/profile/')
+}
+
 export function listCompanies() {
   return fetchPaginatedCollection('/companies/')
 }
@@ -48,6 +70,21 @@ export function getResearcherResume(id) {
   return apiRequest(`/researchers/${id}/resume/`)
 }
 
+export function listResearchAreas() {
+  return fetchPaginatedCollection('/research/area/')
+}
+
+export function listResearches() {
+  return fetchPaginatedCollection('/research/')
+}
+
+export function createResearch(payload) {
+  return apiRequest('/research/', {
+    method: 'POST',
+    body: payload,
+  })
+}
+
 export function listUniversities() {
   return fetchPaginatedCollection('/universities/')
 }
@@ -67,10 +104,21 @@ export function listResumes() {
   return fetchPaginatedCollection('/resumes/')
 }
 
-export function createResume() {
+export function getResume(id) {
+  return apiRequest(`/resumes/${id}`)
+}
+
+export function createResume(payload = {}) {
   return apiRequest('/resumes/', {
     method: 'POST',
-    body: {},
+    body: payload,
+  })
+}
+
+export function updateResume(id, payload) {
+  return apiRequest(`/resumes/${id}`, {
+    method: 'PATCH',
+    body: payload,
   })
 }
 
@@ -110,4 +158,11 @@ export function deleteExperience(id) {
 
 export function listSkills() {
   return fetchPaginatedCollection('/skills/')
+}
+
+export function createSkill(payload) {
+  return apiRequest('/skills/', {
+    method: 'POST',
+    body: payload,
+  })
 }

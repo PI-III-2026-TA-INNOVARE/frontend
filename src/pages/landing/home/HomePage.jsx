@@ -7,15 +7,15 @@ import './HomePage.scss'
 const heroSupportCards = [
   {
     eyebrow: 'Cadastros',
-    title: 'Empresas e pesquisadores entram usando os registros reais da API.',
+    title: 'Empresas usam cadastro publico; pesquisadores acessam contas ja vinculadas na API.',
   },
   {
     eyebrow: 'Perfis',
-    title: 'O painel atual integra perfil, currículo, formações e experiências.',
+    title: 'O painel atual integra perfil, curriculo, formacoes, experiencias e habilidades.',
   },
   {
-    eyebrow: 'Evolução',
-    title: 'Desafios, propostas e IA seguem previstos, mas dependem do backend.',
+    eyebrow: 'Evolucao',
+    title: 'Propostas, notificacoes e IA seguem previstas, mas ainda dependem do backend.',
   },
 ]
 
@@ -24,19 +24,19 @@ const featureCards = [
     icon: appIcons.matchmaking,
     title: 'Cadastro aderente ao backend',
     description:
-      'O front agora consome os endpoints reais de empresas, pesquisadores, universidades e currículos.',
+      'O front agora consome os endpoints reais de empresas, pesquisadores, universidades e curriculos.',
   },
   {
     icon: appIcons.search,
-    title: 'Exploração da base real',
+    title: 'Exploracao da base real',
     description:
-      'A área autenticada usa filtro textual local sobre os dados carregados da API, sem mocks.',
+      'A area autenticada usa filtro textual local sobre os dados carregados da API, sem mocks.',
   },
   {
     icon: appIcons.proposals,
     title: 'Indicadores da plataforma',
     description:
-      'Os indicadores agora mostram somente métricas que a API atual realmente entrega.',
+      'Os indicadores agora mostram somente metricas que a API atual realmente entrega.',
   },
 ]
 
@@ -51,13 +51,13 @@ export default function HomePage() {
           <div className="hero__content hero__content--centered">
             <div className="hero__badge">
               <span className="badge-dot"></span>
-              ODS 9 | Pesquisa, indústria e inovação conectadas
+              ODS 9 | Pesquisa, industria e inovacao conectadas
             </div>
 
-            <h1 className="hero__title">Conecte cadastros, currículos e capacidades reais da plataforma</h1>
+            <h1 className="hero__title">Conecte cadastros, curriculos e capacidades reais da plataforma</h1>
 
             <p className="hero__description">
-              A P&amp;D Connect organiza a conexão entre empresas e pesquisadores e evolui a
+              A P&amp;D Connect organiza a conexao entre empresas e pesquisadores e evolui a
               interface conforme os endpoints reais do backend.
             </p>
 
@@ -94,7 +94,7 @@ export default function HomePage() {
             <h2 className="section-title">
               O front agora segue o que a <span className="text-gradient">API realmente oferece</span>
             </h2>
-            <p className="section-subtitle">Integração correta primeiro, evolução funcional depois.</p>
+            <p className="section-subtitle">Integracao correta primeiro, evolucao funcional depois.</p>
           </Reveal>
 
           <div className="features__grid features__grid--three">
@@ -112,18 +112,18 @@ export default function HomePage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Transforme <span className="text-gradient">dados reais em navegação confiável</span>
+                Transforme <span className="text-gradient">dados reais em navegacao confiavel</span>
               </h2>
               <p className="cta-box__subtitle">
                 Entre na plataforma para explorar a base atual, revisar o perfil e acompanhar a
-                aderência com o backend.
+                aderencia com o backend.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">
-                  Sou Empresa
+                  Entrar na plataforma
                 </Link>
                 <Link to="/login#cadastro" className="btn btn-outline btn-lg">
-                  Sou Pesquisador
+                  Cadastrar empresa
                 </Link>
               </div>
             </div>

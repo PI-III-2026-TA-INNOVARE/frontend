@@ -3,9 +3,14 @@ import { formatBooleanLabel, formatDateLabel } from '../../../lib/domain'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createEducation,
+  createExperience,
+  createSkill,
   deleteEducation,
+  deleteExperience,
+  listSkills,
   updateCompany,
   updateResearcher,
+  updateResume,
 } from '../../../services/pdConnectApi'
 import './ProfilePage.scss'
 
@@ -18,13 +23,27 @@ const defaultEducationForm = {
   endDate: '',
 }
 
+const defaultExperienceForm = {
+  description: '',
+  startDate: '',
+  endDate: '',
+}
+
+const defaultSkillForm = {
+  selectedSkillId: '',
+  newSkillDescription: '',
+}
+
 function buildInitialProfile(user) {
   if (user?.type === 'empresa') {
     return {
       name: user.company?.name || '',
       cnpj: user.company?.cnpj || '',
       registrationStatus: user.company?.registration_status || '',
-      status: String(Boolean(user.company?.status)),
+      status:
+        user.company?.status === null || user.company?.status === undefined
+          ? 'true'
+          : String(Boolean(user.company?.status)),
     }
   }
 
@@ -34,9 +53,6 @@ function buildInitialProfile(user) {
       user?.researcher?.availability === null || user?.researcher?.availability === undefined
         ? 'true'
         : String(Boolean(user?.researcher?.availability)),
-    status: String(Boolean(user?.researcher?.status)),
-    university: user?.researcher?.university ? String(user.researcher.university) : '',
-    resume: user?.researcher?.resume || '',
   }
 }
 
@@ -59,29 +75,61 @@ function buildPageLabel(page, totalItems) {
   return `${start}-${end} de ${totalItems}`
 }
 
+function validateEducationForm(form) {
+  if (!form.course.trim() || !form.institution.trim() || !form.startDate || !form.endDate) {
+    return 'Preencha curso, instituicao, data de inicio e data de termino.'
+  }
+
+  if (form.endDate < form.startDate) {
+    return 'A data de termino nao pode ser anterior a data de inicio.'
+  }
+
+  return ''
+}
+
+function validateExperienceForm(form) {
+  if (!form.description.trim() || !form.startDate) {
+    return 'Preencha descricao e data de inicio da experiencia.'
+  }
+
+  if (form.endDate && form.endDate < form.startDate) {
+    return 'A data de termino nao pode ser anterior a data de inicio.'
+  }
+
+  return ''
+}
+
 export default function ProfilePage() {
   const { refreshUser, user } = useAuth()
   const [savedMessage, setSavedMessage] = useState('')
   const [resumeMessage, setResumeMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [skillsCatalogError, setSkillsCatalogError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isEducationSaving, setIsEducationSaving] = useState(false)
+  const [isExperienceSaving, setIsExperienceSaving] = useState(false)
+  const [isSkillSaving, setIsSkillSaving] = useState(false)
   const [formData, setFormData] = useState(() => buildInitialProfile(user))
   const [educationForm, setEducationForm] = useState(defaultEducationForm)
+  const [experienceForm, setExperienceForm] = useState(defaultExperienceForm)
+  const [skillForm, setSkillForm] = useState(defaultSkillForm)
   const [activeResearcherTab, setActiveResearcherTab] = useState('general')
   const [educationPage, setEducationPage] = useState(1)
+  const [experiencePage, setExperiencePage] = useState(1)
   const [skillsPage, setSkillsPage] = useState(1)
+  const [skillsCatalog, setSkillsCatalog] = useState([])
 
   const isEmpresa = user?.type === 'empresa'
   const resumeData = user?.resume || { education: [], experience: [], skill: [] }
-  const researcherUniversityName = user?.university?.name || 'Universidade não informada'
+  const researcherUniversityName = user?.university?.name || 'Universidade nao informada'
   const researcherStatusLabel = formatBooleanLabel(user?.researcher?.status, {
     trueLabel: 'Ativo',
     falseLabel: 'Inativo',
-    nullLabel: 'Não informado',
+    nullLabel: 'Nao informado',
   })
 
   const totalEducationPages = Math.max(1, Math.ceil((resumeData.education?.length || 0) / PAGE_SIZE))
+  const totalExperiencePages = Math.max(1, Math.ceil((resumeData.experience?.length || 0) / PAGE_SIZE))
   const totalSkillsPages = Math.max(1, Math.ceil((resumeData.skill?.length || 0) / PAGE_SIZE))
 
   const paginatedEducation = useMemo(
@@ -89,9 +137,24 @@ export default function ProfilePage() {
     [educationPage, resumeData.education]
   )
 
+  const paginatedExperience = useMemo(
+    () => paginateItems(resumeData.experience || [], experiencePage),
+    [experiencePage, resumeData.experience]
+  )
+
   const paginatedSkills = useMemo(
     () => paginateItems(resumeData.skill || [], skillsPage),
     [resumeData.skill, skillsPage]
+  )
+
+  const linkedSkillIds = useMemo(
+    () => new Set((resumeData.skill || []).map((item) => item.id_skill)),
+    [resumeData.skill]
+  )
+
+  const availableSkillsToLink = useMemo(
+    () => skillsCatalog.filter((item) => !linkedSkillIds.has(item.id_skill)),
+    [linkedSkillIds, skillsCatalog]
   )
 
   useEffect(() => {
@@ -103,8 +166,51 @@ export default function ProfilePage() {
   }, [totalEducationPages])
 
   useEffect(() => {
+    setExperiencePage((current) => Math.min(current, totalExperiencePages))
+  }, [totalExperiencePages])
+
+  useEffect(() => {
     setSkillsPage((current) => Math.min(current, totalSkillsPages))
   }, [totalSkillsPages])
+
+  useEffect(() => {
+    let isMounted = true
+
+    if (isEmpresa) {
+      setSkillsCatalog([])
+      setSkillsCatalogError('')
+      return () => {
+        isMounted = false
+      }
+    }
+
+    const loadSkillsCatalog = async () => {
+      try {
+        const loadedSkills = await listSkills()
+
+        if (!isMounted) {
+          return
+        }
+
+        setSkillsCatalog(loadedSkills)
+        setSkillsCatalogError('')
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setSkillsCatalogError(
+          error.message || 'Nao foi possivel carregar o catalogo de habilidades disponiveis.'
+        )
+      }
+    }
+
+    loadSkillsCatalog()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isEmpresa, user?.researcher?.id_researcher])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -128,12 +234,13 @@ export default function ProfilePage() {
           status: toBoolean(formData.status),
         })
       } else {
+        if (!formData.name.trim()) {
+          throw new Error('Informe o nome do pesquisador antes de salvar.')
+        }
+
         await updateResearcher(user.researcher.id_researcher, {
           name: formData.name.trim(),
           availability: toBoolean(formData.availability),
-          status: user.researcher.status,
-          university: user.researcher.university,
-          resume: user.researcher.resume,
         })
       }
 
@@ -146,7 +253,7 @@ export default function ProfilePage() {
       setSavedMessage('Perfil atualizado com sucesso.')
     } catch (error) {
       setErrorMessage(
-        error.message || 'Não foi possível salvar as alterações do perfil neste momento.'
+        error.message || 'Nao foi possivel salvar as alteracoes do perfil neste momento.'
       )
     } finally {
       setIsSaving(false)
@@ -155,6 +262,18 @@ export default function ProfilePage() {
 
   const handleEducationChange = (field, value) => {
     setEducationForm((current) => ({ ...current, [field]: value }))
+    setResumeMessage('')
+    setErrorMessage('')
+  }
+
+  const handleExperienceChange = (field, value) => {
+    setExperienceForm((current) => ({ ...current, [field]: value }))
+    setResumeMessage('')
+    setErrorMessage('')
+  }
+
+  const handleSkillChange = (field, value) => {
+    setSkillForm((current) => ({ ...current, [field]: value }))
     setResumeMessage('')
     setErrorMessage('')
   }
@@ -169,11 +288,18 @@ export default function ProfilePage() {
     setResumeMessage(message)
   }
 
+  const ensureResearcherResume = () => {
+    if (!user?.researcher?.resume) {
+      throw new Error('O pesquisador atual nao possui um curriculo vinculado para esta operacao.')
+    }
+  }
+
   const handleEducationSubmit = async (event) => {
     event.preventDefault()
 
-    if (!user?.researcher?.resume) {
-      setErrorMessage('O pesquisador atual não possui um currículo vinculado para receber formações.')
+    const validationMessage = validateEducationForm(educationForm)
+    if (validationMessage) {
+      setErrorMessage(validationMessage)
       return
     }
 
@@ -182,6 +308,8 @@ export default function ProfilePage() {
     setErrorMessage('')
 
     try {
+      ensureResearcherResume()
+
       await createEducation({
         course: educationForm.course.trim(),
         institution: educationForm.institution.trim(),
@@ -190,13 +318,13 @@ export default function ProfilePage() {
         resume: Number(user.researcher.resume),
       })
 
-      await syncResumeAfterChange('Formação adicionada com sucesso.')
+      await syncResumeAfterChange('Formacao adicionada com sucesso.')
       setEducationForm(defaultEducationForm)
       setActiveResearcherTab('educations')
       setEducationPage(1)
     } catch (error) {
       setErrorMessage(
-        error.message || 'Não foi possível adicionar a formação ao currículo.'
+        error.message || 'Nao foi possivel adicionar a formacao ao curriculo.'
       )
     } finally {
       setIsEducationSaving(false)
@@ -210,13 +338,168 @@ export default function ProfilePage() {
 
     try {
       await deleteEducation(educationId)
-      await syncResumeAfterChange('Formação removida com sucesso.')
+      await syncResumeAfterChange('Formacao removida com sucesso.')
     } catch (error) {
       setErrorMessage(
-        error.message || 'Não foi possível remover a formação selecionada.'
+        error.message || 'Nao foi possivel remover a formacao selecionada.'
       )
     } finally {
       setIsEducationSaving(false)
+    }
+  }
+
+  const handleExperienceSubmit = async (event) => {
+    event.preventDefault()
+
+    const validationMessage = validateExperienceForm(experienceForm)
+    if (validationMessage) {
+      setErrorMessage(validationMessage)
+      return
+    }
+
+    setIsExperienceSaving(true)
+    setResumeMessage('')
+    setErrorMessage('')
+
+    try {
+      ensureResearcherResume()
+
+      await createExperience({
+        description: experienceForm.description.trim(),
+        start_date: experienceForm.startDate,
+        end_date: experienceForm.endDate || null,
+        resume: Number(user.researcher.resume),
+      })
+
+      await syncResumeAfterChange('Experiencia adicionada com sucesso.')
+      setExperienceForm(defaultExperienceForm)
+      setActiveResearcherTab('experiences')
+      setExperiencePage(1)
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Nao foi possivel adicionar a experiencia ao curriculo.'
+      )
+    } finally {
+      setIsExperienceSaving(false)
+    }
+  }
+
+  const handleExperienceDelete = async (experienceId) => {
+    setIsExperienceSaving(true)
+    setResumeMessage('')
+    setErrorMessage('')
+
+    try {
+      await deleteExperience(experienceId)
+      await syncResumeAfterChange('Experiencia removida com sucesso.')
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Nao foi possivel remover a experiencia selecionada.'
+      )
+    } finally {
+      setIsExperienceSaving(false)
+    }
+  }
+
+  const syncResumeSkills = async (nextSkillIds, successMessage) => {
+    ensureResearcherResume()
+
+    await updateResume(user.researcher.resume, {
+      skills: nextSkillIds,
+    })
+
+    await syncResumeAfterChange(successMessage)
+  }
+
+  const handleSkillAttach = async (event) => {
+    event.preventDefault()
+
+    if (!skillForm.selectedSkillId) {
+      setErrorMessage('Selecione uma habilidade existente para vincular ao curriculo.')
+      return
+    }
+
+    setIsSkillSaving(true)
+    setResumeMessage('')
+    setErrorMessage('')
+
+    try {
+      const nextSkillIds = Array.from(linkedSkillIds)
+      nextSkillIds.push(Number(skillForm.selectedSkillId))
+
+      await syncResumeSkills(nextSkillIds, 'Habilidade vinculada com sucesso.')
+      setSkillForm((current) => ({
+        ...current,
+        selectedSkillId: '',
+      }))
+      setActiveResearcherTab('skills')
+      setSkillsPage(1)
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Nao foi possivel vincular a habilidade selecionada.'
+      )
+    } finally {
+      setIsSkillSaving(false)
+    }
+  }
+
+  const handleSkillRemove = async (skillId) => {
+    setIsSkillSaving(true)
+    setResumeMessage('')
+    setErrorMessage('')
+
+    try {
+      const nextSkillIds = Array.from(linkedSkillIds).filter((currentId) => currentId !== skillId)
+      await syncResumeSkills(nextSkillIds, 'Habilidade removida do curriculo com sucesso.')
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Nao foi possivel remover a habilidade do curriculo.'
+      )
+    } finally {
+      setIsSkillSaving(false)
+    }
+  }
+
+  const handleSkillCreate = async (event) => {
+    event.preventDefault()
+
+    if (!skillForm.newSkillDescription.trim()) {
+      setErrorMessage('Informe a descricao da nova habilidade.')
+      return
+    }
+
+    setIsSkillSaving(true)
+    setResumeMessage('')
+    setErrorMessage('')
+
+    try {
+      const createdSkill = await createSkill({
+        description: skillForm.newSkillDescription.trim(),
+      })
+
+      setSkillsCatalog((current) => [...current, createdSkill])
+
+      try {
+        const nextSkillIds = Array.from(linkedSkillIds)
+        nextSkillIds.push(createdSkill.id_skill)
+
+        await syncResumeSkills(nextSkillIds, 'Habilidade criada e vinculada com sucesso.')
+      } catch (error) {
+        setErrorMessage(
+          error.message || 'A habilidade foi criada, mas nao foi possivel vincula-la ao curriculo.'
+        )
+        return
+      }
+
+      setSkillForm(defaultSkillForm)
+      setActiveResearcherTab('skills')
+      setSkillsPage(1)
+    } catch (error) {
+      setErrorMessage(
+        error.message || 'Nao foi possivel criar a nova habilidade.'
+      )
+    } finally {
+      setIsSkillSaving(false)
     }
   }
 
@@ -231,8 +514,7 @@ export default function ProfilePage() {
             </h1>
           </div>
           <p className="app-page__subtitle">
-            A exibição foi reorganizada para priorizar clareza, acesso rápido e menos informações
-            técnicas na interface.
+            O perfil agora trabalha apenas com os contratos reais protegidos pela autenticacao JWT.
           </p>
         </header>
 
@@ -242,7 +524,7 @@ export default function ProfilePage() {
               <div className="profile-form-card__head">
                 <div>
                   <span className="profile-form-card__eyebrow">Empresa</span>
-                  <h2 className="profile-form-card__title">Informações principais</h2>
+                  <h2 className="profile-form-card__title">Informacoes principais</h2>
                 </div>
                 {savedMessage ? <span className="profile-form-card__status">{savedMessage}</span> : null}
               </div>
@@ -259,7 +541,7 @@ export default function ProfilePage() {
                 </label>
 
                 <label className="profile-field profile-field--full">
-                  <span>Situação cadastral</span>
+                  <span>Situacao cadastral</span>
                   <input
                     name="registrationStatus"
                     value={formData.registrationStatus}
@@ -281,7 +563,7 @@ export default function ProfilePage() {
 
               <div className="profile-form-card__actions">
                 <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                  {isSaving ? 'Salvando...' : 'Salvar alterações'}
+                  {isSaving ? 'Salvando...' : 'Salvar alteracoes'}
                 </button>
               </div>
             </form>
@@ -292,7 +574,7 @@ export default function ProfilePage() {
               <div className="profile-tabs-card__head">
                 <div>
                   <span className="profile-form-card__eyebrow">Pesquisador</span>
-                  <h2 className="profile-form-card__title">Navegação do perfil</h2>
+                  <h2 className="profile-form-card__title">Navegacao do perfil</h2>
                 </div>
                 {savedMessage ? <span className="profile-form-card__status">{savedMessage}</span> : null}
               </div>
@@ -305,7 +587,7 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'general' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('general')}
                 >
-                  Informações gerais
+                  Informacoes gerais
                 </button>
                 <button
                   type="button"
@@ -314,7 +596,16 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'educations' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('educations')}
                 >
-                  Formações
+                  Formacoes
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={activeResearcherTab === 'experiences'}
+                  className={`profile-tab${activeResearcherTab === 'experiences' ? ' active' : ''}`}
+                  onClick={() => setActiveResearcherTab('experiences')}
+                >
+                  Experiencias
                 </button>
                 <button
                   type="button"
@@ -342,8 +633,8 @@ export default function ProfilePage() {
                       <label className="profile-field">
                         <span>Disponibilidade</span>
                         <select name="availability" value={formData.availability} onChange={handleChange}>
-                          <option value="true">Disponível</option>
-                          <option value="false">Indisponível</option>
+                          <option value="true">Disponivel</option>
+                          <option value="false">Indisponivel</option>
                         </select>
                       </label>
 
@@ -360,30 +651,27 @@ export default function ProfilePage() {
 
                     <div className="profile-form-card__actions">
                       <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                        {isSaving ? 'Salvando...' : 'Salvar alterações'}
+                        {isSaving ? 'Salvando...' : 'Salvar alteracoes'}
                       </button>
                     </div>
                   </form>
 
                   <section className="profile-side__card">
-                    <span className="profile-side__eyebrow">Experiências</span>
-                    <h3 className="profile-side__title">Resumo profissional atual</h3>
+                    <span className="profile-side__eyebrow">Resumo atual</span>
+                    <h3 className="profile-side__title">Visao rapida do curriculo</h3>
                     <div className="profile-side__stack">
-                      {resumeData.experience?.length > 0 ? (
-                        resumeData.experience.map((item) => (
-                          <article key={item.id_experience} className="profile-side__item">
-                            <strong>{item.description}</strong>
-                            <small>
-                              {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
-                            </small>
-                          </article>
-                        ))
-                      ) : (
-                        <article className="profile-side__item">
-                          <strong>Nenhuma experiência cadastrada</strong>
-                          <small>Assim que houver experiências no currículo, elas aparecerão aqui.</small>
-                        </article>
-                      )}
+                      <article className="profile-side__item">
+                        <strong>{resumeData.education?.length || 0} formacao(oes)</strong>
+                        <small>Historico academico vinculado ao curriculo autenticado.</small>
+                      </article>
+                      <article className="profile-side__item">
+                        <strong>{resumeData.experience?.length || 0} experiencia(s)</strong>
+                        <small>Experiencias profissionais registradas no backend.</small>
+                      </article>
+                      <article className="profile-side__item">
+                        <strong>{resumeData.skill?.length || 0} habilidade(s)</strong>
+                        <small>Competencias vinculadas ao curriculo por meio do recurso de resume.</small>
+                      </article>
                     </div>
                   </section>
                 </div>
@@ -394,8 +682,8 @@ export default function ProfilePage() {
                   <section className="profile-side__card">
                     <div className="profile-section-head">
                       <div>
-                        <span className="profile-side__eyebrow">Formações</span>
-                        <h3 className="profile-side__title">Histórico acadêmico</h3>
+                        <span className="profile-side__eyebrow">Formacoes</span>
+                        <h3 className="profile-side__title">Historico academico</h3>
                       </div>
                       {resumeData.education?.length > PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
@@ -411,7 +699,7 @@ export default function ProfilePage() {
                             <strong>{item.course}</strong>
                             <span>{item.institution}</span>
                             <small>
-                              {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
+                              {formatDateLabel(item.start_date)} ate {formatDateLabel(item.end_date)}
                             </small>
                             <button
                               type="button"
@@ -419,14 +707,14 @@ export default function ProfilePage() {
                               onClick={() => handleEducationDelete(item.id_education)}
                               disabled={isEducationSaving}
                             >
-                              Remover formação
+                              Remover formacao
                             </button>
                           </article>
                         ))
                       ) : (
                         <article className="profile-side__item">
-                          <strong>Nenhuma formação cadastrada</strong>
-                          <small>Cadastre sua primeira formação para exibir o histórico acadêmico.</small>
+                          <strong>Nenhuma formacao cadastrada</strong>
+                          <small>Cadastre sua primeira formacao para exibir o historico academico.</small>
                         </article>
                       )}
                     </div>
@@ -442,7 +730,7 @@ export default function ProfilePage() {
                           Anterior
                         </button>
                         <span className="profile-pagination__status">
-                          Página {educationPage} de {totalEducationPages}
+                          Pagina {educationPage} de {totalEducationPages}
                         </span>
                         <button
                           type="button"
@@ -450,15 +738,15 @@ export default function ProfilePage() {
                           onClick={() => setEducationPage((current) => Math.min(totalEducationPages, current + 1))}
                           disabled={educationPage === totalEducationPages}
                         >
-                          Próxima
+                          Proxima
                         </button>
                       </div>
                     ) : null}
                   </section>
 
                   <section className="profile-side__card">
-                    <span className="profile-side__eyebrow">Nova formação</span>
-                    <h3 className="profile-side__title">Adicionar formação</h3>
+                    <span className="profile-side__eyebrow">Nova formacao</span>
+                    <h3 className="profile-side__title">Adicionar formacao</h3>
                     <form className="profile-inline-form" onSubmit={handleEducationSubmit}>
                       <label className="profile-field">
                         <span>Curso</span>
@@ -468,14 +756,14 @@ export default function ProfilePage() {
                         />
                       </label>
                       <label className="profile-field">
-                        <span>Instituição</span>
+                        <span>Instituicao</span>
                         <input
                           value={educationForm.institution}
                           onChange={(event) => handleEducationChange('institution', event.target.value)}
                         />
                       </label>
                       <label className="profile-field">
-                        <span>Data de início</span>
+                        <span>Data de inicio</span>
                         <input
                           type="date"
                           value={educationForm.startDate}
@@ -483,7 +771,7 @@ export default function ProfilePage() {
                         />
                       </label>
                       <label className="profile-field">
-                        <span>Data de término</span>
+                        <span>Data de termino</span>
                         <input
                           type="date"
                           value={educationForm.endDate}
@@ -491,7 +779,108 @@ export default function ProfilePage() {
                         />
                       </label>
                       <button type="submit" className="btn btn-primary" disabled={isEducationSaving}>
-                        {isEducationSaving ? 'Salvando...' : 'Adicionar formação'}
+                        {isEducationSaving ? 'Salvando...' : 'Adicionar formacao'}
+                      </button>
+                    </form>
+                  </section>
+                </div>
+              ) : null}
+
+              {activeResearcherTab === 'experiences' ? (
+                <div className="profile-tab-panel">
+                  <section className="profile-side__card">
+                    <div className="profile-section-head">
+                      <div>
+                        <span className="profile-side__eyebrow">Experiencias</span>
+                        <h3 className="profile-side__title">Historico profissional</h3>
+                      </div>
+                      {resumeData.experience?.length > PAGE_SIZE ? (
+                        <span className="profile-pagination__meta">
+                          {buildPageLabel(experiencePage, resumeData.experience.length)}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="profile-side__stack">
+                      {paginatedExperience.length > 0 ? (
+                        paginatedExperience.map((item) => (
+                          <article key={item.id_experience} className="profile-side__item">
+                            <strong>{item.description}</strong>
+                            <small>
+                              {formatDateLabel(item.start_date)} ate {formatDateLabel(item.end_date)}
+                            </small>
+                            <button
+                              type="button"
+                              className="btn btn-ghost profile-side__action"
+                              onClick={() => handleExperienceDelete(item.id_experience)}
+                              disabled={isExperienceSaving}
+                            >
+                              Remover experiencia
+                            </button>
+                          </article>
+                        ))
+                      ) : (
+                        <article className="profile-side__item">
+                          <strong>Nenhuma experiencia cadastrada</strong>
+                          <small>Adicione experiencias reais do curriculo conforme o backend suporta.</small>
+                        </article>
+                      )}
+                    </div>
+
+                    {resumeData.experience?.length > PAGE_SIZE ? (
+                      <div className="profile-pagination">
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => setExperiencePage((current) => Math.max(1, current - 1))}
+                          disabled={experiencePage === 1}
+                        >
+                          Anterior
+                        </button>
+                        <span className="profile-pagination__status">
+                          Pagina {experiencePage} de {totalExperiencePages}
+                        </span>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => setExperiencePage((current) => Math.min(totalExperiencePages, current + 1))}
+                          disabled={experiencePage === totalExperiencePages}
+                        >
+                          Proxima
+                        </button>
+                      </div>
+                    ) : null}
+                  </section>
+
+                  <section className="profile-side__card">
+                    <span className="profile-side__eyebrow">Nova experiencia</span>
+                    <h3 className="profile-side__title">Adicionar experiencia</h3>
+                    <form className="profile-inline-form" onSubmit={handleExperienceSubmit}>
+                      <label className="profile-field profile-field--full">
+                        <span>Descricao</span>
+                        <input
+                          value={experienceForm.description}
+                          onChange={(event) => handleExperienceChange('description', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de inicio</span>
+                        <input
+                          type="date"
+                          value={experienceForm.startDate}
+                          onChange={(event) => handleExperienceChange('startDate', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de termino</span>
+                        <input
+                          type="date"
+                          value={experienceForm.endDate}
+                          onChange={(event) => handleExperienceChange('endDate', event.target.value)}
+                        />
+                      </label>
+                      <button type="submit" className="btn btn-primary" disabled={isExperienceSaving}>
+                        {isExperienceSaving ? 'Salvando...' : 'Adicionar experiencia'}
                       </button>
                     </form>
                   </section>
@@ -504,7 +893,7 @@ export default function ProfilePage() {
                     <div className="profile-section-head">
                       <div>
                         <span className="profile-side__eyebrow">Habilidades</span>
-                        <h3 className="profile-side__title">Competências cadastradas</h3>
+                        <h3 className="profile-side__title">Competencias vinculadas</h3>
                       </div>
                       {resumeData.skill?.length > PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
@@ -518,13 +907,21 @@ export default function ProfilePage() {
                         paginatedSkills.map((item) => (
                           <article key={item.id_skill} className="profile-side__item">
                             <strong>{item.description}</strong>
-                            <small>Habilidade vinculada ao currículo do pesquisador.</small>
+                            <small>Habilidade vinculada ao curriculo do pesquisador.</small>
+                            <button
+                              type="button"
+                              className="btn btn-ghost profile-side__action"
+                              onClick={() => handleSkillRemove(item.id_skill)}
+                              disabled={isSkillSaving}
+                            >
+                              Remover habilidade
+                            </button>
                           </article>
                         ))
                       ) : (
                         <article className="profile-side__item">
                           <strong>Nenhuma habilidade cadastrada</strong>
-                          <small>Assim que o currículo tiver habilidades vinculadas, elas aparecerão aqui.</small>
+                          <small>Vincule habilidades existentes ou crie uma nova habilidade real na API.</small>
                         </article>
                       )}
                     </div>
@@ -540,7 +937,7 @@ export default function ProfilePage() {
                           Anterior
                         </button>
                         <span className="profile-pagination__status">
-                          Página {skillsPage} de {totalSkillsPages}
+                          Pagina {skillsPage} de {totalSkillsPages}
                         </span>
                         <button
                           type="button"
@@ -548,23 +945,62 @@ export default function ProfilePage() {
                           onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
                           disabled={skillsPage === totalSkillsPages}
                         >
-                          Próxima
+                          Proxima
                         </button>
                       </div>
                     ) : null}
                   </section>
 
                   <section className="profile-side__card">
-                    <span className="profile-side__eyebrow">Edição restrita</span>
-                    <h3 className="profile-side__title">Cadastro de habilidades</h3>
-                    <article className="profile-side__item">
-                      <strong>Edição indisponível nesta tela</strong>
-                      <small>
-                        As habilidades permanecem visíveis em leitura. O front não expõe criação
-                        ou edição aqui para não simular uma ação que a integração atual não
-                        sustenta.
-                      </small>
-                    </article>
+                    <span className="profile-side__eyebrow">Vincular habilidade existente</span>
+                    <h3 className="profile-side__title">Selecionar do catalogo</h3>
+
+                    {skillsCatalogError ? (
+                      <article className="profile-side__item">
+                        <strong>Falha ao carregar catalogo</strong>
+                        <small>{skillsCatalogError}</small>
+                      </article>
+                    ) : null}
+
+                    <form className="profile-inline-form" onSubmit={handleSkillAttach}>
+                      <label className="profile-field">
+                        <span>Habilidade disponivel</span>
+                        <select
+                          value={skillForm.selectedSkillId}
+                          onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
+                        >
+                          <option value="">Selecione uma habilidade</option>
+                          {availableSkillsToLink.map((item) => (
+                            <option key={item.id_skill} value={item.id_skill}>
+                              {item.description}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <button type="submit" className="btn btn-primary" disabled={isSkillSaving}>
+                        {isSkillSaving ? 'Salvando...' : 'Vincular habilidade'}
+                      </button>
+                    </form>
+                  </section>
+
+                  <section className="profile-side__card">
+                    <span className="profile-side__eyebrow">Nova habilidade</span>
+                    <h3 className="profile-side__title">Criar e vincular</h3>
+                    <form className="profile-inline-form" onSubmit={handleSkillCreate}>
+                      <label className="profile-field">
+                        <span>Descricao</span>
+                        <input
+                          value={skillForm.newSkillDescription}
+                          onChange={(event) => handleSkillChange('newSkillDescription', event.target.value)}
+                          placeholder="Ex.: Modelagem de dados"
+                        />
+                      </label>
+
+                      <button type="submit" className="btn btn-primary" disabled={isSkillSaving}>
+                        {isSkillSaving ? 'Salvando...' : 'Criar e vincular'}
+                      </button>
+                    </form>
                   </section>
                 </div>
               ) : null}

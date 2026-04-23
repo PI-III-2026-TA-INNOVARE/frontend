@@ -10,64 +10,66 @@ const journeySteps = [
   {
     id: 'cadastro',
     step: '01',
-    eyebrow: 'Cadastro de perfis',
-    title: 'Empresas e pesquisadores estruturam sua presença.',
-    text: 'O cadastro organiza quem busca parceria e quem oferece conhecimento, criando uma base mais clara para as conexões.',
+    eyebrow: 'Acesso e perfis',
+    title: 'A plataforma agora comeca pelo contrato real da API.',
+    text: 'O fluxo atual usa autenticacao JWT real. Empresas podem se cadastrar publicamente, enquanto pesquisadores acessam contas ja vinculadas no backend.',
     details: [
       {
         label: 'Empresas',
-        text: 'Informam setor, porte, desafios, orçamento e localização.',
+        text: 'Criam acesso pelo cadastro publico e entram com credenciais reais em /api/auth/token/.',
       },
       {
         label: 'Pesquisadores',
-        text: 'Informam áreas de atuação, projetos, vínculo institucional e interesse em parceria.',
+        text: 'Entram com credenciais reais e o perfil e hidratado a partir de /api/auth/profile/.',
       },
     ],
     tags: [
-      { label: 'Setor de atuação' },
-      { label: 'Projetos' },
-      { label: 'Desafios' },
-      { label: 'Localização' },
-      { label: 'Expertise' },
+      { label: 'JWT' },
+      { label: 'Empresa' },
+      { label: 'Pesquisador' },
+      { label: 'Perfil' },
+      { label: 'Curriculo' },
     ],
   },
   {
-    id: 'matchmaking',
+    id: 'exploracao',
     step: '02',
-    eyebrow: 'Matchmaking inteligente',
-    title: 'A busca cruza contexto técnico, problema e aderência.',
-    text: 'A plataforma cruza área, problema e linguagem da demanda para sugerir conexões mais relevantes com busca semântica e IA.',
+    eyebrow: 'Exploracao autenticada',
+    title: 'A area autenticada le a base real protegida pela API.',
+    text: 'O painel integrado consulta empresas, pesquisadores, universidades, areas de pesquisa e curriculos reais antes de aplicar o filtro textual local.',
     tags: [
-      { label: 'Busca semântica' },
-      { label: 'IA matchmaking' },
-      { label: 'Palavras-chave' },
-      { label: 'Ranking' },
+      { label: 'Empresas' },
+      { label: 'Pesquisadores' },
+      { label: 'Universidades' },
+      { label: 'Areas' },
+      { label: 'Indicadores' },
     ],
   },
   {
-    id: 'propostas',
+    id: 'pesquisas',
     step: '03',
-    eyebrow: 'Envio de propostas',
-    title: 'A conexão evolui para proposta com direção.',
-    text: 'Pesquisadores enviam propostas com abordagem, cronograma e metodologia para avaliação das empresas.',
+    eyebrow: 'Publicacao de pesquisas',
+    title: 'Empresas autenticadas ja podem publicar pesquisas reais.',
+    text: 'A criacao usa o recurso /api/research/, com vinculacao de pesquisador, area, prazo e orcamento definidos pelo contrato atual do backend.',
     tags: [
-      { label: 'Resumo' },
-      { label: 'Cronograma' },
-      { label: 'Metodologia' },
-      { label: 'Avaliação' },
+      { label: 'Research' },
+      { label: 'Deadline' },
+      { label: 'Budget' },
+      { label: 'Area' },
+      { label: 'Pesquisador' },
     ],
   },
   {
-    id: 'acompanhamento',
+    id: 'roadmap',
     step: '04',
-    eyebrow: 'Acompanhamento do projeto',
-    title: 'A parceria segue visível até a conclusão.',
-    text: 'O status das propostas fica visível em tempo real, da pendência à conclusão.',
+    eyebrow: 'Evolucao do produto',
+    title: 'Alguns fluxos seguem como roadmap e nao sao simulados no front.',
+    text: 'Propostas, match por IA, notificacoes e acompanhamento completo continuam dependendo de rotas reais do backend antes de virarem experiencia definitiva.',
     tags: [
-      { label: 'Pendente', tone: 'warning' },
-      { label: 'Aceita', tone: 'success' },
-      { label: 'Em andamento', tone: 'primary' },
-      { label: 'Concluída', tone: 'secondary' },
+      { label: 'Propostas', tone: 'warning' },
+      { label: 'Notificacoes', tone: 'warning' },
+      { label: 'IA', tone: 'warning' },
+      { label: 'Roadmap', tone: 'secondary' },
     ],
   },
 ]
@@ -75,19 +77,19 @@ const journeySteps = [
 const resourceCards = [
   {
     icon: appIcons.matchmaking,
-    title: 'Sinais de compatibilidade',
-    text: 'Destaca aderência entre perfis, desafios e temas para orientar a descoberta.',
+    title: 'Leitura integrada da base',
+    text: 'Consolida perfis, universidades, curriculos e areas a partir dos endpoints reais protegidos.',
   },
   {
     icon: appIcons.indicators,
     title: 'Leitura de indicadores',
-    text: 'Organiza dados sobre pesquisa, investimento e distribuição regional.',
+    text: 'Mostra metricas reais apenas quando existe sessao autenticada valida.',
     iconModifier: 'feature-card__icon--secondary',
   },
   {
     icon: appIcons.security,
-    title: 'Segurança de dados',
-    text: 'Protege informações de empresas e pesquisadores com armazenamento seguro.',
+    title: 'Seguranca de sessao',
+    text: 'Mantem access token, refresh controlado e logout limpo para os fluxos protegidos.',
     iconModifier: 'feature-card__icon--warm',
   },
 ]
@@ -115,12 +117,12 @@ export default function ComoFuncionaPage() {
         <div className="container">
           <span className="section-label">Como Funciona</span>
           <h1 className="page-header__title">
-            Do <span className="text-gradient">desafio</span> à{' '}
-            <span className="text-gradient">solução</span>
+            Do <span className="text-gradient">acesso real</span> a uma{' '}
+            <span className="text-gradient">integracao confiavel</span>
           </h1>
           <p className="page-header__text">
-            A jornada da plataforma organiza descoberta, correspondência, proposta e acompanhamento
-            em quatro etapas.
+            A jornada atual da plataforma mostra o que ja funciona com o backend novo e o que ainda
+            permanece em evolucao.
           </p>
         </div>
       </section>
@@ -129,9 +131,9 @@ export default function ComoFuncionaPage() {
         <div className="container">
           <Reveal className="text-center process-journey__intro">
             <span className="section-label">Fluxo da Plataforma</span>
-            <h2 className="section-title">Quatro etapas para transformar busca em colaboração.</h2>
+            <h2 className="section-title">Quatro etapas para operar com o backend real.</h2>
             <p className="section-subtitle">
-              Um fluxo claro para descobrir, conectar, propor e acompanhar.
+              Um fluxo claro para autenticar, explorar, publicar e evoluir sem mascarar limitacoes.
             </p>
           </Reveal>
 
@@ -179,9 +181,9 @@ export default function ComoFuncionaPage() {
                   className="process-step-carousel__button"
                   onClick={() => goToStep(activeStepIndex + 1)}
                   disabled={activeStepIndex === journeySteps.length - 1}
-                  aria-label="Próxima etapa"
+                  aria-label="Proxima etapa"
                 >
-                  <span>Próxima</span>
+                  <span>Proxima</span>
                   <IconBadge icon={appIcons.next} className="process-step-carousel__button-icon" />
                 </button>
               </div>
@@ -277,17 +279,17 @@ export default function ComoFuncionaPage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Comece sua <span className="text-gradient">conexão</span>
+                Comece sua <span className="text-gradient">entrada segura</span>
               </h2>
               <p className="cta-box__subtitle">
-                Cadastre-se e descubra oportunidades de inovação alinhadas ao seu perfil.
+                Entre na plataforma ou cadastre uma empresa conforme o contrato atual da API.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">
-                  Criar Conta Gratuita
+                  Entrar na plataforma
                 </Link>
-                <Link to="/indicadores" className="btn btn-outline btn-lg">
-                  Ver Indicadores
+                <Link to="/login#cadastro" className="btn btn-outline btn-lg">
+                  Cadastrar empresa
                 </Link>
               </div>
             </div>
