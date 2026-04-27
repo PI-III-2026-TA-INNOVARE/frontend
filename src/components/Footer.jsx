@@ -9,10 +9,7 @@ export default function Footer() {
             <div className="footer__brand-name">
               <span>P&amp;D Connect</span>
             </div>
-            <p className="footer__brand-text">
-              Conectando empresas a pesquisadores para impulsionar a inovação tecnológica no
-              Brasil. Alinhado com a ODS 9 da ONU.
-            </p>
+            <p className="footer__brand-text">Empresas, pesquisadores e pesquisas em um so lugar.</p>
           </div>
 
           <div className="footer__col">
@@ -24,27 +21,12 @@ export default function Footer() {
 
           <div className="footer__col">
             <h4 className="footer__col-title">Institucional</h4>
-            <Link to="/sobre">Sobre Nós</Link>
-            <span className="footer__placeholder-link">Termos de Uso em breve</span>
-            <span className="footer__placeholder-link">Privacidade em breve</span>
-            <span className="footer__placeholder-link">Contato em breve</span>
-          </div>
-
-          <div className="footer__col">
-            <h4 className="footer__col-title">Parceiros</h4>
-            <span className="footer__placeholder-link">CNPq</span>
-            <span className="footer__placeholder-link">MCTI</span>
-            <span className="footer__placeholder-link">CAPES</span>
-            <span className="footer__placeholder-link">IBGE</span>
+            <Link to="/sobre">Sobre</Link>
           </div>
         </div>
 
         <div className="footer__bottom">
-          <span>© 2026 P&amp;D Connect. Todos os direitos reservados.</span>
-          <div className="footer__bottom-links">
-            <span className="footer__placeholder-link">Política de Privacidade em breve</span>
-            <span className="footer__placeholder-link">Termos de Serviço em breve</span>
-          </div>
+          <span>2026 P&amp;D Connect.</span>
         </div>
       </div>
     </footer>

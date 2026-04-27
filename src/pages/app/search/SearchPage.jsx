@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatBooleanLabel, normalizeText } from '../../../lib/domain'
 import { useAuth } from '../../../context/AuthContext'
-import PageFaq from '../../../components/PageFaq'
 import {
   createResearchInterest,
   getResearcherResume,
@@ -15,37 +14,6 @@ import {
 import './SearchPage.scss'
 
 const defaultQuery = 'pesquisar por pesquisa, nome, universidade, cnpj, area ou status'
-
-const searchFaqSections = [
-  {
-    title: 'O que esta pagina usa hoje',
-    text: 'A busca trabalha com leitura real da API protegida por JWT e filtro textual local no front.',
-    items: [
-      'GET /api/research/',
-      'POST /api/research/{id}/interest/',
-      'GET /api/research/my-interests/',
-      'GET /api/companies/',
-      'GET /api/researchers/',
-      'GET /api/research/area/',
-      'GET /api/universities/',
-      'GET /api/researchers/{id}/resume/',
-    ],
-  },
-  {
-    title: 'O que continua fora do escopo',
-    text: 'Alguns fluxos previstos ainda nao tem contrato completo e, por isso, nao aparecem como funcionalidade definitiva aqui.',
-    items: [
-      'Propostas formais',
-      'Notificacoes',
-      'Busca semantica',
-      'Match por IA definitivo',
-    ],
-  },
-  {
-    title: 'Como esta tela se comporta',
-    text: 'Pesquisadores veem pesquisas primeiro para demonstrar interesse. Empresas veem pesquisadores primeiro para explorar a base autenticada.',
-  },
-]
 
 function getDefaultTab(userType) {
   return userType === 'empresa' ? 'pesquisadores' : 'pesquisas'
@@ -128,7 +96,6 @@ export default function SearchPage() {
   const [error, setError] = useState('')
   const [partialWarnings, setPartialWarnings] = useState([])
   const [interestMessage, setInterestMessage] = useState('')
-  const [isFaqOpen, setIsFaqOpen] = useState(false)
   const [catalog, setCatalog] = useState({
     companies: [],
     researchers: [],
@@ -206,7 +173,7 @@ export default function SearchPage() {
         }
 
         setError(
-          loadFailure.message || 'Nao foi possivel carregar os dados reais da API para o painel.'
+          loadFailure.message || 'Nao foi possivel carregar os dados do painel.'
         )
         setPartialWarnings([])
       } finally {
@@ -345,7 +312,7 @@ export default function SearchPage() {
         description:
           linkedResearchers.length > 0
             ? `Cadastros ligados: ${linkedResearchers.map((item) => item.name).join(', ')}.`
-            : 'Nenhum pesquisador esta vinculado a esta universidade no backend atual.',
+            : 'Nenhum pesquisador vinculado a esta universidade.',
         tags: ['Universidade', `${linkedResearchers.length} vinculados`],
       }
     })
@@ -391,7 +358,7 @@ export default function SearchPage() {
         ...current,
         myInterests,
       }))
-      setInterestMessage('Interesse registrado pela API para a pesquisa selecionada.')
+      setInterestMessage('Interesse registrado para a pesquisa selecionada.')
     } catch (interestError) {
       setError(interestError.message || 'Nao foi possivel registrar interesse nesta pesquisa.')
     } finally {
@@ -404,37 +371,28 @@ export default function SearchPage() {
       <div className="container app-page__container">
         <header className="app-page__header">
           <div>
-            <span className="section-label">Painel integrado</span>
-            <h1 className="app-page__title">Exploracao dos dados reais da plataforma</h1>
+            <span className="section-label">Explorar</span>
+            <h1 className="app-page__title">Base da plataforma</h1>
           </div>
           <div className="app-page__header-actions">
             <p className="app-page__subtitle">
-              Explore pesquisas, empresas, pesquisadores, areas de pesquisa e universidades com base
-              nos endpoints autenticados disponiveis hoje.
+              Pesquise empresas, pesquisadores, pesquisas e universidades.
             </p>
-            <button
-              type="button"
-              className="btn btn-outline page-faq-trigger"
-              onClick={() => setIsFaqOpen(true)}
-            >
-              FAQ da pagina
-            </button>
           </div>
         </header>
 
         <div className="search-hero-card">
           <div className="search-hero-card__content">
-            <span className="search-hero-card__eyebrow">Busca integrada</span>
-            <h2 className="search-hero-card__title">Explore a base atual sem sair do fluxo principal</h2>
+            <span className="search-hero-card__eyebrow">Busca</span>
+            <h2 className="search-hero-card__title">Encontre registros rapidamente</h2>
             <p className="search-hero-card__text">
-              Use o filtro para localizar registros reais. Pesquisadores podem demonstrar interesse
-              em pesquisas usando o contrato atual do backend.
+              Use o filtro e alterne entre as colecoes disponiveis.
             </p>
           </div>
 
           <form className="app-search-form" onSubmit={handleSubmit}>
             <label className="sr-only" htmlFor="catalog-search">
-              Filtrar dados reais da API
+              Filtrar dados da plataforma
             </label>
             <textarea
               id="catalog-search"
@@ -457,8 +415,8 @@ export default function SearchPage() {
               <p className="semantic-panel__query">{user?.displayName}</p>
               <p className="semantic-panel__text">
                 {user?.type === 'empresa'
-                  ? 'Empresa logada: priorizamos a exploracao de pesquisadores e candidatos.'
-                  : 'Pesquisador logado: priorizamos pesquisas abertas para demonstrar interesse.'}
+                  ? 'Pesquisadores aparecem primeiro para empresas.'
+                  : 'Pesquisas aparecem primeiro para pesquisadores.'}
               </p>
             </div>
 
@@ -495,20 +453,6 @@ export default function SearchPage() {
                 </button>
               </div>
             </div>
-
-            <div className="semantic-panel__block semantic-panel__block--faq">
-              <h3 className="semantic-panel__title">Precisa de contexto?</h3>
-              <p className="semantic-panel__text">
-                Abra o FAQ para ver os endpoints usados nesta tela e o que ainda depende de backend.
-              </p>
-              <button
-                type="button"
-                className="btn btn-ghost page-faq-trigger"
-                onClick={() => setIsFaqOpen(true)}
-              >
-                Abrir FAQ
-              </button>
-            </div>
           </aside>
 
           <div className="search-results">
@@ -539,8 +483,8 @@ export default function SearchPage() {
 
             {loading ? (
               <div className="search-feedback-card">
-                <h3>Carregando dados da API</h3>
-                <p>Estamos consultando os endpoints protegidos para montar o painel integrado.</p>
+                <h3>Carregando dados</h3>
+                <p>Buscando registros disponiveis.</p>
               </div>
             ) : null}
 
@@ -562,8 +506,7 @@ export default function SearchPage() {
               <div className="search-feedback-card">
                 <h3>Nenhum resultado encontrado</h3>
                 <p>
-                  Ajuste o filtro textual ou troque a colecao ativa para explorar outra parte da base
-                  integrada.
+                  Ajuste o filtro ou troque a colecao ativa.
                 </p>
               </div>
             ) : null}
@@ -618,14 +561,6 @@ export default function SearchPage() {
           </div>
         </div>
       </div>
-
-      <PageFaq
-        isOpen={isFaqOpen}
-        onClose={() => setIsFaqOpen(false)}
-        title="Busca integrada"
-        intro="Este FAQ resume o que a pagina ja consome do backend autenticado e o que ainda esta fora do escopo porque depende de rotas que nao existem hoje."
-        sections={searchFaqSections}
-      />
     </section>
   )
 }

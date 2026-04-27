@@ -4,39 +4,39 @@ import './SobrePage.scss'
 
 const aboutHighlights = [
   {
-    title: 'Perfis com dados reais',
-    text: 'Empresas, pesquisadores, universidades e curriculos agora refletem a base real da API.',
+    title: 'Perfis completos',
+    text: 'Empresas, pesquisadores, universidades e curriculos conectados.',
   },
   {
-    title: 'Publicacao autenticada',
-    text: 'Empresas autenticadas ja conseguem publicar pesquisas usando o recurso real do backend.',
+    title: 'Pesquisas abertas',
+    text: 'Demandas publicadas para atrair pesquisadores.',
   },
   {
-    title: 'Roadmap explicito',
-    text: 'Propostas, notificacoes e IA continuam visiveis como evolucao, sem simulacao no front.',
+    title: 'Evolucao clara',
+    text: 'Novos fluxos entram conforme amadurecem.',
   },
 ]
 
 const aboutPillars = [
   {
     eyebrow: 'Conexao qualificada',
-    title: 'Empresas e pesquisadores no mesmo ambiente autenticado.',
-    text: 'A plataforma organiza perfis reais e usa o backend como fonte de verdade para a integracao.',
+    title: 'Empresas e pesquisadores no mesmo ambiente.',
+    text: 'Perfis organizados para facilitar descoberta e contato.',
   },
   {
-    eyebrow: 'Pesquisas autenticadas',
-    title: 'Demandas reais agora usam o recurso de pesquisa do backend.',
-    text: 'A publicacao autentica trabalha com titulo, escopo, objetivo, justificativa, resultados, prazo e orcamento.',
+    eyebrow: 'Pesquisas',
+    title: 'Demandas com objetivo, prazo e orcamento.',
+    text: 'A empresa publica e acompanha interessados.',
   },
   {
     eyebrow: 'Evolucao controlada',
-    title: 'O front nao finge fluxos que o backend ainda nao sustenta.',
-    text: 'Propostas, notificacoes, status e IA continuam fora da entrega real enquanto o contrato nao existir.',
+    title: 'Funcionalidades entram com seguranca.',
+    text: 'Sem prometer fluxos que ainda nao estao prontos.',
   },
   {
     eyebrow: 'Dados e indicadores',
-    title: 'Leituras reais exigem contexto autenticado.',
-    text: 'Indicadores e consultas protegidas aparecem com base na sessao JWT e nas respostas atuais da API.',
+    title: 'Indicadores para acompanhar a base.',
+    text: 'Numeros claros para entender uso e alcance.',
   },
 ]
 
@@ -71,8 +71,7 @@ export default function SobrePage() {
 
                 <div className="about-hero__body">
                   <p className="about-hero__text">
-                    A P&amp;D Connect aproxima empresas e pesquisadores com base em contratos reais
-                    da API e evolucao gradual do produto.
+                    A P&amp;D Connect aproxima empresas e pesquisadores em uma experiencia simples.
                   </p>
 
                   <div className="about-hero__support-block">
@@ -180,8 +179,7 @@ export default function SobrePage() {
                 <span className="text-gradient">conectado</span>
               </h2>
               <p className="cta-box__subtitle">
-                Entre na plataforma ou cadastre uma empresa. O acesso de pesquisador depende de
-                conta ja provisionada no backend atual.
+                Entre na plataforma ou cadastre uma empresa para comecar.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">

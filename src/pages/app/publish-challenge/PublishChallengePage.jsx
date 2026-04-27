@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import PageFaq from '../../../components/PageFaq'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createResearch,
@@ -10,28 +9,6 @@ import {
   updateResearchCandidateStatus,
 } from '../../../services/pdConnectApi'
 import './PublishChallengePage.scss'
-
-const challengeFaqSections = [
-  {
-    title: 'O que esta pagina usa agora',
-    items: [
-      'GET /api/research/',
-      'POST /api/research/',
-      'GET /api/research/area/',
-      'GET /api/research/{id}/candidates/',
-      'PATCH /api/research/{id}/candidates/{candidateId}/',
-      'POST /api/research/{id}/match/run/',
-    ],
-  },
-  {
-    title: 'O que mudou no contrato',
-    text: 'A pesquisa e criada pela empresa autenticada. O front nao envia company nem researcher, porque company vem do JWT e researcher e tratado pelo fluxo de candidatos/interesses.',
-  },
-  {
-    title: 'O que continua limitado',
-    text: 'O backend ja tem candidatos e um match operacional, mas o match ainda e um placeholder por area/disponibilidade, nao uma IA definitiva.',
-  },
-]
 
 const candidateStatusOptions = [
   { value: 'under_review', label: 'Em analise' },
@@ -68,7 +45,7 @@ function validateResearchForm(form, { hasResearchAreas }) {
   }
 
   if (!hasResearchAreas) {
-    return 'Nenhuma area de pesquisa foi carregada da API. Como o backend exige o campo area, cadastre ou disponibilize uma area em /api/research/area/ antes de publicar.'
+    return 'Nenhuma area de pesquisa esta disponivel para publicar.'
   }
 
   if (!form.areaId) {
@@ -144,7 +121,6 @@ function getCandidateSourceLabel(source) {
 
 export default function PublishChallengePage() {
   const { user } = useAuth()
-  const [isFaqOpen, setIsFaqOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
   const [candidateActionLoading, setCandidateActionLoading] = useState('')
@@ -276,7 +252,7 @@ export default function PublishChallengePage() {
         },
       }))
       setResearchForm(defaultResearchForm)
-      setSuccessMessage('Pesquisa publicada com sucesso no recurso real do backend.')
+      setSuccessMessage('Pesquisa publicada com sucesso.')
     } catch (error) {
       setErrorMessage(
         error.message || 'Nao foi possivel publicar a pesquisa com os dados informados.'
@@ -325,7 +301,7 @@ export default function PublishChallengePage() {
           )),
         },
       }))
-      setCandidateMessage('Status do candidato atualizado pela API.')
+      setCandidateMessage('Status do candidato atualizado.')
     } catch (error) {
       setErrorMessage(error.message || 'Nao foi possivel atualizar o status do candidato.')
     } finally {
@@ -339,20 +315,12 @@ export default function PublishChallengePage() {
         <header className="app-page__header">
           <div>
             <span className="section-label">Pesquisas</span>
-            <h1 className="app-page__title">Publicacao baseada no recurso real do backend</h1>
+            <h1 className="app-page__title">Nova pesquisa</h1>
           </div>
           <div className="app-page__header-actions">
             <p className="app-page__subtitle">
-              A empresa vem do JWT. O fluxo de pesquisadores passa pelos candidatos, interesses e
-              match suportados pela API atual.
+              Publique demandas e acompanhe candidatos.
             </p>
-            <button
-              type="button"
-              className="btn btn-outline page-faq-trigger"
-              onClick={() => setIsFaqOpen(true)}
-            >
-              FAQ da pagina
-            </button>
           </div>
         </header>
 
@@ -360,20 +328,15 @@ export default function PublishChallengePage() {
           <div className="challenge-form-card__section">
             <div className="challenge-form-card__section-head">
               <div>
-                <span className="challenge-form-card__eyebrow">Empresa autenticada</span>
-                <h2 className="challenge-form-card__title">Nova pesquisa</h2>
+                <span className="challenge-form-card__eyebrow">Criacao</span>
+                <h2 className="challenge-form-card__title">Dados da pesquisa</h2>
               </div>
             </div>
 
-            <p className="challenge-form-card__text">
-              O backend define a empresa pelo usuario autenticado. O front envia apenas os campos
-              aceitos pelo serializer de pesquisa.
-            </p>
-
             {loading ? (
               <div className="challenge-form-card__item">
-                <strong>Carregando catalogos</strong>
-                <span>Consultando areas, pesquisas existentes e candidatos da empresa.</span>
+                <strong>Carregando dados</strong>
+                <span>Preparando formulario e pesquisas da empresa.</span>
               </div>
             ) : null}
 
@@ -388,9 +351,8 @@ export default function PublishChallengePage() {
               <div className="challenge-form-card__item">
                 <strong>Publicacao bloqueada por catalogo vazio</strong>
                 <span>
-                  A API nao retornou areas de pesquisa. Como o contrato de criacao exige `area`,
-                  e a criacao de areas altera um catalogo global, o front mantem o envio bloqueado
-                  ate existir pelo menos uma area cadastrada no backend.
+                  Nenhuma area de pesquisa esta disponivel. E necessario ter ao menos uma area
+                  cadastrada para publicar.
                 </span>
               </div>
             ) : null}
@@ -431,7 +393,7 @@ export default function PublishChallengePage() {
                         <option value="">
                         {hasResearchAreas
                           ? 'Selecione uma area'
-                          : 'Nenhuma area retornada pela API'}
+                          : 'Nenhuma area disponivel'}
                       </option>
                       {catalog.researchAreas.map((item) => (
                         <option key={item.id_area} value={item.id_area}>
@@ -511,10 +473,6 @@ export default function PublishChallengePage() {
                   >
                     {submitLoading ? 'Publicando...' : 'Publicar pesquisa'}
                   </button>
-
-                  <span className="challenge-form-card__text">
-                    `company` e `researcher` nao sao enviados pelo front neste contrato.
-                  </span>
                 </div>
               </form>
             ) : null}
@@ -523,8 +481,8 @@ export default function PublishChallengePage() {
           <div className="challenge-form-card__section">
             <div className="challenge-form-card__section-head">
               <div>
-                <span className="challenge-form-card__eyebrow">Base atual</span>
-                <h2 className="challenge-form-card__title">Pesquisas e candidatos da empresa</h2>
+                <span className="challenge-form-card__eyebrow">Acompanhamento</span>
+                <h2 className="challenge-form-card__title">Pesquisas publicadas</h2>
               </div>
             </div>
 
@@ -605,21 +563,13 @@ export default function PublishChallengePage() {
               ) : (
                 <article className="challenge-form-card__item">
                   <strong>Nenhuma pesquisa publicada por esta empresa</strong>
-                  <span>Assim que uma publicacao real for criada, ela aparecera aqui.</span>
+                  <span>Assim que uma publicacao for criada, ela aparecera aqui.</span>
                 </article>
               )}
             </div>
           </div>
         </div>
       </div>
-
-      <PageFaq
-        isOpen={isFaqOpen}
-        onClose={() => setIsFaqOpen(false)}
-        title="Fluxo de pesquisa"
-        intro="Este FAQ resume o que o front consome do backend autenticado para publicacao, candidatos e match."
-        sections={challengeFaqSections}
-      />
     </section>
   )
 }

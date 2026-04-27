@@ -1,14 +1,14 @@
 .footer {
-  padding: 60px 0 30px;
+  padding: 48px 0 28px;
   background: var(--bg-tertiary);
   color: var(--text-inverse);
 }
 
 .footer__grid {
   display: grid;
-  grid-template-columns: 1.5fr repeat(3, 1fr);
-  gap: 40px;
-  margin-bottom: 40px;
+  grid-template-columns: 1.5fr repeat(2, minmax(140px, 1fr));
+  gap: 32px;
+  margin-bottom: 32px;
 }
 
 .footer__brand {
@@ -32,11 +32,11 @@
 .footer__brand-text {
   color: var(--text-inverse-muted);
   font-size: 0.88rem;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .footer__col-title {
-  margin-bottom: 20px;
+  margin-bottom: 14px;
   color: var(--accent-warm);
   font-family: var(--font-primary);
   font-size: 0.85rem;

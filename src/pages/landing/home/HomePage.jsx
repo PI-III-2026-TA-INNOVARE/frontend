@@ -7,36 +7,33 @@ import './HomePage.scss'
 const heroSupportCards = [
   {
     eyebrow: 'Cadastros',
-    title: 'Empresas e pesquisadores usam cadastro publico conforme o contrato atual da API.',
+    title: 'Empresas e pesquisadores entram pelo mesmo acesso.',
   },
   {
     eyebrow: 'Perfis',
-    title: 'O painel atual integra perfil, curriculo, formacoes, experiencias e habilidades.',
+    title: 'Curriculos, experiencias e habilidades em um perfil.',
   },
   {
-    eyebrow: 'Evolucao',
-    title: 'Propostas, notificacoes e IA seguem previstas, mas ainda dependem do backend.',
+    eyebrow: 'Pesquisas',
+    title: 'Demandas abertas para descoberta e interesse.',
   },
 ]
 
 const featureCards = [
   {
     icon: appIcons.matchmaking,
-    title: 'Cadastro aderente ao backend',
-    description:
-      'O front agora consome os endpoints reais de empresas, pesquisadores, CNPJ, universidades e curriculos.',
+    title: 'Perfis completos',
+    description: 'Dados essenciais para empresas e pesquisadores.',
   },
   {
     icon: appIcons.proposals,
-    title: 'Pesquisas e interesses reais',
-    description:
-      'Empresas publicam pesquisas e pesquisadores demonstram interesse usando os recursos atuais da API.',
+    title: 'Pesquisas e interesses',
+    description: 'Publique demandas e acompanhe pesquisadores interessados.',
   },
   {
     icon: appIcons.search,
-    title: 'Exploracao da base real',
-    description:
-      'A area autenticada usa filtro textual local sobre os dados carregados da API, sem mocks.',
+    title: 'Busca da plataforma',
+    description: 'Filtre empresas, pesquisadores, universidades e pesquisas.',
   },
 ]
 
@@ -54,11 +51,10 @@ export default function HomePage() {
               ODS 9 | Pesquisa, industria e inovacao conectadas
             </div>
 
-            <h1 className="hero__title">Conecte cadastros, curriculos e capacidades reais da plataforma</h1>
+            <h1 className="hero__title">Conecte empresas e pesquisadores</h1>
 
             <p className="hero__description">
-              A P&amp;D Connect organiza a conexao entre empresas e pesquisadores e evolui a
-              interface conforme os endpoints reais do backend.
+              Uma plataforma para publicar pesquisas, encontrar perfis e criar conexoes de P&amp;D.
             </p>
 
             <div className="hero__actions hero__actions--centered">
@@ -92,9 +88,9 @@ export default function HomePage() {
           <Reveal className="text-center">
             <span className="section-label">Funcionalidades</span>
             <h2 className="section-title">
-              O front agora segue o que a <span className="text-gradient">API realmente oferece</span>
+              Funcionalidades para <span className="text-gradient">operar melhor</span>
             </h2>
-            <p className="section-subtitle">Integracao correta primeiro, evolucao funcional depois.</p>
+            <p className="section-subtitle">O essencial para descobrir, publicar e acompanhar.</p>
           </Reveal>
 
           <div className="features__grid features__grid--three">
@@ -112,11 +108,10 @@ export default function HomePage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Transforme <span className="text-gradient">dados reais em navegacao confiavel</span>
+                Comece a usar a <span className="text-gradient">P&amp;D Connect</span>
               </h2>
               <p className="cta-box__subtitle">
-                Entre na plataforma para explorar a base atual, revisar o perfil e acompanhar a
-                aderencia com o backend.
+                Entre para explorar perfis, pesquisas e indicadores.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">

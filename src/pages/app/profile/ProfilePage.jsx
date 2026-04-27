@@ -370,7 +370,7 @@ export default function ProfilePage() {
     const createdResume = await createResume({})
 
     if (!createdResume?.id_resume) {
-      throw new Error('A API criou o curriculo, mas nao retornou o ID esperado.')
+      throw new Error('Nao foi possivel confirmar o curriculo criado.')
     }
 
     await updateResearcher(user.researcher.id_researcher, {
@@ -557,14 +557,12 @@ export default function ProfilePage() {
       <div className="container app-page__container">
         <header className="app-page__header">
           <div>
-            <span className="section-label">Perfil integrado</span>
+            <span className="section-label">Perfil</span>
             <h1 className="app-page__title">
-              {isEmpresa ? 'Cadastro institucional da empresa' : 'Perfil do pesquisador'}
+              {isEmpresa ? 'Dados da empresa' : 'Perfil do pesquisador'}
             </h1>
           </div>
-          <p className="app-page__subtitle">
-            O perfil agora trabalha apenas com os contratos reais protegidos pela autenticacao JWT.
-          </p>
+          <p className="app-page__subtitle">Atualize informacoes essenciais da conta.</p>
         </header>
 
         {isEmpresa ? (
@@ -573,7 +571,7 @@ export default function ProfilePage() {
               <div className="profile-form-card__head">
                 <div>
                   <span className="profile-form-card__eyebrow">Empresa</span>
-                  <h2 className="profile-form-card__title">Informacoes principais</h2>
+                  <h2 className="profile-form-card__title">Informacoes</h2>
                 </div>
                 {savedMessage ? <span className="profile-form-card__status">{savedMessage}</span> : null}
               </div>
@@ -620,7 +618,7 @@ export default function ProfilePage() {
               <div className="profile-tabs-card__head">
                 <div>
                   <span className="profile-form-card__eyebrow">Pesquisador</span>
-                  <h2 className="profile-form-card__title">Navegacao do perfil</h2>
+                  <h2 className="profile-form-card__title">Secoes do perfil</h2>
                 </div>
                 {savedMessage ? <span className="profile-form-card__status">{savedMessage}</span> : null}
               </div>
@@ -704,7 +702,7 @@ export default function ProfilePage() {
 
                         {!researchAreaCatalogError && researchAreaCatalog.length === 0 ? (
                           <div className="profile-readonly-value">
-                            Nenhuma area de pesquisa foi retornada pela API.
+                            Nenhuma area de pesquisa disponivel.
                           </div>
                         ) : null}
 
@@ -726,8 +724,7 @@ export default function ProfilePage() {
                           </div>
                         ) : null}
                         <small className="profile-field__hint">
-                          Essas areas sao enviadas no perfil do pesquisador e usadas pelo match
-                          suportado pela API.
+                          Selecione as areas em que voce atua.
                         </small>
                       </div>
                     </div>
@@ -740,29 +737,28 @@ export default function ProfilePage() {
                   </form>
 
                   <section className="profile-side__card">
-                    <span className="profile-side__eyebrow">Resumo atual</span>
-                    <h3 className="profile-side__title">Visao rapida do curriculo</h3>
+                    <span className="profile-side__eyebrow">Curriculo</span>
+                    <h3 className="profile-side__title">Resumo</h3>
                     {!hasLinkedResume ? (
                       <article className="profile-side__item">
                         <strong>Curriculo ainda nao vinculado</strong>
                         <small>
-                          O cadastro atual nao exige curriculo. Ao adicionar formacao, experiencia
-                          ou habilidade, o front cria e vincula um curriculo real na API.
+                          Adicione formacao, experiencia ou habilidade para iniciar seu curriculo.
                         </small>
                       </article>
                     ) : null}
                     <div className="profile-side__stack">
                       <article className="profile-side__item">
                         <strong>{resumeData.education?.length || 0} formacao(oes)</strong>
-                        <small>Historico academico vinculado ao curriculo autenticado.</small>
+                        <small>Historico academico.</small>
                       </article>
                       <article className="profile-side__item">
                         <strong>{resumeData.experience?.length || 0} experiencia(s)</strong>
-                        <small>Experiencias profissionais registradas no backend.</small>
+                        <small>Experiencias profissionais.</small>
                       </article>
                       <article className="profile-side__item">
                         <strong>{resumeData.skill?.length || 0} habilidade(s)</strong>
-                        <small>Competencias vinculadas ao curriculo por meio do recurso de resume.</small>
+                        <small>Competencias vinculadas.</small>
                       </article>
                     </div>
                   </section>
@@ -914,7 +910,7 @@ export default function ProfilePage() {
                       ) : (
                         <article className="profile-side__item">
                           <strong>Nenhuma experiencia cadastrada</strong>
-                          <small>Adicione experiencias reais do curriculo conforme o backend suporta.</small>
+                          <small>Adicione sua primeira experiencia.</small>
                         </article>
                       )}
                     </div>
@@ -1013,7 +1009,7 @@ export default function ProfilePage() {
                       ) : (
                         <article className="profile-side__item">
                           <strong>Nenhuma habilidade cadastrada</strong>
-                          <small>Vincule habilidades existentes ou crie uma nova habilidade real na API.</small>
+                          <small>Vincule uma habilidade existente.</small>
                         </article>
                       )}
                     </div>
@@ -1087,8 +1083,7 @@ export default function ProfilePage() {
                     <article className="profile-side__item">
                       <strong>Criacao de habilidades desativada no front</strong>
                       <small>
-                        O endpoint de habilidades altera um catalogo global. Para evitar
-                        ambiguidade, esta tela apenas vincula habilidades ja existentes.
+                        Esta tela usa apenas habilidades ja cadastradas.
                       </small>
                     </article>
                   </section>

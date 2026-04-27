@@ -1,7 +1,3 @@
-# Auditoria Front x Back
-
-Arquivo revisado para refletir o estado atual do front-end. Esta auditoria nao substitui `AUDITORIA_ROTAS_FRONT.md`; ela resume aderencia, riscos e pendencias funcionais do front em relacao aos contratos de API que ele consome hoje.
-
 ## Escopo desta revisao
 
 - Apenas front-end.
@@ -72,28 +68,6 @@ Arquivo revisado para refletir o estado atual do front-end. Esta auditoria nao s
 - `DELETE /api/experiences/{id}`
 - `GET /api/skills/`
 
-## Principais decisoes de front registradas
-
-- O front envia apenas `email`, `password`, `id_tipo` e `cnpj` no cadastro publico de empresa.
-- O front nao envia nome manual de empresa no cadastro publico; o backend define dados oficiais via CNPJ.
-- O front envia `university` como ID no cadastro de pesquisador, selecionado por `GET /api/universities/`.
-- O front nao cria universidades pelo cadastro publico.
-- O front nao cria skills novas no perfil; apenas vincula skills existentes para evitar alterar catalogo global.
-- O front nao cria areas de pesquisa; se nao houver area, publicacao de pesquisa fica bloqueada com mensagem.
-- O front normaliza `deadline` de pesquisa para ISO string antes do envio.
-- O front usa `Promise.allSettled` em busca e indicadores para renderizar dados parciais.
-
-## Pontos de risco conhecidos
-
-| Risco | Impacto | Estado atual |
-|---|---|---|
-| Erro HTML/tecnico do backend pode aparecer cru | Mensagem ruim para usuario final | Pendente por decisao anterior. |
-| Status da empresa ainda editavel | Usuario pode alterar booleano sensivel se backend permitir | Pendente por decisao anterior. |
-| Cadastro pesquisador depende de universidades existentes | Select fica vazio se base nao tiver universidade ou rota falhar | Front mostra erro/estado vazio e bloqueia submit. |
-| Criacao de pesquisa depende de areas existentes | Empresa nao publica sem area | Front bloqueia envio e explica necessidade de area. |
-| Curriculo pode nao existir no cadastro inicial de pesquisador | CRUD de formacao/experiencia/habilidade depende de curriculo | Front cria curriculo sob demanda e vincula ao pesquisador. |
-| Endpoints de catalogo global podem ser perigosos | UI poderia alterar dados globais indevidamente | Front nao expoe criacao de skill, universidade ou area. |
-
 ## Dependencias de backend ainda nao implementadas como fluxo definitivo no front
 
 - Propostas formais.
@@ -102,15 +76,3 @@ Arquivo revisado para refletir o estado atual do front-end. Esta auditoria nao s
 - Busca semantica real.
 - Match por IA definitivo.
 - CRUD administrativo de universidades, areas e skills.
-
-## Pendencias recomendadas para proxima rodada
-
-- Confirmar com backend se `GET /api/universities/` deve permanecer publico para cadastro de pesquisador.
-- Confirmar se `status` de empresa deve continuar editavel no perfil.
-- Melhorar sanitizacao/mensagem para erros HTML ou stack traces vindos da API.
-- Confirmar se o backend tera endpoint publico especifico para dados auxiliares de cadastro, como universidades.
-- Confirmar regras de permissao finais para candidatos, interesses e match.
-
-## Conclusao
-
-O front esta integrado ao backend atual com JWT real, cadastro publico de empresa/pesquisador, hidratacao de perfil, pesquisa, candidatos, interesses, curriculo e indicadores. As principais lacunas restantes nao devem ser simuladas no front sem contrato de backend. Para detalhes operacionais de cada rota usada, consultar `AUDITORIA_ROTAS_FRONT.md`.

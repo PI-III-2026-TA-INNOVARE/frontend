@@ -3,7 +3,7 @@
 .profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
-  gap: 24px;
+  gap: 30px;
   align-items: start;
 }
 
@@ -14,8 +14,8 @@
 .profile-form-card,
 .profile-tabs-card {
   display: grid;
-  gap: 22px;
-  padding: 28px;
+  gap: 28px;
+  padding: 30px;
   border-radius: 28px;
 }
 
@@ -38,19 +38,19 @@
 .profile-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .profile-form-card__actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 20px;
 }
 
 .profile-side {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
 
 .profile-side__card,
@@ -64,7 +64,7 @@
 }
 
 .profile-side__card {
-  padding: 20px;
+  padding: 22px;
   border-radius: 24px;
   background: rgba(36, 58, 105, 0.03);
 }
@@ -151,8 +151,8 @@
 
 .profile-area-options {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 14px;
+  padding: 16px;
   border: 1px solid rgba(36, 58, 105, 0.08);
   border-radius: 22px;
   background: rgba(36, 58, 105, 0.04);

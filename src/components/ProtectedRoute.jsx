@@ -10,12 +10,9 @@ export default function ProtectedRoute({ requiredType = null }) {
       <section className="route-state">
         <div className="container route-state__container">
           <div className="route-state__card">
-            <span className="section-label">Sessão</span>
+            <span className="section-label">Sessao</span>
             <h1 className="route-state__title">Restaurando acesso</h1>
-            <p className="route-state__text">
-              Estamos carregando os dados do seu perfil com base na API antes de liberar a área
-              autenticada.
-            </p>
+            <p className="route-state__text">Preparando sua area autenticada.</p>
           </div>
         </div>
       </section>

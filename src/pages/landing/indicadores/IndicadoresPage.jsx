@@ -193,7 +193,7 @@ export default function IndicadoresPage() {
         }
 
         setError(
-          loadFailure.message || 'Nao foi possivel consolidar os indicadores com a base atual da API.'
+          loadFailure.message || 'Nao foi possivel consolidar os indicadores.'
         )
         setPartialWarnings([])
       } finally {
@@ -222,31 +222,31 @@ export default function IndicadoresPage() {
     {
       eyebrow: 'Empresas',
       value: formatMetric(companyCount),
-      label: 'Cadastros disponiveis em GET /api/companies/',
+      label: 'Empresas cadastradas',
       progress: companyCount ? 100 : 16,
     },
     {
       eyebrow: 'Pesquisadores',
       value: formatMetric(researcherCount),
-      label: 'Cadastros disponiveis em GET /api/researchers/',
+      label: 'Pesquisadores cadastrados',
       progress: researcherCount ? 100 : 16,
     },
     {
       eyebrow: 'Universidades',
       value: formatMetric(universityCount),
-      label: 'Instituicoes registradas em GET /api/universities/',
+      label: 'Instituicoes registradas',
       progress: universityCount ? 100 : 16,
     },
     {
       eyebrow: 'Pesquisas',
       value: formatMetric(researchCount),
-      label: 'Pesquisas disponiveis em GET /api/research/',
+      label: 'Pesquisas publicadas',
       progress: researchCount ? 100 : 16,
     },
     {
       eyebrow: 'Curriculos',
       value: formatMetric(metrics.resumes.length),
-      label: 'Curriculos retornados por GET /api/resumes/',
+      label: 'Curriculos criados',
       progress: metrics.resumes.length ? 100 : 16,
     },
   ]), [companyCount, metrics.resumes.length, researcherCount, researchCount, universityCount])
@@ -255,19 +255,19 @@ export default function IndicadoresPage() {
     {
       eyebrow: 'Formacoes',
       value: formatMetric(metrics.educations.length),
-      label: 'Itens em GET /api/educations/',
+      label: 'Formacoes cadastradas',
       progress: metrics.educations.length ? 100 : 16,
     },
     {
       eyebrow: 'Experiencias',
       value: formatMetric(metrics.experiences.length),
-      label: 'Itens em GET /api/experiences/',
+      label: 'Experiencias cadastradas',
       progress: metrics.experiences.length ? 100 : 16,
     },
     {
       eyebrow: 'Habilidades',
       value: formatMetric(metrics.skills.length),
-      label: 'Itens em GET /api/skills/',
+      label: 'Habilidades disponiveis',
       progress: metrics.skills.length ? 100 : 16,
     },
     {
@@ -357,12 +357,9 @@ export default function IndicadoresPage() {
         <div className="container">
           <span className="section-label">Indicadores</span>
           <h1 className="page-header__title">
-            Leituras reais da <span className="text-gradient">base atual</span> do P&amp;D Connect
+            Numeros da <span className="text-gradient">P&amp;D Connect</span>
           </h1>
-          <p className="page-header__text">
-            Com o backend protegido por JWT, os numeros reais da base agora ficam disponiveis apenas
-            na area autenticada.
-          </p>
+          <p className="page-header__text">Acompanhe cadastros, pesquisas e curriculos.</p>
         </div>
       </section>
 
@@ -371,24 +368,21 @@ export default function IndicadoresPage() {
           {isBootstrapping ? (
             <div className="indicators-feedback">
               <h2>Preparando sessao</h2>
-              <p>Estamos verificando se existe uma sessao autenticada valida antes de consultar a API.</p>
+              <p>Verificando seu acesso.</p>
             </div>
           ) : null}
 
           {showPublicFallback ? (
             <div className="indicators-feedback">
-              <h2>Indicadores reais exigem autenticacao</h2>
-              <p>
-                O backend passou a proteger globalmente os endpoints de dados. Para consultar as
-                metricas reais, entre com um usuario autenticado.
-              </p>
+              <h2>Entre para ver os indicadores</h2>
+              <p>Os numeros da plataforma ficam disponiveis apos o login.</p>
             </div>
           ) : null}
 
           {isAuthenticated && loading ? (
             <div className="indicators-feedback">
               <h2>Carregando indicadores</h2>
-              <p>Consultando os endpoints reais do backend para montar os cards e graficos.</p>
+              <p>Montando cards e graficos.</p>
             </div>
           ) : null}
 
@@ -421,7 +415,7 @@ export default function IndicadoresPage() {
                   <DistributionChart
                     eyebrow="Universidades vinculadas"
                     title="Pesquisadores por universidade"
-                    subtitle="Top 5 instituicoes pelo numero de pesquisadores associados na base atual."
+                    subtitle="Top 5 instituicoes por pesquisadores vinculados."
                     items={researchersByUniversity.length > 0 ? researchersByUniversity : [
                       { label: 'Sem dados', value: '0', height: '22%' },
                     ]}
@@ -433,7 +427,7 @@ export default function IndicadoresPage() {
                   <DistributionChart
                     eyebrow="Status dos cadastros"
                     title="Empresas e pesquisadores por disponibilidade"
-                    subtitle="Leitura combinada dos booleanos de status e disponibilidade existentes no backend."
+                    subtitle="Distribuicao de status e disponibilidade."
                     items={statusDistribution}
                     secondary
                     shouldReduceMotion={shouldReduceMotion}
@@ -458,10 +452,10 @@ export default function IndicadoresPage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Continue a navegacao com o <span className="text-gradient">backend real</span>
+                Continue navegando pela <span className="text-gradient">plataforma</span>
               </h2>
               <p className="cta-box__subtitle">
-                A autenticacao JWT libera o painel integrado, o perfil e os indicadores reais da base.
+                Acesse o painel, edite seu perfil ou explore pesquisas.
               </p>
               <div className="cta-box__buttons">
                 {isAuthenticated ? (

@@ -12,8 +12,8 @@
 }
 
 .app-page__container {
-  padding-top: 36px;
-  padding-bottom: 84px;
+  padding-top: 44px;
+  padding-bottom: 92px;
 }
 
 .authenticated-app .page-header {
@@ -24,24 +24,24 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
   align-items: end;
-  gap: 14px 20px;
-  margin-bottom: 22px;
+  gap: 18px 28px;
+  margin-bottom: 34px;
 }
 
 .app-page__title {
   color: var(--accent-primary);
   font-family: var(--font-primary);
-  font-size: clamp(2rem, 3.6vw, 3rem);
+  font-size: clamp(1.55rem, 2.8vw, 2.35rem);
   font-weight: 800;
   line-height: 1.08;
   letter-spacing: -0.03em;
 }
 
 .app-page__subtitle {
-  max-width: 34ch;
+  max-width: 32ch;
   color: var(--text-secondary);
-  font-size: 0.96rem;
-  line-height: 1.65;
+  font-size: 0.92rem;
+  line-height: 1.55;
 }
 
 .app-page__header-actions {
@@ -90,7 +90,7 @@
 .search-results__title {
   color: var(--accent-primary);
   font-family: var(--font-primary);
-  font-size: 1.38rem;
+  font-size: 1.16rem;
   font-weight: 800;
   line-height: 1.2;
 }
@@ -226,7 +226,7 @@
 
 @include media-down(sm) {
   .app-page__container {
-    padding-top: 32px;
+    padding-top: 34px;
     padding-bottom: 72px;
   }
 
@@ -240,6 +240,6 @@
 
 @include media-down(xs) {
   .app-page__title {
-    font-size: 2rem;
+    font-size: 1.7rem;
   }
 }

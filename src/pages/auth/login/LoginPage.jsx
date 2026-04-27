@@ -1,37 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
-import PageFaq from '../../../components/PageFaq'
 import { listPublicUniversities, lookupCompanyCnpj } from '../../../services/pdConnectApi'
 import './LoginPage.scss'
-
-const loginFaqSections = [
-  {
-    title: 'Como o acesso funciona agora',
-    text: 'O login usa JWT real em /api/auth/token/ e a sessao autenticada e hidratada por /api/auth/profile/.',
-  },
-  {
-    title: 'O que o front valida apenas para UX',
-    items: [
-      'Campos visiveis obrigatorios',
-      'Formato basico de e-mail',
-      'Senha minima de 8 caracteres',
-      'Confirmacao de senha no cadastro de empresa',
-      'Formato basico do CNPJ com 14 digitos',
-    ],
-  },
-  {
-    title: 'O que continua sendo validacao real do backend',
-    items: [
-      'Credenciais validas',
-      'Unicidade de e-mail',
-      'E-mail institucional para pesquisador',
-      'Universidade existente para pesquisador',
-      'CNPJ ativo para empresa',
-      'Permissoes e integridade do perfil autenticado',
-    ],
-  },
-]
 
 const defaultLoginForm = {
   email: '',
@@ -134,11 +105,11 @@ function validateResearcherForm(form, { universitiesLoading, universitiesError, 
   }
 
   if (universitiesError) {
-    return 'Nao foi possivel carregar as universidades da API.'
+    return 'Nao foi possivel carregar as universidades.'
   }
 
   if (!universities.length) {
-    return 'Nenhuma universidade foi retornada pela API.'
+    return 'Nenhuma universidade disponivel.'
   }
 
   if (!form.universityId || Number(form.universityId) <= 0) {
@@ -153,11 +124,9 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const {
     authError,
-    authMode,
     isAuthenticated,
     registerCompany,
     registerResearcher,
-    researcherRegistrationLimitation,
     signInWithCredentials,
   } = useAuth()
 
@@ -168,7 +137,6 @@ export default function LoginPage() {
   const [companyLookup, setCompanyLookup] = useState(null)
   const [loginMessage, setLoginMessage] = useState('')
   const [registerMessage, setRegisterMessage] = useState('')
-  const [isFaqOpen, setIsFaqOpen] = useState(false)
   const [loginForm, setLoginForm] = useState(defaultLoginForm)
   const [companyForm, setCompanyForm] = useState(defaultCompanyForm)
   const [researcherForm, setResearcherForm] = useState(defaultResearcherForm)
@@ -386,7 +354,7 @@ export default function LoginPage() {
       })
       setCompanyLookup(result)
     } catch (error) {
-      setRegisterMessage(error.message || 'Nao foi possivel consultar o CNPJ na API.')
+      setRegisterMessage(error.message || 'Nao foi possivel consultar o CNPJ.')
     } finally {
       setCompanyLookupLoading(false)
     }
@@ -399,46 +367,24 @@ export default function LoginPage() {
         <div className="login-page__bg-orb login-page__bg-orb--2"></div>
       </div>
 
+      <div className="login-shell">
+        <aside className="login-brand-panel" aria-label="Apresentacao P&D Connect">
+          <div className="login-brand-panel__mark">PD</div>
+          <h1 className="login-brand-panel__title">P&amp;D Connect</h1>
+          <p className="login-brand-panel__description">
+            <span>Conecte empresas, pesquisadores e universidades.</span>
+            <span>Publique pesquisas e encontre especialistas.</span>
+            <span>Organize perfis, curriculos e oportunidades.</span>
+            <span>Transforme demandas de inovacao em conexoes reais.</span>
+          </p>
+        </aside>
+
+        <main className="login-shell__form" aria-label="Acesso e cadastro">
       {!isRegister && (
         <div className="login-box login-box--wide" id="loginBox">
           <div className="login-box__header">
-            <h1 className="login-box__title">Acesso autenticado com JWT real</h1>
-            <p className="login-box__subtitle">
-              Use suas credenciais reais para entrar. O front passou a depender da autenticacao e
-              do perfil retornado pela API.
-            </p>
-            <button
-              type="button"
-              className="btn btn-outline page-faq-trigger login-box__faq-trigger"
-              onClick={() => setIsFaqOpen(true)}
-            >
-              FAQ da pagina
-            </button>
-          </div>
-
-          <div className="login-demo">
-            <article className="login-demo__card">
-              <span className="login-demo__eyebrow">Sessao real</span>
-              <h2 className="login-demo__title">JWT + profile</h2>
-              <p className="login-demo__credentials">
-                O login usa access e refresh token, e a area autenticada e hidratada a partir de
-                /api/auth/profile/.
-              </p>
-            </article>
-
-            <article className="login-demo__card">
-              <span className="login-demo__eyebrow">Validacao conservadora</span>
-              <h2 className="login-demo__title">UX no front</h2>
-              <p className="login-demo__credentials">
-                O client valida apenas o basico de experiencia e deixa a validacao real de negocio
-                para a API.
-              </p>
-            </article>
-          </div>
-
-          <div className="login-note">
-            <strong>Contrato atual</strong>
-            <p>{authMode}</p>
+            <h1 className="login-box__title">Entrar</h1>
+            <p className="login-box__subtitle">Acesse sua conta P&amp;D Connect.</p>
           </div>
 
           {authError ? (
@@ -448,7 +394,7 @@ export default function LoginPage() {
             </div>
           ) : null}
 
-          <form onSubmit={handleLoginSubmit}>
+          <form onSubmit={handleLoginSubmit} className="login-form">
             <div className="form-row">
               <div className="form-group">
                 <label className="form-label" htmlFor="login-email">
@@ -483,11 +429,6 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <p className="login-inline-help">
-              O backend valida as credenciais e libera o acesso aos endpoints protegidos. O front
-              apenas orienta o preenchimento e apresenta as mensagens retornadas pela API.
-            </p>
-
             {loginMessage ? <p className="login-message">{loginMessage}</p> : null}
 
             <div className="form-actions">
@@ -508,18 +449,8 @@ export default function LoginPage() {
       {isRegister && (
         <div className="login-box login-box--wide" id="registerBox">
           <div className="login-box__header">
-            <h1 className="login-box__title">Cadastro conforme o contrato atual</h1>
-            <p className="login-box__subtitle">
-              O front envia apenas o que o backend realmente pede e evita simular dependencias que a
-              API nao resolve de forma publica.
-            </p>
-            <button
-              type="button"
-              className="btn btn-outline page-faq-trigger login-box__faq-trigger"
-              onClick={() => setIsFaqOpen(true)}
-            >
-              FAQ da pagina
-            </button>
+            <h1 className="login-box__title">Criar conta</h1>
+            <p className="login-box__subtitle">Escolha seu perfil e preencha os dados principais.</p>
           </div>
 
           <div className="login-tabs">
@@ -545,7 +476,7 @@ export default function LoginPage() {
 
           {regTab === 'empresa' ? (
             <form onSubmit={handleRegisterSubmit} className="login-register-preview">
-              <div className="form-row">
+              <div className="login-register-grid">
                 <div className="form-group">
                   <label className="form-label" htmlFor="company-cnpj">
                     CNPJ
@@ -559,32 +490,7 @@ export default function LoginPage() {
                     disabled={submitLoading}
                   />
                 </div>
-              </div>
 
-              <div className="form-actions">
-                <button
-                  type="button"
-                  className="btn btn-outline"
-                  onClick={handleCompanyLookup}
-                  disabled={submitLoading || companyLookupLoading}
-                >
-                  {companyLookupLoading ? 'Consultando CNPJ...' : 'Consultar CNPJ na API'}
-                </button>
-              </div>
-
-              {companyLookup ? (
-                <div className="login-feedback">
-                  <strong>{companyLookup.razao_social || 'CNPJ consultado'}</strong>
-                  <p>
-                    Situacao cadastral: {companyLookup.situacao_cadastral || 'nao informada'}.
-                    {companyLookup.pode_cadastrar
-                      ? ' O backend indica que este CNPJ pode ser cadastrado.'
-                      : ` ${companyLookup.motivo_bloqueio || 'O backend nao liberou o cadastro deste CNPJ.'}`}
-                  </p>
-                </div>
-              ) : null}
-
-              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="company-email">
                     E-mail de acesso
@@ -616,29 +522,44 @@ export default function LoginPage() {
                     disabled={submitLoading}
                   />
                 </div>
+
+                <div className="form-group">
+                  <label className="form-label" htmlFor="company-password-confirm">
+                    Confirmacao da senha
+                  </label>
+                  <input
+                    id="company-password-confirm"
+                    type="password"
+                    className="form-input"
+                    value={companyForm.confirmPassword}
+                    onChange={(event) => handleCompanyChange('confirmPassword', event.target.value)}
+                    placeholder="Repita a senha"
+                    autoComplete="new-password"
+                    disabled={submitLoading}
+                  />
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="company-password-confirm">
-                  Confirmacao da senha
-                </label>
-                <input
-                  id="company-password-confirm"
-                  type="password"
-                  className="form-input"
-                  value={companyForm.confirmPassword}
-                  onChange={(event) => handleCompanyChange('confirmPassword', event.target.value)}
-                  placeholder="Repita a senha"
-                  autoComplete="new-password"
-                  disabled={submitLoading}
-                />
-              </div>
+              <button
+                type="button"
+                className="btn btn-outline login-register-preview__secondary-action"
+                onClick={handleCompanyLookup}
+                disabled={submitLoading || companyLookupLoading}
+              >
+                {companyLookupLoading ? 'Consultando CNPJ...' : 'Consultar CNPJ'}
+              </button>
 
-              <p className="login-inline-help">
-                Neste cadastro publico o front envia e-mail, senha, tipo e CNPJ. A API consulta os
-                dados oficiais, valida se a situacao cadastral permite cadastro e cria o usuario da
-                empresa.
-              </p>
+              {companyLookup ? (
+                <div className="login-feedback">
+                  <strong>{companyLookup.razao_social || 'CNPJ consultado'}</strong>
+                  <p>
+                    Situacao cadastral: {companyLookup.situacao_cadastral || 'nao informada'}.
+                    {companyLookup.pode_cadastrar
+                      ? ' CNPJ liberado para cadastro.'
+                      : ` ${companyLookup.motivo_bloqueio || 'Cadastro nao liberado para este CNPJ.'}`}
+                  </p>
+                </div>
+              ) : null}
 
               {registerMessage ? <p className="login-message">{registerMessage}</p> : null}
 
@@ -650,12 +571,7 @@ export default function LoginPage() {
             </form>
           ) : (
             <form onSubmit={handleResearcherRegisterSubmit} className="login-register-preview">
-              <div className="login-feedback">
-                <strong>Cadastro de pesquisador pelo contrato atual</strong>
-                <p>{researcherRegistrationLimitation}</p>
-              </div>
-
-              <div className="form-row">
+              <div className="login-register-grid">
                 <div className="form-group">
                   <label className="form-label" htmlFor="researcher-name">
                     Nome completo
@@ -691,23 +607,7 @@ export default function LoginPage() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              {universitiesError ? (
-                <div className="login-feedback login-feedback--error">
-                  <strong>Universidades indisponiveis</strong>
-                  <p>{universitiesError}</p>
-                </div>
-              ) : null}
-
-              {!universitiesLoading && !universitiesError && universities.length === 0 ? (
-                <div className="login-feedback">
-                  <strong>Nenhuma universidade encontrada</strong>
-                  <p>A API nao retornou universidades cadastradas para selecionar.</p>
-                </div>
-              ) : null}
-
-              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="researcher-email">
                     E-mail institucional
@@ -739,9 +639,7 @@ export default function LoginPage() {
                     <option value="false">Indisponivel</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="form-row">
                 <div className="form-group">
                   <label className="form-label" htmlFor="researcher-password">
                     Senha
@@ -775,10 +673,19 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <p className="login-inline-help">
-                O select usa o ID real da universidade como value e mostra o nome da universidade
-                para o usuario. O curriculo nao e criado antes do cadastro.
-              </p>
+              {universitiesError ? (
+                <div className="login-feedback login-feedback--error">
+                  <strong>Universidades indisponiveis</strong>
+                  <p>{universitiesError}</p>
+                </div>
+              ) : null}
+
+              {!universitiesLoading && !universitiesError && universities.length === 0 ? (
+                <div className="login-feedback">
+                  <strong>Nenhuma universidade encontrada</strong>
+                  <p>Nenhuma universidade disponivel para selecao.</p>
+                </div>
+              ) : null}
 
               {registerMessage ? <p className="login-message">{registerMessage}</p> : null}
 
@@ -799,14 +706,8 @@ export default function LoginPage() {
           </div>
         </div>
       )}
-
-      <PageFaq
-        isOpen={isFaqOpen}
-        onClose={() => setIsFaqOpen(false)}
-        title="Acesso e cadastro"
-        intro={authMode}
-        sections={loginFaqSections}
-      />
+        </main>
+      </div>
     </section>
   )
 }

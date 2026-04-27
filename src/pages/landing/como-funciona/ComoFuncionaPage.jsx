@@ -11,20 +11,20 @@ const journeySteps = [
     id: 'cadastro',
     step: '01',
     eyebrow: 'Acesso e perfis',
-    title: 'A plataforma agora comeca pelo contrato real da API.',
-    text: 'O fluxo atual usa autenticacao JWT real. Empresas e pesquisadores podem se cadastrar pelo endpoint publico de registro, respeitando as validacoes do backend.',
+    title: 'Crie sua conta e complete o perfil.',
+    text: 'Empresas e pesquisadores entram na plataforma com dados essenciais.',
     details: [
       {
         label: 'Empresas',
-        text: 'Criam acesso pelo cadastro publico e entram com credenciais reais em /api/auth/token/.',
+        text: 'Informam CNPJ, e-mail e senha.',
       },
       {
         label: 'Pesquisadores',
-        text: 'Criam acesso com e-mail institucional e ID de universidade existente; o curriculo pode ser criado depois pelo perfil.',
+        text: 'Selecionam universidade e completam o curriculo depois.',
       },
     ],
     tags: [
-      { label: 'JWT' },
+      { label: 'Acesso' },
       { label: 'Empresa' },
       { label: 'Pesquisador' },
       { label: 'Perfil' },
@@ -34,9 +34,9 @@ const journeySteps = [
   {
     id: 'exploracao',
     step: '02',
-    eyebrow: 'Exploracao autenticada',
-    title: 'A area autenticada le a base real protegida pela API.',
-    text: 'O painel integrado consulta empresas, pesquisadores, universidades, areas de pesquisa e curriculos reais antes de aplicar o filtro textual local.',
+    eyebrow: 'Exploracao',
+    title: 'Navegue pela base da plataforma.',
+    text: 'Use filtros para encontrar pesquisadores, empresas, universidades e pesquisas.',
     tags: [
       { label: 'Empresas' },
       { label: 'Pesquisadores' },
@@ -49,8 +49,8 @@ const journeySteps = [
     id: 'pesquisas',
     step: '03',
     eyebrow: 'Publicacao de pesquisas',
-    title: 'Empresas autenticadas ja podem publicar pesquisas reais.',
-    text: 'A criacao usa /api/research/. A empresa vem do JWT, a area e enviada no payload e pesquisadores entram pelo fluxo de candidatos/interesses.',
+    title: 'Publique pesquisas e acompanhe interesse.',
+    text: 'Empresas criam demandas e visualizam candidatos vinculados.',
     tags: [
       { label: 'Research' },
       { label: 'Deadline' },
@@ -62,9 +62,9 @@ const journeySteps = [
   {
     id: 'roadmap',
     step: '04',
-    eyebrow: 'Evolucao do produto',
-    title: 'Alguns fluxos seguem como roadmap e nao sao simulados no front.',
-    text: 'Propostas, notificacoes e match por IA definitivo continuam dependendo de rotas reais do backend antes de virarem experiencia completa.',
+    eyebrow: 'Evolucao',
+    title: 'Novos fluxos entram quando estiverem prontos.',
+    text: 'Propostas, notificacoes e IA seguem como proximos passos.',
     tags: [
       { label: 'Propostas', tone: 'warning' },
       { label: 'Notificacoes', tone: 'warning' },
@@ -77,24 +77,18 @@ const journeySteps = [
 const resourceCards = [
   {
     icon: appIcons.matchmaking,
-    title: 'Leitura integrada da base',
-    text: 'Consolida perfis, universidades, curriculos e areas a partir dos endpoints reais protegidos.',
+    title: 'Base integrada',
+    text: 'Perfis, universidades, curriculos e areas no mesmo painel.',
   },
   {
     icon: appIcons.proposals,
     title: 'Pesquisas e interesses',
-    text: 'Usa research, candidatos, interesses e match placeholder sem inventar propostas inexistentes.',
-  },
-  {
-    icon: appIcons.indicators,
-    title: 'Leitura de indicadores',
-    text: 'Mostra metricas reais apenas quando existe sessao autenticada valida.',
-    iconModifier: 'feature-card__icon--secondary',
+    text: 'Demandas publicadas e candidatos acompanhados pela empresa.',
   },
   {
     icon: appIcons.security,
-    title: 'Seguranca de sessao',
-    text: 'Mantem access token, refresh controlado e logout limpo para os fluxos protegidos.',
+    title: 'Sessao segura',
+    text: 'Acesso protegido e logout claro.',
     iconModifier: 'feature-card__icon--warm',
   },
 ]
@@ -122,13 +116,10 @@ export default function ComoFuncionaPage() {
         <div className="container">
           <span className="section-label">Como Funciona</span>
           <h1 className="page-header__title">
-            Do <span className="text-gradient">acesso real</span> a uma{' '}
-            <span className="text-gradient">integracao confiavel</span>
+            Do <span className="text-gradient">cadastro</span> a uma{' '}
+            <span className="text-gradient">conexao ativa</span>
           </h1>
-          <p className="page-header__text">
-            A jornada atual da plataforma mostra o que ja funciona com o backend novo e o que ainda
-            permanece em evolucao.
-          </p>
+          <p className="page-header__text">Um fluxo direto para entrar, explorar e publicar.</p>
         </div>
       </section>
 
@@ -136,10 +127,8 @@ export default function ComoFuncionaPage() {
         <div className="container">
           <Reveal className="text-center process-journey__intro">
             <span className="section-label">Fluxo da Plataforma</span>
-            <h2 className="section-title">Quatro etapas para operar com o backend real.</h2>
-            <p className="section-subtitle">
-              Um fluxo claro para autenticar, explorar, publicar e evoluir sem mascarar limitacoes.
-            </p>
+            <h2 className="section-title">Quatro etapas principais.</h2>
+            <p className="section-subtitle">Acoes claras para cada perfil.</p>
           </Reveal>
 
           <Reveal>
@@ -259,7 +248,7 @@ export default function ComoFuncionaPage() {
           <Reveal className="text-center">
             <span className="section-label">Recursos adicionais</span>
             <h2 className="section-title">
-              Mais contexto para <span className="text-gradient">decidir</span>
+              Recursos para <span className="text-gradient">acompanhar</span>
             </h2>
           </Reveal>
 
@@ -287,7 +276,7 @@ export default function ComoFuncionaPage() {
                 Comece sua <span className="text-gradient">entrada segura</span>
               </h2>
               <p className="cta-box__subtitle">
-                Entre na plataforma ou cadastre uma empresa conforme o contrato atual da API.
+                Entre ou cadastre sua empresa para comecar.
               </p>
               <div className="cta-box__buttons">
                 <Link to="/login" className="btn btn-primary btn-lg">
