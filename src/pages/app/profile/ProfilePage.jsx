@@ -4,9 +4,10 @@ import { useAuth } from '../../../context/AuthContext'
 import {
   createEducation,
   createExperience,
-  createSkill,
+  createResume,
   deleteEducation,
   deleteExperience,
+  listResearchAreas,
   listSkills,
   updateCompany,
   updateResearcher,
@@ -31,7 +32,6 @@ const defaultExperienceForm = {
 
 const defaultSkillForm = {
   selectedSkillId: '',
-  newSkillDescription: '',
 }
 
 function buildInitialProfile(user) {
@@ -39,7 +39,7 @@ function buildInitialProfile(user) {
     return {
       name: user.company?.name || '',
       cnpj: user.company?.cnpj || '',
-      registrationStatus: user.company?.registration_status || '',
+      registrationStatus: user.company?.situacao_cadastral || user.company?.registration_status || '',
       status:
         user.company?.status === null || user.company?.status === undefined
           ? 'true'
@@ -53,6 +53,7 @@ function buildInitialProfile(user) {
       user?.researcher?.availability === null || user?.researcher?.availability === undefined
         ? 'true'
         : String(Boolean(user?.researcher?.availability)),
+    areaIds: (user?.researcher?.area || []).map((areaId) => String(areaId)),
   }
 }
 
@@ -105,6 +106,7 @@ export default function ProfilePage() {
   const [resumeMessage, setResumeMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [skillsCatalogError, setSkillsCatalogError] = useState('')
+  const [researchAreaCatalogError, setResearchAreaCatalogError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [isEducationSaving, setIsEducationSaving] = useState(false)
   const [isExperienceSaving, setIsExperienceSaving] = useState(false)
@@ -118,9 +120,11 @@ export default function ProfilePage() {
   const [experiencePage, setExperiencePage] = useState(1)
   const [skillsPage, setSkillsPage] = useState(1)
   const [skillsCatalog, setSkillsCatalog] = useState([])
+  const [researchAreaCatalog, setResearchAreaCatalog] = useState([])
 
   const isEmpresa = user?.type === 'empresa'
   const resumeData = user?.resume || { education: [], experience: [], skill: [] }
+  const hasLinkedResume = Boolean(user?.researcher?.resume)
   const researcherUniversityName = user?.university?.name || 'Universidade nao informada'
   const researcherStatusLabel = formatBooleanLabel(user?.researcher?.status, {
     trueLabel: 'Ativo',
@@ -155,6 +159,11 @@ export default function ProfilePage() {
   const availableSkillsToLink = useMemo(
     () => skillsCatalog.filter((item) => !linkedSkillIds.has(item.id_skill)),
     [linkedSkillIds, skillsCatalog]
+  )
+
+  const linkedResearcherAreaIds = useMemo(
+    () => new Set((formData.areaIds || []).map((areaId) => String(areaId))),
+    [formData.areaIds]
   )
 
   useEffect(() => {
@@ -212,6 +221,46 @@ export default function ProfilePage() {
     }
   }, [isEmpresa, user?.researcher?.id_researcher])
 
+  useEffect(() => {
+    let isMounted = true
+
+    if (isEmpresa) {
+      setResearchAreaCatalog([])
+      setResearchAreaCatalogError('')
+      return () => {
+        isMounted = false
+      }
+    }
+
+    const loadResearchAreaCatalog = async () => {
+      try {
+        const loadedAreas = await listResearchAreas()
+
+        if (!isMounted) {
+          return
+        }
+
+        setResearchAreaCatalog(loadedAreas)
+        setResearchAreaCatalogError('')
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setResearchAreaCatalog([])
+        setResearchAreaCatalogError(
+          error.message || 'Nao foi possivel carregar as areas de pesquisa disponiveis.'
+        )
+      }
+    }
+
+    loadResearchAreaCatalog()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isEmpresa, user?.researcher?.id_researcher])
+
   const handleChange = (event) => {
     const { name, value } = event.target
     setFormData((current) => ({ ...current, [name]: value }))
@@ -229,8 +278,6 @@ export default function ProfilePage() {
       if (isEmpresa) {
         await updateCompany(user.company.id_company, {
           name: formData.name.trim(),
-          cnpj: formData.cnpj.trim(),
-          registration_status: formData.registrationStatus.trim() || null,
           status: toBoolean(formData.status),
         })
       } else {
@@ -241,6 +288,7 @@ export default function ProfilePage() {
         await updateResearcher(user.researcher.id_researcher, {
           name: formData.name.trim(),
           availability: toBoolean(formData.availability),
+          area: (formData.areaIds || []).map((areaId) => Number(areaId)),
         })
       }
 
@@ -278,6 +326,28 @@ export default function ProfilePage() {
     setErrorMessage('')
   }
 
+  const handleResearchAreaToggle = (areaId, checked) => {
+    const normalizedAreaId = String(areaId)
+
+    setFormData((current) => {
+      const currentAreaIds = new Set((current.areaIds || []).map((item) => String(item)))
+
+      if (checked) {
+        currentAreaIds.add(normalizedAreaId)
+      } else {
+        currentAreaIds.delete(normalizedAreaId)
+      }
+
+      return {
+        ...current,
+        areaIds: Array.from(currentAreaIds),
+      }
+    })
+
+    setSavedMessage('')
+    setErrorMessage('')
+  }
+
   const syncResumeAfterChange = async (message) => {
     const refreshed = await refreshUser()
 
@@ -288,10 +358,32 @@ export default function ProfilePage() {
     setResumeMessage(message)
   }
 
-  const ensureResearcherResume = () => {
-    if (!user?.researcher?.resume) {
-      throw new Error('O pesquisador atual nao possui um curriculo vinculado para esta operacao.')
+  const ensureResearcherResume = async () => {
+    if (user?.researcher?.resume) {
+      return Number(user.researcher.resume)
     }
+
+    if (!user?.researcher?.id_researcher) {
+      throw new Error('O perfil autenticado nao retornou o ID do pesquisador.')
+    }
+
+    const createdResume = await createResume({})
+
+    if (!createdResume?.id_resume) {
+      throw new Error('A API criou o curriculo, mas nao retornou o ID esperado.')
+    }
+
+    await updateResearcher(user.researcher.id_researcher, {
+      resume: createdResume.id_resume,
+    })
+
+    const refreshed = await refreshUser()
+
+    if (!refreshed.ok) {
+      throw new Error(refreshed.message)
+    }
+
+    return Number(createdResume.id_resume)
   }
 
   const handleEducationSubmit = async (event) => {
@@ -308,14 +400,14 @@ export default function ProfilePage() {
     setErrorMessage('')
 
     try {
-      ensureResearcherResume()
+      const resumeId = await ensureResearcherResume()
 
       await createEducation({
         course: educationForm.course.trim(),
         institution: educationForm.institution.trim(),
         start_date: educationForm.startDate,
         end_date: educationForm.endDate,
-        resume: Number(user.researcher.resume),
+        resume: resumeId,
       })
 
       await syncResumeAfterChange('Formacao adicionada com sucesso.')
@@ -362,13 +454,13 @@ export default function ProfilePage() {
     setErrorMessage('')
 
     try {
-      ensureResearcherResume()
+      const resumeId = await ensureResearcherResume()
 
       await createExperience({
         description: experienceForm.description.trim(),
         start_date: experienceForm.startDate,
         end_date: experienceForm.endDate || null,
-        resume: Number(user.researcher.resume),
+        resume: resumeId,
       })
 
       await syncResumeAfterChange('Experiencia adicionada com sucesso.')
@@ -402,9 +494,9 @@ export default function ProfilePage() {
   }
 
   const syncResumeSkills = async (nextSkillIds, successMessage) => {
-    ensureResearcherResume()
+    const resumeId = await ensureResearcherResume()
 
-    await updateResume(user.researcher.resume, {
+    await updateResume(resumeId, {
       skills: nextSkillIds,
     })
 
@@ -460,49 +552,6 @@ export default function ProfilePage() {
     }
   }
 
-  const handleSkillCreate = async (event) => {
-    event.preventDefault()
-
-    if (!skillForm.newSkillDescription.trim()) {
-      setErrorMessage('Informe a descricao da nova habilidade.')
-      return
-    }
-
-    setIsSkillSaving(true)
-    setResumeMessage('')
-    setErrorMessage('')
-
-    try {
-      const createdSkill = await createSkill({
-        description: skillForm.newSkillDescription.trim(),
-      })
-
-      setSkillsCatalog((current) => [...current, createdSkill])
-
-      try {
-        const nextSkillIds = Array.from(linkedSkillIds)
-        nextSkillIds.push(createdSkill.id_skill)
-
-        await syncResumeSkills(nextSkillIds, 'Habilidade criada e vinculada com sucesso.')
-      } catch (error) {
-        setErrorMessage(
-          error.message || 'A habilidade foi criada, mas nao foi possivel vincula-la ao curriculo.'
-        )
-        return
-      }
-
-      setSkillForm(defaultSkillForm)
-      setActiveResearcherTab('skills')
-      setSkillsPage(1)
-    } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel criar a nova habilidade.'
-      )
-    } finally {
-      setIsSkillSaving(false)
-    }
-  }
-
   return (
     <section className="app-page profile-page">
       <div className="container app-page__container">
@@ -531,24 +580,21 @@ export default function ProfilePage() {
 
               <div className="profile-form-grid">
                 <label className="profile-field">
-                  <span>Nome da empresa</span>
+                  <span>Nome interno da empresa</span>
                   <input name="name" value={formData.name} onChange={handleChange} />
                 </label>
 
-                <label className="profile-field">
+                <div className="profile-field profile-field--readonly">
                   <span>CNPJ</span>
-                  <input name="cnpj" value={formData.cnpj} onChange={handleChange} />
-                </label>
+                  <div className="profile-readonly-value">{formData.cnpj || 'Nao informado'}</div>
+                </div>
 
-                <label className="profile-field profile-field--full">
+                <div className="profile-field profile-field--readonly profile-field--full">
                   <span>Situacao cadastral</span>
-                  <input
-                    name="registrationStatus"
-                    value={formData.registrationStatus}
-                    onChange={handleChange}
-                    placeholder="Ex.: Ativo"
-                  />
-                </label>
+                  <div className="profile-readonly-value">
+                    {formData.registrationStatus || 'Nao informada'}
+                  </div>
+                </div>
 
                 <label className="profile-field">
                   <span>Status do cadastro</span>
@@ -647,6 +693,43 @@ export default function ProfilePage() {
                         <span>Status do cadastro</span>
                         <div className="profile-readonly-value">{researcherStatusLabel}</div>
                       </div>
+
+                      <div className="profile-field profile-field--full">
+                        <span>Areas de pesquisa</span>
+                        {researchAreaCatalogError ? (
+                          <div className="profile-readonly-value">
+                            {researchAreaCatalogError}
+                          </div>
+                        ) : null}
+
+                        {!researchAreaCatalogError && researchAreaCatalog.length === 0 ? (
+                          <div className="profile-readonly-value">
+                            Nenhuma area de pesquisa foi retornada pela API.
+                          </div>
+                        ) : null}
+
+                        {!researchAreaCatalogError && researchAreaCatalog.length > 0 ? (
+                          <div className="profile-area-options">
+                            {researchAreaCatalog.map((area) => (
+                              <label key={area.id_area} className="profile-area-option">
+                                <input
+                                  type="checkbox"
+                                  checked={linkedResearcherAreaIds.has(String(area.id_area))}
+                                  onChange={(event) => handleResearchAreaToggle(
+                                    area.id_area,
+                                    event.target.checked
+                                  )}
+                                />
+                                <span>{area.name}</span>
+                              </label>
+                            ))}
+                          </div>
+                        ) : null}
+                        <small className="profile-field__hint">
+                          Essas areas sao enviadas no perfil do pesquisador e usadas pelo match
+                          suportado pela API.
+                        </small>
+                      </div>
                     </div>
 
                     <div className="profile-form-card__actions">
@@ -659,6 +742,15 @@ export default function ProfilePage() {
                   <section className="profile-side__card">
                     <span className="profile-side__eyebrow">Resumo atual</span>
                     <h3 className="profile-side__title">Visao rapida do curriculo</h3>
+                    {!hasLinkedResume ? (
+                      <article className="profile-side__item">
+                        <strong>Curriculo ainda nao vinculado</strong>
+                        <small>
+                          O cadastro atual nao exige curriculo. Ao adicionar formacao, experiencia
+                          ou habilidade, o front cria e vincula um curriculo real na API.
+                        </small>
+                      </article>
+                    ) : null}
                     <div className="profile-side__stack">
                       <article className="profile-side__item">
                         <strong>{resumeData.education?.length || 0} formacao(oes)</strong>
@@ -968,8 +1060,13 @@ export default function ProfilePage() {
                         <select
                           value={skillForm.selectedSkillId}
                           onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
+                          disabled={isSkillSaving || availableSkillsToLink.length === 0}
                         >
-                          <option value="">Selecione uma habilidade</option>
+                          <option value="">
+                            {availableSkillsToLink.length > 0
+                              ? 'Selecione uma habilidade'
+                              : 'Nenhuma habilidade disponivel para vincular'}
+                          </option>
                           {availableSkillsToLink.map((item) => (
                             <option key={item.id_skill} value={item.id_skill}>
                               {item.description}
@@ -978,29 +1075,22 @@ export default function ProfilePage() {
                         </select>
                       </label>
 
-                      <button type="submit" className="btn btn-primary" disabled={isSkillSaving}>
+                      <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={isSkillSaving || availableSkillsToLink.length === 0}
+                      >
                         {isSkillSaving ? 'Salvando...' : 'Vincular habilidade'}
                       </button>
                     </form>
-                  </section>
 
-                  <section className="profile-side__card">
-                    <span className="profile-side__eyebrow">Nova habilidade</span>
-                    <h3 className="profile-side__title">Criar e vincular</h3>
-                    <form className="profile-inline-form" onSubmit={handleSkillCreate}>
-                      <label className="profile-field">
-                        <span>Descricao</span>
-                        <input
-                          value={skillForm.newSkillDescription}
-                          onChange={(event) => handleSkillChange('newSkillDescription', event.target.value)}
-                          placeholder="Ex.: Modelagem de dados"
-                        />
-                      </label>
-
-                      <button type="submit" className="btn btn-primary" disabled={isSkillSaving}>
-                        {isSkillSaving ? 'Salvando...' : 'Criar e vincular'}
-                      </button>
-                    </form>
+                    <article className="profile-side__item">
+                      <strong>Criacao de habilidades desativada no front</strong>
+                      <small>
+                        O endpoint de habilidades altera um catalogo global. Para evitar
+                        ambiguidade, esta tela apenas vincula habilidades ja existentes.
+                      </small>
+                    </article>
                   </section>
                 </div>
               ) : null}

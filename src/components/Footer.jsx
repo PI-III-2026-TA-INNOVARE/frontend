@@ -25,25 +25,25 @@ export default function Footer() {
           <div className="footer__col">
             <h4 className="footer__col-title">Institucional</h4>
             <Link to="/sobre">Sobre Nós</Link>
-            <a href="#">Termos de Uso</a>
-            <a href="#">Privacidade</a>
-            <a href="#">Contato</a>
+            <span className="footer__placeholder-link">Termos de Uso em breve</span>
+            <span className="footer__placeholder-link">Privacidade em breve</span>
+            <span className="footer__placeholder-link">Contato em breve</span>
           </div>
 
           <div className="footer__col">
             <h4 className="footer__col-title">Parceiros</h4>
-            <a href="#">CNPq</a>
-            <a href="#">MCTI</a>
-            <a href="#">CAPES</a>
-            <a href="#">IBGE</a>
+            <span className="footer__placeholder-link">CNPq</span>
+            <span className="footer__placeholder-link">MCTI</span>
+            <span className="footer__placeholder-link">CAPES</span>
+            <span className="footer__placeholder-link">IBGE</span>
           </div>
         </div>
 
         <div className="footer__bottom">
           <span>© 2026 P&amp;D Connect. Todos os direitos reservados.</span>
           <div className="footer__bottom-links">
-            <a href="#">Política de Privacidade</a>
-            <a href="#">Termos de Serviço</a>
+            <span className="footer__placeholder-link">Política de Privacidade em breve</span>
+            <span className="footer__placeholder-link">Termos de Serviço em breve</span>
           </div>
         </div>
       </div>

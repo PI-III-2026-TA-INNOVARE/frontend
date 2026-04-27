@@ -6,6 +6,7 @@ import {
   setApiAuthSession,
 } from '../lib/api'
 import {
+  getCompany,
   getAuthenticatedProfile,
   getResearcherResume,
   getUniversity,
@@ -15,7 +16,7 @@ import {
 
 const STORAGE_KEY = 'pdconnect-auth-session-v2'
 const RESEARCHER_PUBLIC_REGISTER_LIMITATION =
-  'O backend atual exige university e resume preexistentes para cadastrar pesquisador em /api/auth/register/, mas essas dependencias seguem protegidas por JWT. O front nao vai simular esse fluxo.'
+  'O backend atual permite cadastro publico de pesquisador sem curriculo, mas ainda exige um ID de universidade ja existente. Como a listagem de universidades segue protegida por JWT, o front solicita esse ID explicitamente e nao simula uma busca publica inexistente.'
 
 const AuthContext = createContext(null)
 
@@ -99,7 +100,7 @@ function buildCompanyUser(profilePayload) {
     userTypeLabel: profilePayload.tipo,
     type: 'empresa',
     profileId: company.id_company,
-    displayName: company.name || profilePayload.email,
+    displayName: company.razao_social || company.legal_name || company.name || profilePayload.email,
     company,
     researcher: null,
     university: null,
@@ -133,7 +134,19 @@ async function fetchHydratedUser() {
   const profilePayload = await getAuthenticatedProfile()
 
   if (profilePayload?.empresa) {
-    return buildCompanyUser(profilePayload)
+    const company = profilePayload.empresa
+    const companyDetailResult = await Promise.allSettled([
+      company.id_company ? getCompany(company.id_company) : Promise.resolve(null),
+    ])
+    const hydratedCompany =
+      companyDetailResult[0]?.status === 'fulfilled' && companyDetailResult[0].value
+        ? { ...company, ...companyDetailResult[0].value }
+        : company
+
+    return buildCompanyUser({
+      ...profilePayload,
+      empresa: hydratedCompany,
+    })
   }
 
   if (profilePayload?.pesquisador) {
@@ -269,13 +282,12 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const registerCompany = async ({ name, email, password, cnpj }) => {
+  const registerCompany = async ({ email, password, cnpj }) => {
     try {
       await registerUser({
         email: email.trim(),
         password,
         id_tipo: 'empresa',
-        name: name.trim(),
         cnpj,
       })
 
@@ -306,10 +318,43 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const registerResearcher = async () => ({
-    ok: false,
-    message: RESEARCHER_PUBLIC_REGISTER_LIMITATION,
-  })
+  const registerResearcher = async ({ name, email, password, universityId, availability }) => {
+    try {
+      await registerUser({
+        email: email.trim(),
+        password,
+        id_tipo: 'pesquisador',
+        name: name.trim(),
+        university: Number(universityId),
+        availability,
+      })
+
+      const loginResult = await signInWithCredentials({
+        email,
+        password,
+      })
+
+      if (loginResult.ok) {
+        return loginResult
+      }
+
+      return {
+        ok: false,
+        registered: true,
+        email: email.trim(),
+        message:
+          'Pesquisador cadastrado com sucesso, mas o login automatico falhou. Entre com as credenciais criadas.',
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        message: buildFriendlyErrorMessage(
+          error,
+          'Nao foi possivel cadastrar o pesquisador com os dados informados.'
+        ),
+      }
+    }
+  }
 
   const refreshUser = async () => {
     if (!session) {

@@ -12,7 +12,7 @@ const journeySteps = [
     step: '01',
     eyebrow: 'Acesso e perfis',
     title: 'A plataforma agora comeca pelo contrato real da API.',
-    text: 'O fluxo atual usa autenticacao JWT real. Empresas podem se cadastrar publicamente, enquanto pesquisadores acessam contas ja vinculadas no backend.',
+    text: 'O fluxo atual usa autenticacao JWT real. Empresas e pesquisadores podem se cadastrar pelo endpoint publico de registro, respeitando as validacoes do backend.',
     details: [
       {
         label: 'Empresas',
@@ -20,7 +20,7 @@ const journeySteps = [
       },
       {
         label: 'Pesquisadores',
-        text: 'Entram com credenciais reais e o perfil e hidratado a partir de /api/auth/profile/.',
+        text: 'Criam acesso com e-mail institucional e ID de universidade existente; o curriculo pode ser criado depois pelo perfil.',
       },
     ],
     tags: [
@@ -50,13 +50,13 @@ const journeySteps = [
     step: '03',
     eyebrow: 'Publicacao de pesquisas',
     title: 'Empresas autenticadas ja podem publicar pesquisas reais.',
-    text: 'A criacao usa o recurso /api/research/, com vinculacao de pesquisador, area, prazo e orcamento definidos pelo contrato atual do backend.',
+    text: 'A criacao usa /api/research/. A empresa vem do JWT, a area e enviada no payload e pesquisadores entram pelo fluxo de candidatos/interesses.',
     tags: [
       { label: 'Research' },
       { label: 'Deadline' },
       { label: 'Budget' },
       { label: 'Area' },
-      { label: 'Pesquisador' },
+      { label: 'Candidatos' },
     ],
   },
   {
@@ -64,7 +64,7 @@ const journeySteps = [
     step: '04',
     eyebrow: 'Evolucao do produto',
     title: 'Alguns fluxos seguem como roadmap e nao sao simulados no front.',
-    text: 'Propostas, match por IA, notificacoes e acompanhamento completo continuam dependendo de rotas reais do backend antes de virarem experiencia definitiva.',
+    text: 'Propostas, notificacoes e match por IA definitivo continuam dependendo de rotas reais do backend antes de virarem experiencia completa.',
     tags: [
       { label: 'Propostas', tone: 'warning' },
       { label: 'Notificacoes', tone: 'warning' },
@@ -79,6 +79,11 @@ const resourceCards = [
     icon: appIcons.matchmaking,
     title: 'Leitura integrada da base',
     text: 'Consolida perfis, universidades, curriculos e areas a partir dos endpoints reais protegidos.',
+  },
+  {
+    icon: appIcons.proposals,
+    title: 'Pesquisas e interesses',
+    text: 'Usa research, candidatos, interesses e match placeholder sem inventar propostas inexistentes.',
   },
   {
     icon: appIcons.indicators,

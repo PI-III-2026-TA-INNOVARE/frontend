@@ -31,7 +31,7 @@ export default function AuthNav() {
           <div className="logo-icon">PD</div>
           <div>
             <div className="auth-nav__brand-title">P&amp;D Connect</div>
-            <div className="auth-nav__brand-subtitle">Area autenticada</div>
+            <div className="auth-nav__brand-subtitle">Área autenticada</div>
           </div>
         </div>
 
@@ -49,8 +49,13 @@ export default function AuthNav() {
 
         <div className="auth-nav__profile">
           <div className="auth-nav__profile-text">
-            <span className="auth-nav__profile-name">{profileName}</span>
-            <span className="auth-nav__profile-meta">
+            <span className="auth-nav__profile-name" title={profileName}>
+              {profileName}
+            </span>
+            <span
+              className="auth-nav__profile-meta"
+              title={`${user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | ${profileMeta}`}
+            >
               {user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | {profileMeta}
             </span>
           </div>

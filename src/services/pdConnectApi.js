@@ -18,6 +18,15 @@ export function registerUser(payload) {
   })
 }
 
+export function lookupCompanyCnpj(payload) {
+  return apiRequest('/companies/cnpj-lookup/', {
+    method: 'POST',
+    body: payload,
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
+}
+
 export function getAuthenticatedProfile() {
   return apiRequest('/auth/profile/')
 }
@@ -28,13 +37,6 @@ export function listCompanies() {
 
 export function getCompany(id) {
   return apiRequest(`/companies/${id}`)
-}
-
-export function createCompany(payload) {
-  return apiRequest('/companies/', {
-    method: 'POST',
-    body: payload,
-  })
 }
 
 export function updateCompany(id, payload) {
@@ -50,13 +52,6 @@ export function listResearchers() {
 
 export function getResearcher(id) {
   return apiRequest(`/researchers/${id}`)
-}
-
-export function createResearcher(payload) {
-  return apiRequest('/researchers/', {
-    method: 'POST',
-    body: payload,
-  })
 }
 
 export function updateResearcher(id, payload) {
@@ -78,6 +73,10 @@ export function listResearches() {
   return fetchPaginatedCollection('/research/')
 }
 
+export function listMyResearchInterests() {
+  return fetchPaginatedCollection('/research/my-interests/')
+}
+
 export function createResearch(payload) {
   return apiRequest('/research/', {
     method: 'POST',
@@ -85,19 +84,53 @@ export function createResearch(payload) {
   })
 }
 
+export function createResearchInterest(researchId, payload = {}) {
+  return apiRequest(`/research/${researchId}/interest/`, {
+    method: 'POST',
+    body: payload,
+  })
+}
+
+export function listResearchCandidates(researchId, params = {}) {
+  const query = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value)
+    }
+  })
+
+  const suffix = query.toString() ? `?${query.toString()}` : ''
+  return fetchPaginatedCollection(`/research/${researchId}/candidates/${suffix}`)
+}
+
+export function updateResearchCandidateStatus(researchId, candidateId, status) {
+  return apiRequest(`/research/${researchId}/candidates/${candidateId}/`, {
+    method: 'PATCH',
+    body: { status },
+  })
+}
+
+export function runResearchMatch(researchId) {
+  return apiRequest(`/research/${researchId}/match/run/`, {
+    method: 'POST',
+    body: {},
+  })
+}
+
 export function listUniversities() {
   return fetchPaginatedCollection('/universities/')
 }
 
-export function getUniversity(id) {
-  return apiRequest(`/universities/${id}`)
+export function listPublicUniversities() {
+  return fetchPaginatedCollection('/universities/', {
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
 }
 
-export function createUniversity(payload) {
-  return apiRequest('/universities/', {
-    method: 'POST',
-    body: payload,
-  })
+export function getUniversity(id) {
+  return apiRequest(`/universities/${id}`)
 }
 
 export function listResumes() {
@@ -158,11 +191,4 @@ export function deleteExperience(id) {
 
 export function listSkills() {
   return fetchPaginatedCollection('/skills/')
-}
-
-export function createSkill(payload) {
-  return apiRequest('/skills/', {
-    method: 'POST',
-    body: payload,
-  })
 }

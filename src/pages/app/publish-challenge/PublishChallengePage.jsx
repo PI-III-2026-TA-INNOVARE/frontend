@@ -4,8 +4,10 @@ import { useAuth } from '../../../context/AuthContext'
 import {
   createResearch,
   listResearchAreas,
+  listResearchCandidates,
   listResearches,
-  listResearchers,
+  runResearchMatch,
+  updateResearchCandidateStatus,
 } from '../../../services/pdConnectApi'
 import './PublishChallengePage.scss'
 
@@ -16,19 +18,25 @@ const challengeFaqSections = [
       'GET /api/research/',
       'POST /api/research/',
       'GET /api/research/area/',
-      'GET /api/researchers/',
+      'GET /api/research/{id}/candidates/',
+      'PATCH /api/research/{id}/candidates/{candidateId}/',
+      'POST /api/research/{id}/match/run/',
     ],
   },
   {
-    title: 'O que continua fora do escopo',
-    text: 'O backend agora sustenta a publicacao de pesquisas, mas ainda nao expoe fluxos completos de propostas e notificacoes.',
-    items: [
-      'Propostas recebidas',
-      'Aceite, recusa e status de proposta',
-      'Notificacoes',
-      'Match por IA',
-    ],
+    title: 'O que mudou no contrato',
+    text: 'A pesquisa e criada pela empresa autenticada. O front nao envia company nem researcher, porque company vem do JWT e researcher e tratado pelo fluxo de candidatos/interesses.',
   },
+  {
+    title: 'O que continua limitado',
+    text: 'O backend ja tem candidatos e um match operacional, mas o match ainda e um placeholder por area/disponibilidade, nao uma IA definitiva.',
+  },
+]
+
+const candidateStatusOptions = [
+  { value: 'under_review', label: 'Em analise' },
+  { value: 'approved', label: 'Aprovado' },
+  { value: 'rejected', label: 'Rejeitado' },
 ]
 
 const defaultResearchForm = {
@@ -39,11 +47,10 @@ const defaultResearchForm = {
   results: '',
   deadline: '',
   budget: '',
-  researcherId: '',
   areaId: '',
 }
 
-function validateResearchForm(form) {
+function validateResearchForm(form, { hasResearchAreas }) {
   if (!form.title.trim()) {
     return 'Informe o titulo da pesquisa.'
   }
@@ -60,8 +67,12 @@ function validateResearchForm(form) {
     return 'Informe um orcamento maior que zero.'
   }
 
-  if (!form.researcherId || !form.areaId) {
-    return 'Selecione um pesquisador e uma area de pesquisa.'
+  if (!hasResearchAreas) {
+    return 'Nenhuma area de pesquisa foi carregada da API. Como o backend exige o campo area, cadastre ou disponibilize uma area em /api/research/area/ antes de publicar.'
+  }
+
+  if (!form.areaId) {
+    return 'Selecione uma area de pesquisa.'
   }
 
   return ''
@@ -70,6 +81,14 @@ function validateResearchForm(form) {
 function buildLookup(items, idKey, labelKey) {
   return items.reduce((lookup, item) => {
     lookup[item[idKey]] = item[labelKey]
+    return lookup
+  }, {})
+}
+
+function buildCandidatesLookup(researches, candidateResults) {
+  return researches.reduce((lookup, research, index) => {
+    const response = candidateResults[index]
+    lookup[research.id_research] = response?.status === 'fulfilled' ? response.value : []
     return lookup
   }, {})
 }
@@ -91,17 +110,51 @@ function formatDeadlineLabel(value) {
   }).format(parsed)
 }
 
+function normalizeDeadlineToIso(value) {
+  const parsed = new Date(value)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return parsed.toISOString()
+}
+
+function getCandidateStatusLabel(status) {
+  const labels = {
+    suggested: 'Sugerido',
+    interested: 'Interessado',
+    under_review: 'Em analise',
+    approved: 'Aprovado',
+    rejected: 'Rejeitado',
+  }
+
+  return labels[status] || status || 'nao informado'
+}
+
+function getCandidateSourceLabel(source) {
+  const labels = {
+    ai: 'Match',
+    interest: 'Interesse',
+    manual: 'Manual',
+  }
+
+  return labels[source] || source || 'origem nao informada'
+}
+
 export default function PublishChallengePage() {
   const { user } = useAuth()
   const [isFaqOpen, setIsFaqOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
+  const [candidateActionLoading, setCandidateActionLoading] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
+  const [candidateMessage, setCandidateMessage] = useState('')
   const [catalog, setCatalog] = useState({
     researches: [],
     researchAreas: [],
-    researchers: [],
+    candidatesByResearch: {},
   })
   const [researchForm, setResearchForm] = useState(defaultResearchForm)
 
@@ -113,11 +166,17 @@ export default function PublishChallengePage() {
       setErrorMessage('')
 
       try {
-        const [researches, researchAreas, researchers] = await Promise.all([
+        const [researches, researchAreas] = await Promise.all([
           listResearches(),
           listResearchAreas(),
-          listResearchers(),
         ])
+
+        const ownedResearches = researches.filter(
+          (item) => item.company === user?.company?.id_company
+        )
+        const candidateResults = await Promise.allSettled(
+          ownedResearches.map((item) => listResearchCandidates(item.id_research))
+        )
 
         if (!isMounted) {
           return
@@ -126,7 +185,7 @@ export default function PublishChallengePage() {
         setCatalog({
           researches,
           researchAreas,
-          researchers,
+          candidatesByResearch: buildCandidatesLookup(ownedResearches, candidateResults),
         })
       } catch (error) {
         if (!isMounted) {
@@ -148,7 +207,7 @@ export default function PublishChallengePage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user?.company?.id_company])
 
   const ownedResearches = useMemo(() => (
     catalog.researches.filter((item) => item.company === user?.company?.id_company)
@@ -158,11 +217,7 @@ export default function PublishChallengePage() {
     () => buildLookup(catalog.researchAreas, 'id_area', 'name'),
     [catalog.researchAreas]
   )
-
-  const researcherLookup = useMemo(
-    () => buildLookup(catalog.researchers, 'id_researcher', 'name'),
-    [catalog.researchers]
-  )
+  const hasResearchAreas = catalog.researchAreas.length > 0
 
   const handleChange = (field, value) => {
     setResearchForm((current) => ({
@@ -173,10 +228,24 @@ export default function PublishChallengePage() {
     setErrorMessage('')
   }
 
+  const refreshCandidates = async (researchId) => {
+    const candidates = await listResearchCandidates(researchId)
+    setCatalog((current) => ({
+      ...current,
+      candidatesByResearch: {
+        ...current.candidatesByResearch,
+        [researchId]: candidates,
+      },
+    }))
+    return candidates
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    const validationMessage = validateResearchForm(researchForm)
+    const validationMessage = validateResearchForm(researchForm, {
+      hasResearchAreas: catalog.researchAreas.length > 0,
+    })
     if (validationMessage) {
       setErrorMessage(validationMessage)
       return
@@ -193,15 +262,18 @@ export default function PublishChallengePage() {
         goal: researchForm.goal.trim(),
         justification: researchForm.justification.trim(),
         results: researchForm.results.trim(),
-        deadline: researchForm.deadline,
+        deadline: normalizeDeadlineToIso(researchForm.deadline),
         budget: Number(researchForm.budget),
-        researcher: Number(researchForm.researcherId),
         area: Number(researchForm.areaId),
       })
 
       setCatalog((current) => ({
         ...current,
         researches: [createdResearch, ...current.researches],
+        candidatesByResearch: {
+          ...current.candidatesByResearch,
+          [createdResearch.id_research]: [],
+        },
       }))
       setResearchForm(defaultResearchForm)
       setSuccessMessage('Pesquisa publicada com sucesso no recurso real do backend.')
@@ -211,6 +283,53 @@ export default function PublishChallengePage() {
       )
     } finally {
       setSubmitLoading(false)
+    }
+  }
+
+  const handleRunMatch = async (researchId) => {
+    const loadingKey = `match-${researchId}`
+    setCandidateActionLoading(loadingKey)
+    setCandidateMessage('')
+    setErrorMessage('')
+
+    try {
+      const result = await runResearchMatch(researchId)
+      await refreshCandidates(researchId)
+      setCandidateMessage(
+        `Match solicitado para a pesquisa ${result.research_id}. Job ${result.job_id}.`
+      )
+    } catch (error) {
+      setErrorMessage(error.message || 'Nao foi possivel executar o match desta pesquisa.')
+    } finally {
+      setCandidateActionLoading('')
+    }
+  }
+
+  const handleCandidateStatusChange = async (researchId, candidateId, status) => {
+    const loadingKey = `candidate-${candidateId}`
+    setCandidateActionLoading(loadingKey)
+    setCandidateMessage('')
+    setErrorMessage('')
+
+    try {
+      const updatedCandidate = await updateResearchCandidateStatus(researchId, candidateId, status)
+
+      setCatalog((current) => ({
+        ...current,
+        candidatesByResearch: {
+          ...current.candidatesByResearch,
+          [researchId]: (current.candidatesByResearch[researchId] || []).map((candidate) => (
+            candidate.id_candidate === candidateId
+              ? { ...candidate, ...updatedCandidate }
+              : candidate
+          )),
+        },
+      }))
+      setCandidateMessage('Status do candidato atualizado pela API.')
+    } catch (error) {
+      setErrorMessage(error.message || 'Nao foi possivel atualizar o status do candidato.')
+    } finally {
+      setCandidateActionLoading('')
     }
   }
 
@@ -224,8 +343,8 @@ export default function PublishChallengePage() {
           </div>
           <div className="app-page__header-actions">
             <p className="app-page__subtitle">
-              Esta area agora usa o dominio real de pesquisa exposto pela API para empresas
-              autenticadas.
+              A empresa vem do JWT. O fluxo de pesquisadores passa pelos candidatos, interesses e
+              match suportados pela API atual.
             </p>
             <button
               type="button"
@@ -247,14 +366,14 @@ export default function PublishChallengePage() {
             </div>
 
             <p className="challenge-form-card__text">
-              O backend define a empresa pelo usuario autenticado. O front envia apenas os campos que
-              o contrato real da pesquisa exige.
+              O backend define a empresa pelo usuario autenticado. O front envia apenas os campos
+              aceitos pelo serializer de pesquisa.
             </p>
 
             {loading ? (
               <div className="challenge-form-card__item">
                 <strong>Carregando catalogos</strong>
-                <span>Consultando areas de pesquisa, pesquisadores e pesquisas existentes.</span>
+                <span>Consultando areas, pesquisas existentes e candidatos da empresa.</span>
               </div>
             ) : null}
 
@@ -265,8 +384,19 @@ export default function PublishChallengePage() {
               </div>
             ) : null}
 
+            {!loading && !hasResearchAreas ? (
+              <div className="challenge-form-card__item">
+                <strong>Publicacao bloqueada por catalogo vazio</strong>
+                <span>
+                  A API nao retornou areas de pesquisa. Como o contrato de criacao exige `area`,
+                  e a criacao de areas altera um catalogo global, o front mantem o envio bloqueado
+                  ate existir pelo menos uma area cadastrada no backend.
+                </span>
+              </div>
+            ) : null}
+
             {!loading ? (
-              <form className="challenge-form-card__section" onSubmit={handleSubmit}>
+              <form className="challenge-form-card__section" onSubmit={handleSubmit} noValidate>
                 <div className="challenge-form-grid">
                   <label className="profile-field">
                     <span>Titulo</span>
@@ -292,29 +422,17 @@ export default function PublishChallengePage() {
                   </label>
 
                   <label className="profile-field">
-                    <span>Pesquisador</span>
-                    <select
-                      value={researchForm.researcherId}
-                      onChange={(event) => handleChange('researcherId', event.target.value)}
-                      disabled={submitLoading || catalog.researchers.length === 0}
-                    >
-                      <option value="">Selecione um pesquisador</option>
-                      {catalog.researchers.map((item) => (
-                        <option key={item.id_researcher} value={item.id_researcher}>
-                          {item.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="profile-field">
                     <span>Area de pesquisa</span>
-                    <select
-                      value={researchForm.areaId}
-                      onChange={(event) => handleChange('areaId', event.target.value)}
-                      disabled={submitLoading || catalog.researchAreas.length === 0}
-                    >
-                      <option value="">Selecione uma area</option>
+                      <select
+                        value={researchForm.areaId}
+                        onChange={(event) => handleChange('areaId', event.target.value)}
+                        disabled={submitLoading || !hasResearchAreas}
+                      >
+                        <option value="">
+                        {hasResearchAreas
+                          ? 'Selecione uma area'
+                          : 'Nenhuma area retornada pela API'}
+                      </option>
                       {catalog.researchAreas.map((item) => (
                         <option key={item.id_area} value={item.id_area}>
                           {item.name}
@@ -322,17 +440,17 @@ export default function PublishChallengePage() {
                       ))}
                     </select>
                   </label>
-                </div>
 
-                <label className="profile-field profile-field--full">
-                  <span>Prazo</span>
-                  <input
-                    type="datetime-local"
-                    value={researchForm.deadline}
-                    onChange={(event) => handleChange('deadline', event.target.value)}
-                    disabled={submitLoading}
-                  />
-                </label>
+                  <label className="profile-field">
+                    <span>Prazo</span>
+                    <input
+                      type="datetime-local"
+                      value={researchForm.deadline}
+                      onChange={(event) => handleChange('deadline', event.target.value)}
+                      disabled={submitLoading}
+                    />
+                  </label>
+                </div>
 
                 <label className="profile-field profile-field--full">
                   <span>Escopo</span>
@@ -379,22 +497,23 @@ export default function PublishChallengePage() {
                 </label>
 
                 {successMessage ? <p className="challenge-form-card__success">{successMessage}</p> : null}
+                {errorMessage ? (
+                  <p className="challenge-form-card__error" role="alert">
+                    {errorMessage}
+                  </p>
+                ) : null}
 
                 <div className="challenge-form-card__footer">
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={
-                      submitLoading ||
-                      catalog.researchers.length === 0 ||
-                      catalog.researchAreas.length === 0
-                    }
+                    disabled={submitLoading}
                   >
                     {submitLoading ? 'Publicando...' : 'Publicar pesquisa'}
                   </button>
 
                   <span className="challenge-form-card__text">
-                    A API define o campo `company` automaticamente a partir da autenticacao.
+                    `company` e `researcher` nao sao enviados pelo front neste contrato.
                   </span>
                 </div>
               </form>
@@ -405,22 +524,84 @@ export default function PublishChallengePage() {
             <div className="challenge-form-card__section-head">
               <div>
                 <span className="challenge-form-card__eyebrow">Base atual</span>
-                <h2 className="challenge-form-card__title">Pesquisas da empresa autenticada</h2>
+                <h2 className="challenge-form-card__title">Pesquisas e candidatos da empresa</h2>
               </div>
             </div>
 
+            {candidateMessage ? <p className="challenge-form-card__success">{candidateMessage}</p> : null}
+
             <div className="challenge-form-card__list">
               {ownedResearches.length > 0 ? (
-                ownedResearches.map((item) => (
-                  <article key={item.id_research} className="challenge-form-card__item">
-                    <strong>{item.title}</strong>
-                    <span>
-                      Area {researchAreaLookup[item.area] || item.area} | pesquisador{' '}
-                      {researcherLookup[item.researcher] || item.researcher} | status{' '}
-                      {item.status || 'nao informado'} | prazo {formatDeadlineLabel(item.deadline)}
-                    </span>
-                  </article>
-                ))
+                ownedResearches.map((item) => {
+                  const candidates = catalog.candidatesByResearch[item.id_research] || []
+
+                  return (
+                    <article key={item.id_research} className="challenge-form-card__item">
+                      <strong>{item.title}</strong>
+                      <span>
+                        {researchAreaLookup[item.area] || 'Area nao identificada'} | status{' '}
+                        {item.status || 'nao informado'} | prazo {formatDeadlineLabel(item.deadline)}
+                      </span>
+
+                      <div className="challenge-form-card__actions">
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => handleRunMatch(item.id_research)}
+                          disabled={candidateActionLoading === `match-${item.id_research}`}
+                        >
+                          {candidateActionLoading === `match-${item.id_research}`
+                            ? 'Executando match...'
+                            : 'Rodar match suportado'}
+                        </button>
+                      </div>
+
+                      <div className="challenge-candidates">
+                        <span className="challenge-form-card__eyebrow">
+                          {candidates.length} candidato(s)
+                        </span>
+
+                        {candidates.length > 0 ? (
+                          candidates.map((candidate) => (
+                            <div key={candidate.id_candidate} className="challenge-candidate">
+                              <div>
+                                <strong>{candidate.researcher_name || 'Pesquisador nao identificado'}</strong>
+                                <span>
+                                  {getCandidateSourceLabel(candidate.source)} |{' '}
+                                  {getCandidateStatusLabel(candidate.status)}
+                                  {candidate.score_match ? ` | score ${candidate.score_match}` : ''}
+                                </span>
+                              </div>
+
+                              <select
+                                value=""
+                                onChange={(event) => {
+                                  if (event.target.value) {
+                                    handleCandidateStatusChange(
+                                      item.id_research,
+                                      candidate.id_candidate,
+                                      event.target.value
+                                    )
+                                  }
+                                }}
+                                disabled={candidateActionLoading === `candidate-${candidate.id_candidate}`}
+                              >
+                                <option value="">Alterar status</option>
+                                {candidateStatusOptions.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ))
+                        ) : (
+                          <span>Nenhum candidato registrado ainda para esta pesquisa.</span>
+                        )}
+                      </div>
+                    </article>
+                  )
+                })
               ) : (
                 <article className="challenge-form-card__item">
                   <strong>Nenhuma pesquisa publicada por esta empresa</strong>
@@ -436,7 +617,7 @@ export default function PublishChallengePage() {
         isOpen={isFaqOpen}
         onClose={() => setIsFaqOpen(false)}
         title="Fluxo de pesquisa"
-        intro="Este FAQ resume o que o front agora consome do backend real para publicacao autenticada de pesquisas."
+        intro="Este FAQ resume o que o front consome do backend autenticado para publicacao, candidatos e match."
         sections={challengeFaqSections}
       />
     </section>

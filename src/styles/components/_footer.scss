@@ -45,12 +45,17 @@
   text-transform: uppercase;
 }
 
-.footer__col a {
+.footer__col a,
+.footer__placeholder-link {
   display: block;
   padding: 6px 0;
   color: var(--text-inverse-muted);
   font-size: 0.9rem;
   transition: color var(--transition-fast);
+}
+
+.footer__placeholder-link {
+  cursor: default;
 }
 
 .footer__col a:hover,
@@ -73,7 +78,8 @@
   gap: 20px;
 }
 
-.footer__bottom-links a {
+.footer__bottom-links a,
+.footer__bottom-links .footer__placeholder-link {
   color: var(--text-inverse-muted);
   transition: color var(--transition-fast);
 }

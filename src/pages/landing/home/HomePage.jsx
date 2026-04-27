@@ -7,7 +7,7 @@ import './HomePage.scss'
 const heroSupportCards = [
   {
     eyebrow: 'Cadastros',
-    title: 'Empresas usam cadastro publico; pesquisadores acessam contas ja vinculadas na API.',
+    title: 'Empresas e pesquisadores usam cadastro publico conforme o contrato atual da API.',
   },
   {
     eyebrow: 'Perfis',
@@ -24,19 +24,19 @@ const featureCards = [
     icon: appIcons.matchmaking,
     title: 'Cadastro aderente ao backend',
     description:
-      'O front agora consome os endpoints reais de empresas, pesquisadores, universidades e curriculos.',
+      'O front agora consome os endpoints reais de empresas, pesquisadores, CNPJ, universidades e curriculos.',
+  },
+  {
+    icon: appIcons.proposals,
+    title: 'Pesquisas e interesses reais',
+    description:
+      'Empresas publicam pesquisas e pesquisadores demonstram interesse usando os recursos atuais da API.',
   },
   {
     icon: appIcons.search,
     title: 'Exploracao da base real',
     description:
       'A area autenticada usa filtro textual local sobre os dados carregados da API, sem mocks.',
-  },
-  {
-    icon: appIcons.proposals,
-    title: 'Indicadores da plataforma',
-    description:
-      'Os indicadores agora mostram somente metricas que a API atual realmente entrega.',
   },
 ]
 
@@ -123,7 +123,7 @@ export default function HomePage() {
                   Entrar na plataforma
                 </Link>
                 <Link to="/login#cadastro" className="btn btn-outline btn-lg">
-                  Cadastrar empresa
+                  Cadastrar
                 </Link>
               </div>
             </div>

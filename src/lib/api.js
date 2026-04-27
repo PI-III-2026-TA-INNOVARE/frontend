@@ -233,7 +233,7 @@ export async function apiRequest(path, options = {}) {
   return data
 }
 
-export async function fetchPaginatedCollection(path) {
+export async function fetchPaginatedCollection(path, options = {}) {
   const collectedItems = []
   let nextPath = path
   let safetyCounter = 0
@@ -245,7 +245,7 @@ export async function fetchPaginatedCollection(path) {
       throw new ApiError('A paginacao da API excedeu o limite esperado durante a leitura dos dados.')
     }
 
-    const data = await apiRequest(nextPath)
+    const data = await apiRequest(nextPath, options)
 
     if (Array.isArray(data)) {
       return data

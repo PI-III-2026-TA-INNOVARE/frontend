@@ -8,6 +8,7 @@ import {
   listEducations,
   listExperiences,
   listResearchers,
+  listResearches,
   listResumes,
   listSkills,
   listUniversities,
@@ -24,6 +25,10 @@ function buildHeight(value, total) {
   }
 
   return `${Math.max(22, Math.round((value / total) * 100))}%`
+}
+
+function readSettledValue(result, fallback) {
+  return result?.status === 'fulfilled' ? result.value : fallback
 }
 
 function IndicatorCard({ item, shouldReduceMotion }) {
@@ -82,10 +87,12 @@ export default function IndicadoresPage() {
   const { isAuthenticated, isBootstrapping } = useAuth()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [partialWarnings, setPartialWarnings] = useState([])
   const [metrics, setMetrics] = useState({
     companies: [],
     researchers: [],
     universities: [],
+    researches: [],
     resumes: [],
     educations: [],
     experiences: [],
@@ -98,10 +105,12 @@ export default function IndicadoresPage() {
     if (!isAuthenticated) {
       setLoading(false)
       setError('')
+      setPartialWarnings([])
       setMetrics({
         companies: [],
         researchers: [],
         universities: [],
+        researches: [],
         resumes: [],
         educations: [],
         experiences: [],
@@ -115,25 +124,51 @@ export default function IndicadoresPage() {
     const loadMetrics = async () => {
       setLoading(true)
       setError('')
+      setPartialWarnings([])
 
       try {
-        const [
-          companies,
-          researchers,
-          universities,
-          resumes,
-          educations,
-          experiences,
-          skills,
-        ] = await Promise.all([
+        const metricRequests = [
           listCompanies(),
           listResearchers(),
           listUniversities(),
+          listResearches(),
           listResumes(),
           listEducations(),
           listExperiences(),
           listSkills(),
-        ])
+        ]
+        const metricLabels = [
+          'empresas',
+          'pesquisadores',
+          'universidades',
+          'pesquisas',
+          'curriculos',
+          'formacoes',
+          'experiencias',
+          'habilidades',
+        ]
+        const metricResults = await Promise.allSettled(metricRequests)
+        const [
+          companiesResult,
+          researchersResult,
+          universitiesResult,
+          researchesResult,
+          resumesResult,
+          educationsResult,
+          experiencesResult,
+          skillsResult,
+        ] = metricResults
+        const companies = readSettledValue(companiesResult, [])
+        const researchers = readSettledValue(researchersResult, [])
+        const universities = readSettledValue(universitiesResult, [])
+        const researches = readSettledValue(researchesResult, [])
+        const resumes = readSettledValue(resumesResult, [])
+        const educations = readSettledValue(educationsResult, [])
+        const experiences = readSettledValue(experiencesResult, [])
+        const skills = readSettledValue(skillsResult, [])
+        const failedMetrics = metricResults
+          .map((result, index) => result.status === 'rejected' ? metricLabels[index] : '')
+          .filter(Boolean)
 
         if (!isMounted) {
           return
@@ -143,11 +178,15 @@ export default function IndicadoresPage() {
           companies,
           researchers,
           universities,
+          researches,
           resumes,
           educations,
           experiences,
           skills,
         })
+        setPartialWarnings(
+          failedMetrics.map((label) => `Nao foi possivel carregar ${label}.`)
+        )
       } catch (loadFailure) {
         if (!isMounted) {
           return
@@ -156,6 +195,7 @@ export default function IndicadoresPage() {
         setError(
           loadFailure.message || 'Nao foi possivel consolidar os indicadores com a base atual da API.'
         )
+        setPartialWarnings([])
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -173,6 +213,7 @@ export default function IndicadoresPage() {
   const companyCount = metrics.companies.length
   const researcherCount = metrics.researchers.length
   const universityCount = metrics.universities.length
+  const researchCount = metrics.researches.length
   const activeCompanies = metrics.companies.filter((item) => item.status === true).length
   const availableResearchers = metrics.researchers.filter((item) => item.availability === true).length
   const activeResearchers = metrics.researchers.filter((item) => item.status === true).length
@@ -197,12 +238,18 @@ export default function IndicadoresPage() {
       progress: universityCount ? 100 : 16,
     },
     {
+      eyebrow: 'Pesquisas',
+      value: formatMetric(researchCount),
+      label: 'Pesquisas disponiveis em GET /api/research/',
+      progress: researchCount ? 100 : 16,
+    },
+    {
       eyebrow: 'Curriculos',
       value: formatMetric(metrics.resumes.length),
       label: 'Curriculos retornados por GET /api/resumes/',
       progress: metrics.resumes.length ? 100 : 16,
     },
-  ]), [companyCount, metrics.resumes.length, researcherCount, universityCount])
+  ]), [companyCount, metrics.resumes.length, researcherCount, researchCount, universityCount])
 
   const secondaryIndicators = useMemo(() => ([
     {
@@ -349,6 +396,13 @@ export default function IndicadoresPage() {
             <div className="indicators-feedback indicators-feedback--error">
               <h2>Falha ao carregar indicadores</h2>
               <p>{error}</p>
+            </div>
+          ) : null}
+
+          {isAuthenticated && !loading && !error && partialWarnings.length > 0 ? (
+            <div className="indicators-feedback">
+              <h2>Indicadores carregados parcialmente</h2>
+              <p>{partialWarnings.join(' ')}</p>
             </div>
           ) : null}
 

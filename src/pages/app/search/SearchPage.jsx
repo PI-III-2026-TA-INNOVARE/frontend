@@ -3,21 +3,27 @@ import { formatBooleanLabel, normalizeText } from '../../../lib/domain'
 import { useAuth } from '../../../context/AuthContext'
 import PageFaq from '../../../components/PageFaq'
 import {
+  createResearchInterest,
   getResearcherResume,
   listCompanies,
+  listMyResearchInterests,
   listResearchAreas,
   listResearchers,
+  listResearches,
   listUniversities,
 } from '../../../services/pdConnectApi'
 import './SearchPage.scss'
 
-const defaultQuery = 'pesquisar por nome, universidade, cnpj, area ou status'
+const defaultQuery = 'pesquisar por pesquisa, nome, universidade, cnpj, area ou status'
 
 const searchFaqSections = [
   {
     title: 'O que esta pagina usa hoje',
     text: 'A busca trabalha com leitura real da API protegida por JWT e filtro textual local no front.',
     items: [
+      'GET /api/research/',
+      'POST /api/research/{id}/interest/',
+      'GET /api/research/my-interests/',
       'GET /api/companies/',
       'GET /api/researchers/',
       'GET /api/research/area/',
@@ -27,22 +33,22 @@ const searchFaqSections = [
   },
   {
     title: 'O que continua fora do escopo',
-    text: 'Alguns fluxos previstos no projeto ainda nao tem rota real disponivel e, por isso, nao aparecem como funcionalidade completa aqui.',
+    text: 'Alguns fluxos previstos ainda nao tem contrato completo e, por isso, nao aparecem como funcionalidade definitiva aqui.',
     items: [
-      'Busca semantica',
-      'Match por IA',
-      'Propostas e atualizacao de status',
+      'Propostas formais',
       'Notificacoes',
+      'Busca semantica',
+      'Match por IA definitivo',
     ],
   },
   {
     title: 'Como esta tela se comporta',
-    text: 'Empresas e pesquisadores veem a mesma base integrada, mas a aba inicial muda conforme o perfil autenticado para priorizar o tipo de exploracao mais util naquele contexto.',
+    text: 'Pesquisadores veem pesquisas primeiro para demonstrar interesse. Empresas veem pesquisadores primeiro para explorar a base autenticada.',
   },
 ]
 
 function getDefaultTab(userType) {
-  return userType === 'empresa' ? 'pesquisadores' : 'empresas'
+  return userType === 'empresa' ? 'pesquisadores' : 'pesquisas'
 }
 
 function buildResumeLookup(researchers, resumeResults) {
@@ -70,19 +76,66 @@ function buildResearchAreaLookup(researchAreas) {
   }, {})
 }
 
+function buildCompanyLookup(companies) {
+  return companies.reduce((lookup, item) => {
+    lookup[item.id_company] = item
+    return lookup
+  }, {})
+}
+
+function buildInterestLookup(interests) {
+  return interests.reduce((lookup, item) => {
+    lookup[item.research_id] = item
+    return lookup
+  }, {})
+}
+
+function readSettledValue(result, fallback) {
+  return result?.status === 'fulfilled' ? result.value : fallback
+}
+
+function formatDeadlineLabel(value) {
+  if (!value) {
+    return 'prazo nao informado'
+  }
+
+  const parsed = new Date(value)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+  }).format(parsed)
+}
+
+function getCompanyDisplayName(company) {
+  return company?.razao_social || company?.legal_name || company?.name || company?.cnpj || 'Empresa nao identificada'
+}
+
+function getCompanyRegistrationStatus(company) {
+  return company?.situacao_cadastral || company?.registration_status || 'nao informada'
+}
+
 export default function SearchPage() {
   const { user } = useAuth()
   const [query, setQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
   const [activeTab, setActiveTab] = useState(() => getDefaultTab(user?.type))
   const [loading, setLoading] = useState(true)
+  const [interestLoading, setInterestLoading] = useState('')
   const [error, setError] = useState('')
+  const [partialWarnings, setPartialWarnings] = useState([])
+  const [interestMessage, setInterestMessage] = useState('')
   const [isFaqOpen, setIsFaqOpen] = useState(false)
   const [catalog, setCatalog] = useState({
     companies: [],
     researchers: [],
+    researches: [],
     researchAreas: [],
     universities: [],
+    myInterests: [],
     resumeLookup: {},
   })
 
@@ -96,18 +149,40 @@ export default function SearchPage() {
     const loadCatalog = async () => {
       setLoading(true)
       setError('')
+      setPartialWarnings([])
 
       try {
-        const [companies, researchers, researchAreas, universities] = await Promise.all([
+        const catalogRequests = [
           listCompanies(),
           listResearchers(),
+          listResearches(),
           listResearchAreas(),
           listUniversities(),
-        ])
+          user?.type === 'pesquisador' ? listMyResearchInterests() : Promise.resolve([]),
+        ]
+        const catalogLabels = [
+          'empresas',
+          'pesquisadores',
+          'pesquisas',
+          'areas de pesquisa',
+          'universidades',
+          'interesses do pesquisador',
+        ]
+        const catalogResults = await Promise.allSettled(catalogRequests)
+        const [companiesResult, researchersResult, researchesResult, researchAreasResult, universitiesResult, myInterestsResult] = catalogResults
+        const companies = readSettledValue(companiesResult, [])
+        const researchers = readSettledValue(researchersResult, [])
+        const researches = readSettledValue(researchesResult, [])
+        const researchAreas = readSettledValue(researchAreasResult, [])
+        const universities = readSettledValue(universitiesResult, [])
+        const myInterests = readSettledValue(myInterestsResult, [])
 
         const resumeResults = await Promise.allSettled(
           researchers.map((item) => getResearcherResume(item.id_researcher))
         )
+        const failedCatalogs = catalogResults
+          .map((result, index) => result.status === 'rejected' ? catalogLabels[index] : '')
+          .filter(Boolean)
 
         if (!isMounted) {
           return
@@ -116,10 +191,15 @@ export default function SearchPage() {
         setCatalog({
           companies,
           researchers,
+          researches,
           researchAreas,
           universities,
+          myInterests,
           resumeLookup: buildResumeLookup(researchers, resumeResults),
         })
+        setPartialWarnings([
+          ...failedCatalogs.map((label) => `Nao foi possivel carregar ${label}.`),
+        ])
       } catch (loadFailure) {
         if (!isMounted) {
           return
@@ -128,6 +208,7 @@ export default function SearchPage() {
         setError(
           loadFailure.message || 'Nao foi possivel carregar os dados reais da API para o painel.'
         )
+        setPartialWarnings([])
       } finally {
         if (isMounted) {
           setLoading(false)
@@ -140,7 +221,7 @@ export default function SearchPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [user?.type])
 
   const universityLookup = useMemo(
     () => buildUniversityLookup(catalog.universities),
@@ -152,21 +233,31 @@ export default function SearchPage() {
     [catalog.researchAreas]
   )
 
+  const companyLookup = useMemo(
+    () => buildCompanyLookup(catalog.companies),
+    [catalog.companies]
+  )
+
+  const interestLookup = useMemo(
+    () => buildInterestLookup(catalog.myInterests),
+    [catalog.myInterests]
+  )
+
   const companyItems = useMemo(() => (
     catalog.companies.map((company) => ({
       id: `company-${company.id_company}`,
       type: 'empresa',
-      title: company.name,
+      title: getCompanyDisplayName(company),
       subtitle: company.cnpj,
       description:
-        `Situacao cadastral: ${company.registration_status || 'nao informada'}. ` +
+        `Situacao cadastral: ${getCompanyRegistrationStatus(company)}. ` +
         `Status do cadastro: ${formatBooleanLabel(company.status, {
           trueLabel: 'ativo',
           falseLabel: 'inativo',
           nullLabel: 'nao informado',
         })}.`,
       tags: [
-        company.registration_status || 'Sem situacao',
+        getCompanyRegistrationStatus(company),
         company.status ? 'Ativa' : 'Inativa',
       ],
     }))
@@ -207,6 +298,39 @@ export default function SearchPage() {
     })
   ), [catalog.researchers, catalog.resumeLookup, researchAreaLookup, universityLookup])
 
+  const researchItems = useMemo(() => (
+    catalog.researches.map((research) => {
+      const company = companyLookup[research.company]
+      const areaName = researchAreaLookup[research.area]?.name || 'Area nao identificada'
+      const interest = interestLookup[research.id_research]
+      const canShowInterestAction = user?.type === 'pesquisador'
+
+      return {
+        id: `research-${research.id_research}`,
+        type: 'pesquisa',
+        title: research.title,
+        subtitle: `${getCompanyDisplayName(company)} | ${areaName}`,
+        description:
+          `${research.goal || 'Objetivo nao informado'} ` +
+          `Prazo: ${formatDeadlineLabel(research.deadline)}. ` +
+          `Orcamento: ${research.budget || 'nao informado'}.`,
+        tags: [
+          areaName,
+          research.status || 'status nao informado',
+          company?.cnpj || 'empresa sem CNPJ',
+          interest ? `Interesse: ${interest.status}` : 'Sem interesse registrado',
+        ],
+        action: canShowInterestAction
+          ? {
+              researchId: research.id_research,
+              disabled: Boolean(interest),
+              label: interest ? `Interesse ${interest.status}` : 'Tenho interesse',
+            }
+          : null,
+      }
+    })
+  ), [catalog.researches, companyLookup, interestLookup, researchAreaLookup, user?.type])
+
   const universityItems = useMemo(() => (
     catalog.universities.map((university) => {
       const linkedResearchers = catalog.researchers.filter(
@@ -229,6 +353,7 @@ export default function SearchPage() {
 
   const visibleItems = useMemo(() => {
     const sourceMap = {
+      pesquisas: researchItems,
       empresas: companyItems,
       pesquisadores: researcherItems,
       universidades: universityItems,
@@ -247,11 +372,31 @@ export default function SearchPage() {
       item.description,
       ...item.tags,
     ].join(' ')).includes(normalizedQuery))
-  }, [activeQuery, activeTab, companyItems, researcherItems, universityItems])
+  }, [activeQuery, activeTab, companyItems, researcherItems, researchItems, universityItems])
 
   const handleSubmit = (event) => {
     event.preventDefault()
     setActiveQuery(query.trim())
+  }
+
+  const handleResearchInterest = async (researchId) => {
+    setInterestLoading(String(researchId))
+    setInterestMessage('')
+    setError('')
+
+    try {
+      await createResearchInterest(researchId)
+      const myInterests = await listMyResearchInterests()
+      setCatalog((current) => ({
+        ...current,
+        myInterests,
+      }))
+      setInterestMessage('Interesse registrado pela API para a pesquisa selecionada.')
+    } catch (interestError) {
+      setError(interestError.message || 'Nao foi possivel registrar interesse nesta pesquisa.')
+    } finally {
+      setInterestLoading('')
+    }
   }
 
   return (
@@ -264,8 +409,8 @@ export default function SearchPage() {
           </div>
           <div className="app-page__header-actions">
             <p className="app-page__subtitle">
-              Explore empresas, pesquisadores, areas de pesquisa e universidades com base nos dados
-              autenticados disponiveis hoje.
+              Explore pesquisas, empresas, pesquisadores, areas de pesquisa e universidades com base
+              nos endpoints autenticados disponiveis hoje.
             </p>
             <button
               type="button"
@@ -282,8 +427,8 @@ export default function SearchPage() {
             <span className="search-hero-card__eyebrow">Busca integrada</span>
             <h2 className="search-hero-card__title">Explore a base atual sem sair do fluxo principal</h2>
             <p className="search-hero-card__text">
-              Use o filtro para localizar perfis e instituicoes com rapidez. Os detalhes tecnicos da
-              integracao ficam disponiveis no FAQ desta pagina.
+              Use o filtro para localizar registros reais. Pesquisadores podem demonstrar interesse
+              em pesquisas usando o contrato atual do backend.
             </p>
           </div>
 
@@ -312,14 +457,21 @@ export default function SearchPage() {
               <p className="semantic-panel__query">{user?.displayName}</p>
               <p className="semantic-panel__text">
                 {user?.type === 'empresa'
-                  ? 'Empresa logada: priorizamos a exploracao de pesquisadores, areas e curriculos.'
-                  : 'Pesquisador logado: priorizamos a exploracao de empresas e universidades.'}
+                  ? 'Empresa logada: priorizamos a exploracao de pesquisadores e candidatos.'
+                  : 'Pesquisador logado: priorizamos pesquisas abertas para demonstrar interesse.'}
               </p>
             </div>
 
             <div className="semantic-panel__block">
               <h3 className="semantic-panel__title">Colecoes disponiveis</h3>
               <div className="semantic-panel__chips">
+                <button
+                  type="button"
+                  className={`semantic-chip semantic-chip--button${activeTab === 'pesquisas' ? ' active' : ''}`}
+                  onClick={() => setActiveTab('pesquisas')}
+                >
+                  Pesquisas
+                </button>
                 <button
                   type="button"
                   className={`semantic-chip semantic-chip--button${activeTab === 'pesquisadores' ? ' active' : ''}`}
@@ -364,17 +516,26 @@ export default function SearchPage() {
               <div>
                 <span className="section-label">Resultado atual</span>
                 <h2 className="search-results__title">
-                  {activeTab === 'pesquisadores'
-                    ? 'Base de pesquisadores'
-                    : activeTab === 'empresas'
-                      ? 'Base de empresas'
-                      : 'Base de universidades'}
+                  {activeTab === 'pesquisas'
+                    ? 'Base de pesquisas'
+                    : activeTab === 'pesquisadores'
+                      ? 'Base de pesquisadores'
+                      : activeTab === 'empresas'
+                        ? 'Base de empresas'
+                        : 'Base de universidades'}
                 </h2>
               </div>
               <p className="search-results__meta">
                 {visibleItems.length} item(ns) encontrados{activeQuery ? ` para "${activeQuery}"` : '.'}
               </p>
             </div>
+
+            {interestMessage ? (
+              <div className="search-feedback-card">
+                <h3>Interesse atualizado</h3>
+                <p>{interestMessage}</p>
+              </div>
+            ) : null}
 
             {loading ? (
               <div className="search-feedback-card">
@@ -387,6 +548,13 @@ export default function SearchPage() {
               <div className="search-feedback-card search-feedback-card--error">
                 <h3>Falha ao carregar o painel</h3>
                 <p>{error}</p>
+              </div>
+            ) : null}
+
+            {!loading && !error && partialWarnings.length > 0 ? (
+              <div className="search-feedback-card">
+                <h3>Painel carregado parcialmente</h3>
+                <p>{partialWarnings.join(' ')}</p>
               </div>
             ) : null}
 
@@ -410,7 +578,9 @@ export default function SearchPage() {
                           ? 'Pesquisador'
                           : item.type === 'empresa'
                             ? 'Empresa'
-                            : 'Universidade'}
+                            : item.type === 'pesquisa'
+                              ? 'Pesquisa'
+                              : 'Universidade'}
                       </span>
                     </div>
 
@@ -425,6 +595,22 @@ export default function SearchPage() {
                         </span>
                       ))}
                     </div>
+
+                    {item.action ? (
+                      <button
+                        type="button"
+                        className="btn btn-primary search-result-card__button"
+                        onClick={() => handleResearchInterest(item.action.researchId)}
+                        disabled={
+                          item.action.disabled ||
+                          interestLoading === String(item.action.researchId)
+                        }
+                      >
+                        {interestLoading === String(item.action.researchId)
+                          ? 'Registrando...'
+                          : item.action.label}
+                      </button>
+                    ) : null}
                   </article>
                 ))}
               </div>
