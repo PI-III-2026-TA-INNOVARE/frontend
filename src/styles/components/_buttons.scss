@@ -13,36 +13,36 @@
 
 .btn-ghost {
   color: var(--accent-primary);
-  background: rgba(36, 58, 105, 0.04);
-  border: 1px solid rgba(36, 58, 105, 0.14);
+  background: var(--bg-chip);
+  border: 1px solid var(--border-strong);
 }
 
 .btn-ghost:hover {
-  color: var(--accent-primary);
-  background: rgba(61, 107, 206, 0.09);
+  color: var(--accent-primary-strong);
+  background: var(--bg-chip-strong);
 }
 
 .btn-primary {
-  color: var(--text-inverse);
-  background: linear-gradient(135deg, var(--accent-primary), #2e4a83);
+  color: var(--text-on-accent);
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-primary-strong));
   box-shadow: var(--shadow-accent);
 }
 
 .btn-primary:hover {
-  box-shadow: 0 20px 38px rgba(36, 58, 105, 0.24);
+  box-shadow: var(--shadow-medium);
   transform: translateY(-1px);
 }
 
 .btn-outline {
   color: var(--accent-primary);
-  background: rgba(248, 244, 239, 0.45);
-  border: 1px solid rgba(36, 58, 105, 0.2);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
 }
 
 .btn-outline:hover {
-  background: rgba(248, 244, 239, 0.7);
-  border-color: rgba(91, 136, 165, 0.45);
-  box-shadow: 0 10px 24px rgba(91, 136, 165, 0.12);
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-secondary);
 }
 
 .btn-lg {

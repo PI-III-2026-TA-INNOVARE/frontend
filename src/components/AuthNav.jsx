@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ThemeToggle from './ThemeToggle'
 
 export default function AuthNav() {
   const { user, logout } = useAuth()
@@ -59,6 +60,8 @@ export default function AuthNav() {
               {user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | {profileMeta}
             </span>
           </div>
+
+          <ThemeToggle />
 
           <button type="button" className="btn btn-ghost auth-nav__logout" onClick={logout}>
             Sair

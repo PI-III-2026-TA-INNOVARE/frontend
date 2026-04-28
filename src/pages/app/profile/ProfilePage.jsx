@@ -594,13 +594,16 @@ export default function ProfilePage() {
                   </div>
                 </div>
 
-                <label className="profile-field">
-                  <span>Status do cadastro</span>
-                  <select name="status" value={formData.status} onChange={handleChange}>
-                    <option value="true">Ativo</option>
-                    <option value="false">Inativo</option>
-                  </select>
-                </label>
+                <div className="profile-company-status">
+                  <span className="profile-company-status__label">Empresa ativa</span>
+                  <strong
+                    className={`profile-company-status__badge${
+                      formData.status === 'true' ? ' profile-company-status__badge--active' : ''
+                    }`}
+                  >
+                    {formData.status === 'true' ? 'Ativa' : 'Inativa'}
+                  </strong>
+                </div>
               </div>
 
               {errorMessage ? <p className="login-message">{errorMessage}</p> : null}
@@ -736,7 +739,7 @@ export default function ProfilePage() {
                     </div>
                   </form>
 
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--registered">
                     <span className="profile-side__eyebrow">Curriculo</span>
                     <h3 className="profile-side__title">Resumo</h3>
                     {!hasLinkedResume ? (
@@ -767,7 +770,7 @@ export default function ProfilePage() {
 
               {activeResearcherTab === 'educations' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--registered">
                     <div className="profile-section-head">
                       <div>
                         <span className="profile-side__eyebrow">Formacoes</span>
@@ -832,7 +835,7 @@ export default function ProfilePage() {
                     ) : null}
                   </section>
 
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--actions">
                     <span className="profile-side__eyebrow">Nova formacao</span>
                     <h3 className="profile-side__title">Adicionar formacao</h3>
                     <form className="profile-inline-form" onSubmit={handleEducationSubmit}>
@@ -876,7 +879,7 @@ export default function ProfilePage() {
 
               {activeResearcherTab === 'experiences' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--registered">
                     <div className="profile-section-head">
                       <div>
                         <span className="profile-side__eyebrow">Experiencias</span>
@@ -940,7 +943,7 @@ export default function ProfilePage() {
                     ) : null}
                   </section>
 
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--actions">
                     <span className="profile-side__eyebrow">Nova experiencia</span>
                     <h3 className="profile-side__title">Adicionar experiencia</h3>
                     <form className="profile-inline-form" onSubmit={handleExperienceSubmit}>
@@ -977,7 +980,7 @@ export default function ProfilePage() {
 
               {activeResearcherTab === 'skills' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--registered">
                     <div className="profile-section-head">
                       <div>
                         <span className="profile-side__eyebrow">Habilidades</span>
@@ -1039,7 +1042,7 @@ export default function ProfilePage() {
                     ) : null}
                   </section>
 
-                  <section className="profile-side__card">
+                  <section className="profile-side__card profile-side__card--actions">
                     <span className="profile-side__eyebrow">Vincular habilidade existente</span>
                     <h3 className="profile-side__title">Selecionar do catalogo</h3>
 

@@ -5,7 +5,9 @@ import {
   faClipboardCheck,
   faHandshake,
   faMagnifyingGlass,
+  faMoon,
   faShieldHalved,
+  faSun,
 } from '@fortawesome/free-solid-svg-icons'
 
 export const appIcons = {
@@ -14,6 +16,8 @@ export const appIcons = {
   proposals: faClipboardCheck,
   indicators: faChartLine,
   security: faShieldHalved,
+  themeDark: faMoon,
+  themeLight: faSun,
   previous: faChevronLeft,
   next: faChevronRight,
 }

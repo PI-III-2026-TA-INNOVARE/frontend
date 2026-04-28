@@ -13,7 +13,7 @@
 .form-input {
   width: 100%;
   padding: 12px 16px;
-  background: var(--bg-primary);
+  background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
@@ -24,7 +24,7 @@
 
 .form-input:focus {
   border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(91, 136, 165, 0.1);
+  box-shadow: var(--shadow-focus);
 }
 
 .form-input::placeholder {
@@ -82,7 +82,7 @@
 
 .field-error,
 .login-message {
-  color: #a83c3c;
+  color: var(--accent-error);
   font-size: 0.85rem;
   line-height: 1.5;
 }

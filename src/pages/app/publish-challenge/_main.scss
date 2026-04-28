@@ -1,15 +1,28 @@
 @use '../../../styles/mixins' as *;
 
+.challenge-page .app-page__header {
+  margin-bottom: 22px;
+}
+
+.challenge-page .app-page__title {
+  font-size: clamp(1.45rem, 2.4vw, 2rem);
+}
+
+.challenge-page__stack {
+  display: grid;
+  gap: 22px;
+}
+
 .challenge-form-card {
   display: grid;
-  gap: 30px;
-  padding: 30px;
-  border-radius: 28px;
+  gap: 18px;
+  padding: 22px 24px;
+  border-radius: 26px;
 }
 
 .challenge-form-card__section {
   display: grid;
-  gap: 22px;
+  gap: 14px;
 }
 
 .challenge-form-card__section-head {
@@ -19,32 +32,73 @@
   gap: 14px;
 }
 
+.challenge-page .challenge-form-card__eyebrow {
+  min-height: 28px;
+  padding: 0 12px;
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+}
+
+.challenge-page .challenge-form-card__title {
+  font-size: 1.04rem;
+}
+
 .challenge-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 14px 16px;
+}
+
+.challenge-text-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+
+.challenge-page .profile-field {
+  gap: 6px;
+}
+
+.challenge-page .profile-field span {
+  font-size: 0.78rem;
+}
+
+.challenge-page .profile-field input,
+.challenge-page .profile-field select,
+.challenge-page .profile-field textarea {
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.challenge-page .profile-field textarea {
+  min-height: 92px;
+  max-height: 180px;
+  resize: vertical;
 }
 
 .challenge-form-card__footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 2px;
 }
 
 .challenge-form-card__success {
   color: var(--accent-green);
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .challenge-form-card__error {
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: rgba(168, 60, 60, 0.08);
-  color: #8f2f2f;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-danger-soft);
+  color: var(--accent-error);
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.45;
 }
 
 .challenge-form-card--notice {
@@ -71,15 +125,15 @@
 
 .challenge-form-card__list {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .challenge-form-card__item {
   display: grid;
   gap: 4px;
-  padding: 18px 20px;
-  border-radius: 20px;
-  background: rgba(36, 58, 105, 0.05);
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--bg-chip);
 }
 
 .challenge-form-card__item strong {
@@ -93,10 +147,10 @@
 
 .challenge-candidates {
   display: grid;
-  gap: 10px;
-  margin-top: 10px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(36, 58, 105, 0.08);
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
 }
 
 .challenge-candidate {
@@ -106,7 +160,7 @@
   gap: 12px;
   padding: 12px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.62);
+  background: var(--bg-input-muted);
 }
 
 .challenge-candidate > div {
@@ -120,6 +174,10 @@
 
 @include media-down(sm) {
   .challenge-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .challenge-text-grid {
     grid-template-columns: 1fr;
   }
 

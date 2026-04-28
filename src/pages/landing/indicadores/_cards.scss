@@ -4,8 +4,8 @@
   padding-top: 44px;
   padding-bottom: 72px;
   background:
-    radial-gradient(circle at top center, rgba(91, 136, 165, 0.08) 0%, transparent 40%),
-    linear-gradient(180deg, rgba(36, 58, 105, 0.04) 0%, transparent 100%);
+    radial-gradient(circle at top center, var(--bg-auth-radial) 0%, transparent 40%),
+    linear-gradient(180deg, var(--bg-chip) 0%, transparent 100%);
 }
 
 .indicators-stage .container {
@@ -18,9 +18,9 @@
   gap: 10px;
   padding: 28px;
   border-radius: 26px;
-  border: 1px solid rgba(36, 58, 105, 0.1);
-  background: rgba(248, 244, 239, 0.82);
-  box-shadow: 0 18px 34px rgba(25, 16, 19, 0.08);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-soft);
 }
 
 .indicators-feedback--error {
@@ -56,9 +56,9 @@
   min-height: 236px;
   padding: 26px;
   border-radius: 26px;
-  border: 1px solid rgba(36, 58, 105, 0.1);
-  background: rgba(248, 244, 239, 0.82);
-  box-shadow: 0 18px 34px rgba(25, 16, 19, 0.08);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(10px);
 }
 
@@ -69,7 +69,7 @@
   min-height: 30px;
   padding: 0 10px;
   border-radius: 999px;
-  background: rgba(36, 58, 105, 0.08);
+  background: var(--bg-chip);
   color: var(--accent-primary);
   font-family: var(--font-primary);
   font-size: 0.68rem;
@@ -99,7 +99,7 @@
 .indicador-card__bar {
   height: 8px;
   margin-top: auto;
-  background: rgba(36, 58, 105, 0.08);
+  background: var(--bg-chip);
   border-radius: 999px;
   overflow: hidden;
 }

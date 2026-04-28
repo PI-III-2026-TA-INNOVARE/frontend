@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ThemeToggle from './ThemeToggle'
 
 export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
@@ -67,6 +68,7 @@ export default function Navbar() {
           <Link to="/como-funciona" className={isActive('/como-funciona') ? 'active' : ''}>Como funciona</Link>
 
           <div className="navbar__mobile-actions">
+            <ThemeToggle />
             {isAuthenticated ? (
               <>
                 <Link to="/pesquisa" className="btn btn-ghost">Abrir painel</Link>
@@ -84,6 +86,7 @@ export default function Navbar() {
         </div>
 
         <div className="navbar__actions">
+          <ThemeToggle />
           {isAuthenticated ? (
             <>
               <Link to="/pesquisa" className="btn btn-ghost">Abrir painel</Link>

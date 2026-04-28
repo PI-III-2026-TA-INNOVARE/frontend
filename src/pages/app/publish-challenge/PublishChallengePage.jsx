@@ -324,8 +324,8 @@ export default function PublishChallengePage() {
           </div>
         </header>
 
-        <div className="challenge-form-card">
-          <div className="challenge-form-card__section">
+        <div className="challenge-page__stack">
+          <div className="challenge-form-card challenge-form-card--editor">
             <div className="challenge-form-card__section-head">
               <div>
                 <span className="challenge-form-card__eyebrow">Criacao</span>
@@ -385,12 +385,12 @@ export default function PublishChallengePage() {
 
                   <label className="profile-field">
                     <span>Area de pesquisa</span>
-                      <select
-                        value={researchForm.areaId}
-                        onChange={(event) => handleChange('areaId', event.target.value)}
-                        disabled={submitLoading || !hasResearchAreas}
-                      >
-                        <option value="">
+                    <select
+                      value={researchForm.areaId}
+                      onChange={(event) => handleChange('areaId', event.target.value)}
+                      disabled={submitLoading || !hasResearchAreas}
+                    >
+                      <option value="">
                         {hasResearchAreas
                           ? 'Selecione uma area'
                           : 'Nenhuma area disponivel'}
@@ -414,49 +414,51 @@ export default function PublishChallengePage() {
                   </label>
                 </div>
 
-                <label className="profile-field profile-field--full">
-                  <span>Escopo</span>
-                  <textarea
-                    rows={4}
-                    value={researchForm.scope}
-                    onChange={(event) => handleChange('scope', event.target.value)}
-                    placeholder="Descreva o escopo da pesquisa."
-                    disabled={submitLoading}
-                  />
-                </label>
+                <div className="challenge-text-grid">
+                  <label className="profile-field">
+                    <span>Escopo</span>
+                    <textarea
+                      rows={3}
+                      value={researchForm.scope}
+                      onChange={(event) => handleChange('scope', event.target.value)}
+                      placeholder="Descreva o escopo da pesquisa."
+                      disabled={submitLoading}
+                    />
+                  </label>
 
-                <label className="profile-field profile-field--full">
-                  <span>Objetivo</span>
-                  <textarea
-                    rows={4}
-                    value={researchForm.goal}
-                    onChange={(event) => handleChange('goal', event.target.value)}
-                    placeholder="Descreva o objetivo principal."
-                    disabled={submitLoading}
-                  />
-                </label>
+                  <label className="profile-field">
+                    <span>Objetivo</span>
+                    <textarea
+                      rows={3}
+                      value={researchForm.goal}
+                      onChange={(event) => handleChange('goal', event.target.value)}
+                      placeholder="Descreva o objetivo principal."
+                      disabled={submitLoading}
+                    />
+                  </label>
 
-                <label className="profile-field profile-field--full">
-                  <span>Justificativa</span>
-                  <textarea
-                    rows={4}
-                    value={researchForm.justification}
-                    onChange={(event) => handleChange('justification', event.target.value)}
-                    placeholder="Explique a justificativa de negocio ou tecnica."
-                    disabled={submitLoading}
-                  />
-                </label>
+                  <label className="profile-field">
+                    <span>Justificativa</span>
+                    <textarea
+                      rows={3}
+                      value={researchForm.justification}
+                      onChange={(event) => handleChange('justification', event.target.value)}
+                      placeholder="Explique a justificativa de negocio ou tecnica."
+                      disabled={submitLoading}
+                    />
+                  </label>
 
-                <label className="profile-field profile-field--full">
-                  <span>Resultados esperados</span>
-                  <textarea
-                    rows={4}
-                    value={researchForm.results}
-                    onChange={(event) => handleChange('results', event.target.value)}
-                    placeholder="Informe os resultados esperados."
-                    disabled={submitLoading}
-                  />
-                </label>
+                  <label className="profile-field">
+                    <span>Resultados esperados</span>
+                    <textarea
+                      rows={3}
+                      value={researchForm.results}
+                      onChange={(event) => handleChange('results', event.target.value)}
+                      placeholder="Informe os resultados esperados."
+                      disabled={submitLoading}
+                    />
+                  </label>
+                </div>
 
                 {successMessage ? <p className="challenge-form-card__success">{successMessage}</p> : null}
                 {errorMessage ? (
@@ -478,7 +480,7 @@ export default function PublishChallengePage() {
             ) : null}
           </div>
 
-          <div className="challenge-form-card__section">
+          <div className="challenge-form-card challenge-form-card--published">
             <div className="challenge-form-card__section-head">
               <div>
                 <span className="challenge-form-card__eyebrow">Acompanhamento</span>

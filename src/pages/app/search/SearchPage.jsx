@@ -368,46 +368,7 @@ export default function SearchPage() {
 
   return (
     <section className="app-page app-search-page">
-      <div className="container app-page__container">
-        <header className="app-page__header">
-          <div>
-            <span className="section-label">Explorar</span>
-            <h1 className="app-page__title">Base da plataforma</h1>
-          </div>
-          <div className="app-page__header-actions">
-            <p className="app-page__subtitle">
-              Pesquise empresas, pesquisadores, pesquisas e universidades.
-            </p>
-          </div>
-        </header>
-
-        <div className="search-hero-card">
-          <div className="search-hero-card__content">
-            <span className="search-hero-card__eyebrow">Busca</span>
-            <h2 className="search-hero-card__title">Encontre registros rapidamente</h2>
-            <p className="search-hero-card__text">
-              Use o filtro e alterne entre as colecoes disponiveis.
-            </p>
-          </div>
-
-          <form className="app-search-form" onSubmit={handleSubmit}>
-            <label className="sr-only" htmlFor="catalog-search">
-              Filtrar dados da plataforma
-            </label>
-            <textarea
-              id="catalog-search"
-              className="app-search-form__input"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              rows={3}
-              placeholder={defaultQuery}
-            />
-            <button type="submit" className="btn btn-primary app-search-form__button">
-              Filtrar dados
-            </button>
-          </form>
-        </div>
-
+      <div className="container app-page__container app-search-page__container">
         <div className="app-search-layout">
           <aside className="semantic-panel">
             <div className="semantic-panel__block">
@@ -455,7 +416,34 @@ export default function SearchPage() {
             </div>
           </aside>
 
-          <div className="search-results">
+          <main className="search-feed">
+            <header className="search-feed__header">
+              <div>
+                <span className="section-label">Explorar</span>
+                <h1 className="app-page__title search-feed__title">Base da plataforma</h1>
+              </div>
+              <p className="app-page__subtitle search-feed__subtitle">
+                Pesquise empresas, pesquisadores, pesquisas e universidades.
+              </p>
+            </header>
+
+            <form className="app-search-form" onSubmit={handleSubmit}>
+              <label className="sr-only" htmlFor="catalog-search">
+                Filtrar dados da plataforma
+              </label>
+              <input
+                id="catalog-search"
+                className="app-search-form__input"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder={defaultQuery}
+              />
+              <button type="submit" className="btn btn-primary app-search-form__button">
+                Buscar
+              </button>
+            </form>
+
+            <div className="search-results">
             <div className="search-results__header">
               <div>
                 <span className="section-label">Resultado atual</span>
@@ -558,7 +546,8 @@ export default function SearchPage() {
                 ))}
               </div>
             ) : null}
-          </div>
+            </div>
+          </main>
         </div>
       </div>
     </section>
