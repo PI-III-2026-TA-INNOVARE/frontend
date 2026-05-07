@@ -1,39 +1,34 @@
 import { Link } from 'react-router-dom'
-import FeatureCard from '../../../components/FeatureCard'
 import Reveal from '../../../components/Reveal'
-import { appIcons } from '../../../lib/icons'
 import './HomePage.scss'
 
-const heroSupportCards = [
+const matchFlow = [
   {
-    eyebrow: 'Cadastros',
-    title: 'Empresas e pesquisadores entram pelo mesmo acesso.',
+    label: 'Demanda',
+    text: 'A empresa descreve o problema, objetivo, prazo e area de pesquisa.',
   },
   {
-    eyebrow: 'Perfis',
-    title: 'Curriculos, experiencias e habilidades em um perfil.',
+    label: 'Perfil',
+    text: 'O pesquisador apresenta curriculo, experiencias e competencias.',
   },
   {
-    eyebrow: 'Pesquisas',
-    title: 'Demandas abertas para descoberta e interesse.',
+    label: 'Match',
+    text: 'A IA aproxima os perfis com maior potencial de colaboracao.',
   },
 ]
 
-const featureCards = [
+const supportCards = [
   {
-    icon: appIcons.matchmaking,
-    title: 'Perfis completos',
-    description: 'Dados essenciais para empresas e pesquisadores.',
+    title: 'Para empresas',
+    text: 'Publique demandas de P&D e encontre pesquisadores com aderencia tecnica.',
   },
   {
-    icon: appIcons.proposals,
-    title: 'Pesquisas e interesses',
-    description: 'Publique demandas e acompanhe pesquisadores interessados.',
+    title: 'Para pesquisadores',
+    text: 'Mantenha seu perfil claro e descubra oportunidades alinhadas a sua area.',
   },
   {
-    icon: appIcons.search,
-    title: 'Busca da plataforma',
-    description: 'Filtre empresas, pesquisadores, universidades e pesquisas.',
+    title: 'Com apoio de IA',
+    text: 'Reduza a busca manual e priorize conexoes com mais contexto.',
   },
 ]
 
@@ -41,65 +36,83 @@ export default function HomePage() {
   return (
     <>
       <section className="hero" id="hero">
-        <div className="hero__bg-glow"></div>
-        <div className="hero__bg-glow hero__bg-glow--right"></div>
-
         <div className="container">
-          <div className="hero__content hero__content--centered">
-            <div className="hero__badge">
-              <span className="badge-dot"></span>
-              ODS 9 | Pesquisa, industria e inovacao conectadas
-            </div>
+          <div className="hero__layout">
+            <div className="hero__content">
+              <div className="hero__badge">
+                <span className="badge-dot"></span>
+                Match inteligente para P&amp;D
+              </div>
 
-            <h1 className="hero__title">Conecte empresas e pesquisadores</h1>
+              <h1 className="hero__title">Conectando empresas e pesquisadores com IA</h1>
 
-            <p className="hero__description">
-              Uma plataforma para publicar pesquisas, encontrar perfis e criar conexoes de P&amp;D.
-            </p>
+              <p className="hero__description">
+                A P&amp;D Connect ajuda empresas a encontrar especialistas e pesquisadores a
+                descobrir oportunidades de colaboracao com mais clareza, contexto e velocidade.
+              </p>
 
-            <div className="hero__actions hero__actions--centered">
-              <Link to="/login" className="btn btn-primary btn-lg">
-                Entrar na plataforma
-              </Link>
-              <Link to="/como-funciona" className="btn btn-outline btn-lg">
-                Ver como funciona
-              </Link>
-            </div>
-          </div>
+              <div className="hero__actions">
+                <Link to="/login#cadastro" className="btn btn-primary btn-lg">
+                  Explorar solucoes
+                </Link>
+                <Link to="/como-funciona" className="btn btn-outline btn-lg">
+                  Saiba mais
+                </Link>
+              </div>
 
-          <div className="hero__support hero__support--compact">
-            <div className="hero__support-grid">
-              {heroSupportCards.map((card) => (
-                <article key={card.eyebrow} className="hero__support-card">
-                  <span className="hero__support-card-eyebrow">{card.eyebrow}</span>
-                  <h3 className="hero__support-card-title">{card.title}</h3>
-                </article>
-              ))}
+              <div className="hero__match-card">
+                <div className="hero__match-card-head">
+                  <span>IA aplicada</span>
+                  <h2>Match inteligente com IA</h2>
+                </div>
+                <p>
+                  A plataforma cruza demandas de empresas com perfis de pesquisadores para sugerir
+                  conexoes com maior potencial.
+                </p>
+                <div className="hero__match-flow" aria-label="Fluxo resumido do match">
+                  {matchFlow.map((item) => (
+                    <article key={item.label} className="hero__match-step">
+                      <strong>{item.label}</strong>
+                      <span>{item.text}</span>
+                    </article>
+                  ))}
+                </div>
+                <Link to="/login#cadastro" className="btn btn-primary hero__match-cta">
+                  Conecte-se agora
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section
-        className="section section--muted home-features home-features--focused"
-        id="funcionalidades"
-      >
-        <div className="container">
-          <Reveal className="text-center">
-            <span className="section-label">Funcionalidades</span>
-            <h2 className="section-title">
-              Funcionalidades para <span className="text-gradient">operar melhor</span>
-            </h2>
-            <p className="section-subtitle">O essencial para descobrir, publicar e acompanhar.</p>
-          </Reveal>
+      <section className="section home-ai" id="funcionalidades">
+        <div className="container home-ai__container">
+          <Reveal>
+            <div className="home-ai__panel">
+              <div className="home-ai__mark" aria-hidden="true">IA</div>
 
-          <div className="features__grid features__grid--three">
-            {featureCards.map((card) => (
-              <Reveal key={card.title}>
-                <FeatureCard icon={card.icon} title={card.title} description={card.description} />
-              </Reveal>
-            ))}
-          </div>
+              <div className="home-ai__copy">
+                <span className="section-label">Como funciona</span>
+                <h2 className="section-title">
+                  Menos busca manual, mais conexoes relevantes.
+                </h2>
+                <p className="section-subtitle">
+                  A P&amp;D Connect organiza os dados essenciais e apoia empresas e pesquisadores
+                  na descoberta de colaboracoes com maior aderencia.
+                </p>
+              </div>
+
+              <div className="home-ai__cards">
+                {supportCards.map((card) => (
+                  <article key={card.title} className="home-ai-card">
+                    <h3>{card.title}</h3>
+                    <p>{card.text}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -108,17 +121,18 @@ export default function HomePage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Comece a usar a <span className="text-gradient">P&amp;D Connect</span>
+                Conecte-se com pesquisadores ou empresas agora
               </h2>
               <p className="cta-box__subtitle">
-                Entre para explorar perfis, pesquisas e indicadores.
+                Comece pela plataforma e transforme demandas de P&amp;D em oportunidades reais de
+                colaboracao.
               </p>
               <div className="cta-box__buttons">
-                <Link to="/login" className="btn btn-primary btn-lg">
-                  Entrar na plataforma
+                <Link to="/login#cadastro" className="btn btn-primary btn-lg">
+                  Criar conexao
                 </Link>
-                <Link to="/login#cadastro" className="btn btn-outline btn-lg">
-                  Cadastrar
+                <Link to="/login" className="btn btn-outline btn-lg">
+                  Entrar
                 </Link>
               </div>
             </div>

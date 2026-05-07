@@ -5,8 +5,8 @@
   inset: 0 0 auto;
   height: var(--nav-height);
   z-index: 1000;
-  background: var(--nav-public-bg);
-  border-bottom: 1px solid rgba(248, 244, 239, 0.08);
+  background: rgba(36, 58, 105, 0.92);
+  border-bottom: 1px solid rgba(248, 244, 239, 0.14);
   backdrop-filter: blur(18px);
   transition:
     background var(--transition-normal),
@@ -87,7 +87,7 @@
 
 .navbar__links a.active {
   color: var(--text-inverse);
-  background: rgba(91, 136, 165, 0.24);
+  background: rgba(91, 136, 165, 0.28);
   font-weight: 600;
 }
 
@@ -107,6 +107,11 @@
   background: rgba(248, 244, 239, 0.14);
   border-color: rgba(248, 244, 239, 0.26);
   color: var(--text-inverse);
+}
+
+.navbar__actions .btn-primary,
+.navbar__mobile-actions .btn-primary {
+  background: linear-gradient(135deg, var(--accent-green), #4f866f);
 }
 
 .navbar__hamburger {

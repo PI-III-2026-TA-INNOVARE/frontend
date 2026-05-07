@@ -7,7 +7,7 @@
   overflow: hidden;
   padding: 34px;
   border-radius: 30px;
-  background: linear-gradient(135deg, rgba(36, 58, 105, 0.98) 0%, rgba(47, 74, 120, 0.95) 100%);
+  background: linear-gradient(135deg, rgba(36, 58, 105, 0.98) 0%, rgba(36, 58, 105, 0.94) 62%, rgba(63, 114, 95, 0.95) 100%);
   border: 1px solid rgba(248, 244, 239, 0.12);
   box-shadow: 0 28px 48px rgba(25, 16, 19, 0.18);
   color: var(--text-inverse);
@@ -20,7 +20,7 @@
   width: 280px;
   height: 280px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(91, 136, 165, 0.24) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(212, 205, 197, 0.22) 0%, transparent 70%);
 }
 
 .cta-box__title {
@@ -65,7 +65,7 @@
 }
 
 .cta-box .btn-primary {
-  background: linear-gradient(135deg, #5b88a5, #6f99b5);
+  background: linear-gradient(135deg, var(--accent-green), #4f866f);
   box-shadow: var(--shadow-secondary);
 }
 
