@@ -1,15 +1,14 @@
-import { Link } from 'react-router-dom'
 import Reveal from '../../../components/Reveal'
 import './SobrePage.scss'
 
 const aboutOdsFacts = [
   {
     label: 'Meta 9.5',
-    text: 'Fortalecer a pesquisa cientifica e ampliar capacidades tecnologicas com incentivo a inovacao.',
+    text: 'Fortalecer a pesquisa científica e ampliar capacidades tecnológicas com incentivo à inovação.',
   },
   {
     label: 'Impacto esperado',
-    text: 'Aproximar universidade e mercado para ampliar a aplicacao pratica do conhecimento.',
+    text: 'Aproximar universidade e mercado para ampliar a aplicação prática do conhecimento.',
   },
 ]
 
@@ -29,18 +28,19 @@ export default function SobrePage() {
                   Sobre a P&amp;D Connect
                 </div>
 
-                <h1 className="about-hero__title">Pesquisa aplicada conectada a industria.</h1>
+                <h1 className="about-hero__title">Pesquisa aplicada conectada à indústria.</h1>
 
                 <p className="about-hero__text">
-                  A P&amp;D Connect aproxima empresas e pesquisadores em uma experiencia simples.
+                  A P&amp;D Connect aproxima empresas e pesquisadores para transformar desafios
+                  reais em oportunidades de pesquisa aplicada.
                 </p>
               </div>
 
               <div className="about-hero__support-block">
-                <span className="about-hero__support-label">Menos dispersao, mais clareza</span>
+                <span className="about-hero__support-label">Menos dispersão, mais clareza</span>
                 <p className="about-hero__support">
                   Problema, especialista e oportunidade passam a coexistir em um fluxo mais claro
-                  de descoberta e colaboracao.
+                  de descoberta e colaboração.
                 </p>
               </div>
             </div>
@@ -55,16 +55,15 @@ export default function SobrePage() {
               <div className="about-ods-panel__intro">
                 <span className="section-label">ODS 9</span>
                 <h2 className="section-title about-ods-panel__title">
-                  Alinhada a industria e a pesquisa aplicada.
+                  Alinhada à ODS 9, à indústria e à pesquisa aplicada.
                 </h2>
               </div>
 
               <div className="about-ods-panel__body">
                 <div className="about-ods-panel__content">
-                  
                   <p className="about-ods-panel__text about-ods-panel__text--secondary">
-                    Esse movimento se conecta a Meta 9.5 da ODS 9, fortalecendo pesquisa
-                    cientifica, capacidade tecnologica e inovacao com impacto.
+                    Esse movimento se conecta à Meta 9.5 da ODS 9, fortalecendo pesquisa
+                    científica, capacidade tecnológica e inovação com impacto.
                   </p>
                 </div>
 

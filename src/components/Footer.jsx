@@ -9,8 +9,8 @@ export default function Footer() {
             P&amp;D Connect
           </Link>
 
-          <nav className="footer__links" aria-label="Links do rodape">
-            <Link to="/">Inicio</Link>
+          <nav className="footer__links" aria-label="Links do rodapé">
+            <Link to="/">Início</Link>
             <Link to="/sobre">Sobre</Link>
             <Link to="/como-funciona">Como funciona</Link>
             <Link to="/indicadores">Indicadores</Link>

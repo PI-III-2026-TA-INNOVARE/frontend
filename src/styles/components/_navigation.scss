@@ -32,14 +32,15 @@
   align-items: center;
   justify-content: space-between;
   height: 100%;
+  gap: 22px;
 }
 
 .navbar__logo {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-family: var(--font-primary);
-  font-size: 1.5rem;
+  font-size: 1.38rem;
   font-weight: 800;
 }
 
@@ -47,13 +48,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   background: rgba(248, 244, 239, 0.12);
   color: var(--text-inverse);
   border: 1px solid rgba(248, 244, 239, 0.18);
   border-radius: 10px;
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .navbar__logo span {
@@ -63,7 +64,7 @@
 .navbar__links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
 
 .navbar__mobile-actions,
@@ -72,11 +73,11 @@
 }
 
 .navbar__links a {
-  padding: 8px 16px;
+  padding: 9px 15px;
   border-radius: var(--radius-sm);
   color: var(--text-inverse-muted);
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-size: 0.88rem;
+  font-weight: 600;
   transition: color var(--transition-fast), background var(--transition-fast);
 }
 
@@ -94,7 +95,12 @@
 .navbar__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.navbar__actions .btn {
+  min-height: 42px;
+  padding: 0 22px;
 }
 
 .navbar__actions .btn-ghost {
