@@ -370,13 +370,6 @@ export default function LoginPage() {
       <div className="login-shell">
         <aside className="login-brand-panel" aria-label="Apresentacao P&D Connect">
           <div className="login-brand-panel__mark">PD</div>
-          <h1 className="login-brand-panel__title">P&amp;D Connect</h1>
-          <p className="login-brand-panel__description">
-            <span>Conecte empresas, pesquisadores e universidades.</span>
-            <span>Publique pesquisas e encontre especialistas.</span>
-            <span>Organize perfis, curriculos e oportunidades.</span>
-            <span>Transforme demandas de inovacao em conexoes reais.</span>
-          </p>
         </aside>
 
         <main className="login-shell__form" aria-label="Acesso e cadastro">

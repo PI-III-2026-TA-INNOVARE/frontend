@@ -4,29 +4,20 @@ export default function Footer() {
   return (
     <footer className="footer">
       <div className="container">
-        <div className="footer__grid">
-          <div className="footer__brand">
-            <div className="footer__brand-name">
-              <span>P&amp;D Connect</span>
-            </div>
-            <p className="footer__brand-text">Empresas, pesquisadores e pesquisas em um so lugar.</p>
-          </div>
+        <div className="footer__inner">
+          <Link to="/" className="footer__brand-name">
+            P&amp;D Connect
+          </Link>
 
-          <div className="footer__col">
-            <h4 className="footer__col-title">Plataforma</h4>
-            <Link to="/como-funciona">Como Funciona</Link>
+          <nav className="footer__links" aria-label="Links do rodape">
+            <Link to="/">Inicio</Link>
+            <Link to="/sobre">Sobre</Link>
+            <Link to="/como-funciona">Como funciona</Link>
             <Link to="/indicadores">Indicadores</Link>
             <Link to="/login">Entrar</Link>
-          </div>
+          </nav>
 
-          <div className="footer__col">
-            <h4 className="footer__col-title">Institucional</h4>
-            <Link to="/sobre">Sobre</Link>
-          </div>
-        </div>
-
-        <div className="footer__bottom">
-          <span>2026 P&amp;D Connect.</span>
+          <span className="footer__copy">2026</span>
         </div>
       </div>
     </footer>

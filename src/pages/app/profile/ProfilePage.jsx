@@ -15,7 +15,10 @@ import {
 } from '../../../services/pdConnectApi'
 import './ProfilePage.scss'
 
-const PAGE_SIZE = 5
+const PROFILE_AREA_PAGE_SIZE = 4
+const PROFILE_EDUCATION_PAGE_SIZE = 3
+const PROFILE_EXPERIENCE_PAGE_SIZE = 3
+const PROFILE_SKILL_PAGE_SIZE = 2
 
 const defaultEducationForm = {
   course: '',
@@ -61,18 +64,18 @@ function toBoolean(value) {
   return value === 'true'
 }
 
-function paginateItems(items, page) {
-  const startIndex = (page - 1) * PAGE_SIZE
-  return items.slice(startIndex, startIndex + PAGE_SIZE)
+function paginateItems(items, page, pageSize) {
+  const startIndex = (page - 1) * pageSize
+  return items.slice(startIndex, startIndex + pageSize)
 }
 
-function buildPageLabel(page, totalItems) {
+function buildPageLabel(page, totalItems, pageSize) {
   if (!totalItems) {
     return '0 de 0'
   }
 
-  const start = (page - 1) * PAGE_SIZE + 1
-  const end = Math.min(page * PAGE_SIZE, totalItems)
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(page * pageSize, totalItems)
   return `${start}-${end} de ${totalItems}`
 }
 
@@ -116,11 +119,16 @@ export default function ProfilePage() {
   const [experienceForm, setExperienceForm] = useState(defaultExperienceForm)
   const [skillForm, setSkillForm] = useState(defaultSkillForm)
   const [activeResearcherTab, setActiveResearcherTab] = useState('general')
+  const [researchAreaPage, setResearchAreaPage] = useState(1)
   const [educationPage, setEducationPage] = useState(1)
   const [experiencePage, setExperiencePage] = useState(1)
   const [skillsPage, setSkillsPage] = useState(1)
   const [skillsCatalog, setSkillsCatalog] = useState([])
   const [researchAreaCatalog, setResearchAreaCatalog] = useState([])
+  const [selectedResearchAreaId, setSelectedResearchAreaId] = useState('')
+  const [selectedSkillIds, setSelectedSkillIds] = useState(() => (
+    (user?.resume?.skill || []).map((item) => String(item.id_skill))
+  ))
 
   const isEmpresa = user?.type === 'empresa'
   const resumeData = user?.resume || { education: [], experience: [], skill: [] }
@@ -132,33 +140,55 @@ export default function ProfilePage() {
     nullLabel: 'Nao informado',
   })
 
-  const totalEducationPages = Math.max(1, Math.ceil((resumeData.education?.length || 0) / PAGE_SIZE))
-  const totalExperiencePages = Math.max(1, Math.ceil((resumeData.experience?.length || 0) / PAGE_SIZE))
-  const totalSkillsPages = Math.max(1, Math.ceil((resumeData.skill?.length || 0) / PAGE_SIZE))
+  const totalEducationPages = Math.max(
+    1,
+    Math.ceil((resumeData.education?.length || 0) / PROFILE_EDUCATION_PAGE_SIZE)
+  )
+  const totalExperiencePages = Math.max(
+    1,
+    Math.ceil((resumeData.experience?.length || 0) / PROFILE_EXPERIENCE_PAGE_SIZE)
+  )
+  const selectedSkillIdSet = useMemo(
+    () => new Set((selectedSkillIds || []).map((skillId) => String(skillId))),
+    [selectedSkillIds]
+  )
+
+  const selectedSkills = useMemo(
+    () => (selectedSkillIds || [])
+      .map((skillId) => {
+        const normalizedSkillId = String(skillId)
+        return (
+          skillsCatalog.find((item) => String(item.id_skill) === normalizedSkillId) ||
+          (resumeData.skill || []).find((item) => String(item.id_skill) === normalizedSkillId)
+        )
+      })
+      .filter(Boolean),
+    [resumeData.skill, selectedSkillIds, skillsCatalog]
+  )
+
+  const totalSkillsPages = Math.max(
+    1,
+    Math.ceil(selectedSkills.length / PROFILE_SKILL_PAGE_SIZE)
+  )
 
   const paginatedEducation = useMemo(
-    () => paginateItems(resumeData.education || [], educationPage),
+    () => paginateItems(resumeData.education || [], educationPage, PROFILE_EDUCATION_PAGE_SIZE),
     [educationPage, resumeData.education]
   )
 
   const paginatedExperience = useMemo(
-    () => paginateItems(resumeData.experience || [], experiencePage),
+    () => paginateItems(resumeData.experience || [], experiencePage, PROFILE_EXPERIENCE_PAGE_SIZE),
     [experiencePage, resumeData.experience]
   )
 
   const paginatedSkills = useMemo(
-    () => paginateItems(resumeData.skill || [], skillsPage),
-    [resumeData.skill, skillsPage]
-  )
-
-  const linkedSkillIds = useMemo(
-    () => new Set((resumeData.skill || []).map((item) => item.id_skill)),
-    [resumeData.skill]
+    () => paginateItems(selectedSkills, skillsPage, PROFILE_SKILL_PAGE_SIZE),
+    [selectedSkills, skillsPage]
   )
 
   const availableSkillsToLink = useMemo(
-    () => skillsCatalog.filter((item) => !linkedSkillIds.has(item.id_skill)),
-    [linkedSkillIds, skillsCatalog]
+    () => skillsCatalog.filter((item) => !selectedSkillIdSet.has(String(item.id_skill))),
+    [selectedSkillIdSet, skillsCatalog]
   )
 
   const linkedResearcherAreaIds = useMemo(
@@ -166,9 +196,38 @@ export default function ProfilePage() {
     [formData.areaIds]
   )
 
+  const selectedResearchAreas = useMemo(
+    () => researchAreaCatalog.filter((area) => linkedResearcherAreaIds.has(String(area.id_area))),
+    [linkedResearcherAreaIds, researchAreaCatalog]
+  )
+
+  const totalResearchAreaPages = Math.max(
+    1,
+    Math.ceil(selectedResearchAreas.length / PROFILE_AREA_PAGE_SIZE)
+  )
+
+  const paginatedSelectedResearchAreas = useMemo(
+    () => paginateItems(selectedResearchAreas, researchAreaPage, PROFILE_AREA_PAGE_SIZE),
+    [researchAreaPage, selectedResearchAreas]
+  )
+
+  const availableResearchAreasToAdd = useMemo(
+    () => researchAreaCatalog.filter((area) => !linkedResearcherAreaIds.has(String(area.id_area))),
+    [linkedResearcherAreaIds, researchAreaCatalog]
+  )
+
   useEffect(() => {
     setFormData(buildInitialProfile(user))
+    setSelectedResearchAreaId('')
+    setResearchAreaPage(1)
+    setSelectedSkillIds((user?.resume?.skill || []).map((item) => String(item.id_skill)))
+    setSkillForm(defaultSkillForm)
+    setSkillsPage(1)
   }, [user])
+
+  useEffect(() => {
+    setResearchAreaPage((current) => Math.min(current, totalResearchAreaPages))
+  }, [totalResearchAreaPages])
 
   useEffect(() => {
     setEducationPage((current) => Math.min(current, totalEducationPages))
@@ -326,23 +385,48 @@ export default function ProfilePage() {
     setErrorMessage('')
   }
 
-  const handleResearchAreaToggle = (areaId, checked) => {
+  const handleResearchAreaSelectChange = (event) => {
+    setSelectedResearchAreaId(event.target.value)
+    setSavedMessage('')
+    setErrorMessage('')
+  }
+
+  const handleResearchAreaAdd = () => {
+    if (!selectedResearchAreaId) {
+      setErrorMessage('Selecione uma area de pesquisa antes de adicionar.')
+      return
+    }
+
+    if (linkedResearcherAreaIds.has(String(selectedResearchAreaId))) {
+      setErrorMessage('Esta area de pesquisa ja esta selecionada.')
+      setSelectedResearchAreaId('')
+      return
+    }
+
+    setFormData((current) => ({
+      ...current,
+      areaIds: [...(current.areaIds || []), String(selectedResearchAreaId)],
+    }))
+
+    setResearchAreaPage(Math.ceil((selectedResearchAreas.length + 1) / PROFILE_AREA_PAGE_SIZE))
+    setSelectedResearchAreaId('')
+    setSavedMessage('')
+    setErrorMessage('')
+  }
+
+  const handleResearchAreaRemove = (areaId) => {
     const normalizedAreaId = String(areaId)
 
     setFormData((current) => {
-      const currentAreaIds = new Set((current.areaIds || []).map((item) => String(item)))
-
-      if (checked) {
-        currentAreaIds.add(normalizedAreaId)
-      } else {
-        currentAreaIds.delete(normalizedAreaId)
-      }
-
       return {
         ...current,
-        areaIds: Array.from(currentAreaIds),
+        areaIds: (current.areaIds || []).filter((item) => String(item) !== normalizedAreaId),
       }
     })
+
+    if (selectedResearchAreaId === normalizedAreaId) {
+      setSelectedResearchAreaId('')
+    }
 
     setSavedMessage('')
     setErrorMessage('')
@@ -503,7 +587,7 @@ export default function ProfilePage() {
     await syncResumeAfterChange(successMessage)
   }
 
-  const handleSkillAttach = async (event) => {
+  const handleSkillAttach = (event) => {
     event.preventDefault()
 
     if (!skillForm.selectedSkillId) {
@@ -511,45 +595,53 @@ export default function ProfilePage() {
       return
     }
 
+    if (selectedSkillIdSet.has(String(skillForm.selectedSkillId))) {
+      setErrorMessage('Esta habilidade ja esta selecionada.')
+      setSkillForm((current) => ({
+        ...current,
+        selectedSkillId: '',
+      }))
+      return
+    }
+
+    setSelectedSkillIds((current) => [...current, String(skillForm.selectedSkillId)])
+    setSkillsPage(Math.ceil((selectedSkills.length + 1) / PROFILE_SKILL_PAGE_SIZE))
+    setSkillForm((current) => ({
+      ...current,
+      selectedSkillId: '',
+    }))
+    setResumeMessage('')
+    setErrorMessage('')
+  }
+
+  const handleSkillSave = async () => {
     setIsSkillSaving(true)
     setResumeMessage('')
     setErrorMessage('')
 
     try {
-      const nextSkillIds = Array.from(linkedSkillIds)
-      nextSkillIds.push(Number(skillForm.selectedSkillId))
-
-      await syncResumeSkills(nextSkillIds, 'Habilidade vinculada com sucesso.')
-      setSkillForm((current) => ({
-        ...current,
-        selectedSkillId: '',
-      }))
+      await syncResumeSkills(
+        (selectedSkillIds || []).map((skillId) => Number(skillId)),
+        'Habilidades atualizadas com sucesso.'
+      )
       setActiveResearcherTab('skills')
       setSkillsPage(1)
     } catch (error) {
       setErrorMessage(
-        error.message || 'Nao foi possivel vincular a habilidade selecionada.'
+        error.message || 'Nao foi possivel salvar as habilidades selecionadas.'
       )
     } finally {
       setIsSkillSaving(false)
     }
   }
 
-  const handleSkillRemove = async (skillId) => {
-    setIsSkillSaving(true)
+  const handleSkillRemove = (skillId) => {
     setResumeMessage('')
     setErrorMessage('')
 
-    try {
-      const nextSkillIds = Array.from(linkedSkillIds).filter((currentId) => currentId !== skillId)
-      await syncResumeSkills(nextSkillIds, 'Habilidade removida do curriculo com sucesso.')
-    } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel remover a habilidade do curriculo.'
-      )
-    } finally {
-      setIsSkillSaving(false)
-    }
+    setSelectedSkillIds((current) => (
+      (current || []).filter((currentId) => String(currentId) !== String(skillId))
+    ))
   }
 
   return (
@@ -710,20 +802,84 @@ export default function ProfilePage() {
                         ) : null}
 
                         {!researchAreaCatalogError && researchAreaCatalog.length > 0 ? (
-                          <div className="profile-area-options">
-                            {researchAreaCatalog.map((area) => (
-                              <label key={area.id_area} className="profile-area-option">
-                                <input
-                                  type="checkbox"
-                                  checked={linkedResearcherAreaIds.has(String(area.id_area))}
-                                  onChange={(event) => handleResearchAreaToggle(
-                                    area.id_area,
-                                    event.target.checked
-                                  )}
-                                />
-                                <span>{area.name}</span>
+                          <div className="profile-area-picker">
+                            <div className="profile-area-picker__controls">
+                              <label className="profile-area-picker__select">
+                                <span className="sr-only">Area de pesquisa disponivel</span>
+                                <select
+                                  value={selectedResearchAreaId}
+                                  onChange={handleResearchAreaSelectChange}
+                                  disabled={availableResearchAreasToAdd.length === 0}
+                                >
+                                  <option value="">
+                                    {availableResearchAreasToAdd.length > 0
+                                      ? 'Selecione uma area'
+                                      : 'Todas as areas disponiveis foram adicionadas'}
+                                  </option>
+                                  {availableResearchAreasToAdd.map((area) => (
+                                    <option key={area.id_area} value={area.id_area}>
+                                      {area.name}
+                                    </option>
+                                  ))}
+                                </select>
                               </label>
-                            ))}
+
+                              <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={handleResearchAreaAdd}
+                                disabled={!selectedResearchAreaId}
+                              >
+                                Adicionar
+                              </button>
+                            </div>
+
+                            <div className="profile-area-picker__selected" aria-live="polite">
+                              {selectedResearchAreas.length > 0 ? (
+                                paginatedSelectedResearchAreas.map((area) => (
+                                  <span key={area.id_area} className="profile-area-chip">
+                                    <span>{area.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResearchAreaRemove(area.id_area)}
+                                      aria-label={`Remover area ${area.name}`}
+                                    >
+                                      Remover
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="profile-area-picker__empty">
+                                  Nenhuma area selecionada.
+                                </span>
+                              )}
+                            </div>
+
+                            {selectedResearchAreas.length > PROFILE_AREA_PAGE_SIZE ? (
+                              <div className="profile-pagination profile-pagination--compact">
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() => setResearchAreaPage((current) => Math.max(1, current - 1))}
+                                  disabled={researchAreaPage === 1}
+                                >
+                                  Anterior
+                                </button>
+                                <span className="profile-pagination__status">
+                                  Pagina {researchAreaPage} de {totalResearchAreaPages}
+                                </span>
+                                <button
+                                  type="button"
+                                  className="btn btn-ghost"
+                                  onClick={() => setResearchAreaPage((current) => (
+                                    Math.min(totalResearchAreaPages, current + 1)
+                                  ))}
+                                  disabled={researchAreaPage === totalResearchAreaPages}
+                                >
+                                  Proxima
+                                </button>
+                              </div>
+                            ) : null}
                           </div>
                         ) : null}
                         <small className="profile-field__hint">
@@ -776,9 +932,13 @@ export default function ProfilePage() {
                         <span className="profile-side__eyebrow">Formacoes</span>
                         <h3 className="profile-side__title">Historico academico</h3>
                       </div>
-                      {resumeData.education?.length > PAGE_SIZE ? (
+                      {resumeData.education?.length > PROFILE_EDUCATION_PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
-                          {buildPageLabel(educationPage, resumeData.education.length)}
+                          {buildPageLabel(
+                            educationPage,
+                            resumeData.education.length,
+                            PROFILE_EDUCATION_PAGE_SIZE
+                          )}
                         </span>
                       ) : null}
                     </div>
@@ -810,7 +970,7 @@ export default function ProfilePage() {
                       )}
                     </div>
 
-                    {resumeData.education?.length > PAGE_SIZE ? (
+                    {resumeData.education?.length > PROFILE_EDUCATION_PAGE_SIZE ? (
                       <div className="profile-pagination">
                         <button
                           type="button"
@@ -885,9 +1045,13 @@ export default function ProfilePage() {
                         <span className="profile-side__eyebrow">Experiencias</span>
                         <h3 className="profile-side__title">Historico profissional</h3>
                       </div>
-                      {resumeData.experience?.length > PAGE_SIZE ? (
+                      {resumeData.experience?.length > PROFILE_EXPERIENCE_PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
-                          {buildPageLabel(experiencePage, resumeData.experience.length)}
+                          {buildPageLabel(
+                            experiencePage,
+                            resumeData.experience.length,
+                            PROFILE_EXPERIENCE_PAGE_SIZE
+                          )}
                         </span>
                       ) : null}
                     </div>
@@ -918,7 +1082,7 @@ export default function ProfilePage() {
                       )}
                     </div>
 
-                    {resumeData.experience?.length > PAGE_SIZE ? (
+                    {resumeData.experience?.length > PROFILE_EXPERIENCE_PAGE_SIZE ? (
                       <div className="profile-pagination">
                         <button
                           type="button"
@@ -980,70 +1144,8 @@ export default function ProfilePage() {
 
               {activeResearcherTab === 'skills' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card profile-side__card--registered">
-                    <div className="profile-section-head">
-                      <div>
-                        <span className="profile-side__eyebrow">Habilidades</span>
-                        <h3 className="profile-side__title">Competencias vinculadas</h3>
-                      </div>
-                      {resumeData.skill?.length > PAGE_SIZE ? (
-                        <span className="profile-pagination__meta">
-                          {buildPageLabel(skillsPage, resumeData.skill.length)}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="profile-side__stack">
-                      {paginatedSkills.length > 0 ? (
-                        paginatedSkills.map((item) => (
-                          <article key={item.id_skill} className="profile-side__item">
-                            <strong>{item.description}</strong>
-                            <small>Habilidade vinculada ao curriculo do pesquisador.</small>
-                            <button
-                              type="button"
-                              className="btn btn-ghost profile-side__action"
-                              onClick={() => handleSkillRemove(item.id_skill)}
-                              disabled={isSkillSaving}
-                            >
-                              Remover habilidade
-                            </button>
-                          </article>
-                        ))
-                      ) : (
-                        <article className="profile-side__item">
-                          <strong>Nenhuma habilidade cadastrada</strong>
-                          <small>Vincule uma habilidade existente.</small>
-                        </article>
-                      )}
-                    </div>
-
-                    {resumeData.skill?.length > PAGE_SIZE ? (
-                      <div className="profile-pagination">
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          onClick={() => setSkillsPage((current) => Math.max(1, current - 1))}
-                          disabled={skillsPage === 1}
-                        >
-                          Anterior
-                        </button>
-                        <span className="profile-pagination__status">
-                          Pagina {skillsPage} de {totalSkillsPages}
-                        </span>
-                        <button
-                          type="button"
-                          className="btn btn-ghost"
-                          onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
-                          disabled={skillsPage === totalSkillsPages}
-                        >
-                          Proxima
-                        </button>
-                      </div>
-                    ) : null}
-                  </section>
-
                   <section className="profile-side__card profile-side__card--actions">
-                    <span className="profile-side__eyebrow">Vincular habilidade existente</span>
+                    <span className="profile-side__eyebrow">Habilidades</span>
                     <h3 className="profile-side__title">Selecionar do catalogo</h3>
 
                     {skillsCatalogError ? (
@@ -1053,42 +1155,94 @@ export default function ProfilePage() {
                       </article>
                     ) : null}
 
-                    <form className="profile-inline-form" onSubmit={handleSkillAttach}>
-                      <label className="profile-field">
-                        <span>Habilidade disponivel</span>
-                        <select
-                          value={skillForm.selectedSkillId}
-                          onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
-                          disabled={isSkillSaving || availableSkillsToLink.length === 0}
-                        >
-                          <option value="">
-                            {availableSkillsToLink.length > 0
-                              ? 'Selecione uma habilidade'
-                              : 'Nenhuma habilidade disponivel para vincular'}
-                          </option>
-                          {availableSkillsToLink.map((item) => (
-                            <option key={item.id_skill} value={item.id_skill}>
-                              {item.description}
+                    <form className="profile-area-picker" onSubmit={handleSkillAttach}>
+                      <div className="profile-area-picker__controls">
+                        <label className="profile-area-picker__select">
+                          <span className="sr-only">Habilidade disponivel</span>
+                          <select
+                            value={skillForm.selectedSkillId}
+                            onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
+                            disabled={isSkillSaving || availableSkillsToLink.length === 0}
+                          >
+                            <option value="">
+                              {availableSkillsToLink.length > 0
+                                ? 'Selecione uma habilidade'
+                                : 'Todas as habilidades disponiveis foram adicionadas'}
                             </option>
-                          ))}
-                        </select>
-                      </label>
+                            {availableSkillsToLink.map((item) => (
+                              <option key={item.id_skill} value={item.id_skill}>
+                                {item.description}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
 
-                      <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={isSkillSaving || availableSkillsToLink.length === 0}
-                      >
-                        {isSkillSaving ? 'Salvando...' : 'Vincular habilidade'}
-                      </button>
+                        <button
+                          type="submit"
+                          className="btn btn-primary"
+                          disabled={isSkillSaving || !skillForm.selectedSkillId}
+                        >
+                          Adicionar
+                        </button>
+                      </div>
+
+                      <div className="profile-area-picker__selected" aria-live="polite">
+                        {selectedSkills.length > 0 ? (
+                          paginatedSkills.map((item) => (
+                            <span key={item.id_skill} className="profile-area-chip">
+                              <span>{item.description}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleSkillRemove(item.id_skill)}
+                                disabled={isSkillSaving}
+                                aria-label={`Remover habilidade ${item.description}`}
+                              >
+                                Remover
+                              </button>
+                            </span>
+                          ))
+                        ) : (
+                          <span className="profile-area-picker__empty">
+                            Nenhuma habilidade selecionada.
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedSkills.length > PROFILE_SKILL_PAGE_SIZE ? (
+                        <div className="profile-pagination profile-pagination--compact">
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setSkillsPage((current) => Math.max(1, current - 1))}
+                            disabled={skillsPage === 1}
+                          >
+                            Anterior
+                          </button>
+                          <span className="profile-pagination__status">
+                            Pagina {skillsPage} de {totalSkillsPages}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn btn-ghost"
+                            onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
+                            disabled={skillsPage === totalSkillsPages}
+                          >
+                            Proxima
+                          </button>
+                        </div>
+                      ) : null}
                     </form>
 
-                    <article className="profile-side__item">
-                      <strong>Criacao de habilidades desativada no front</strong>
-                      <small>
-                        Esta tela usa apenas habilidades ja cadastradas.
-                      </small>
-                    </article>
+                    <div className="profile-form-card__actions">
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={handleSkillSave}
+                        disabled={isSkillSaving}
+                      >
+                        {isSkillSaving ? 'Salvando...' : 'Salvar habilidades'}
+                      </button>
+                    </div>
                   </section>
                 </div>
               ) : null}

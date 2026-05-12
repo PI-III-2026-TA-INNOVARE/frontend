@@ -1,39 +1,28 @@
 import { Link } from 'react-router-dom'
 import FeatureCard from '../../../components/FeatureCard'
-import Reveal from '../../../components/Reveal'
 import { appIcons } from '../../../lib/icons'
 import './HomePage.scss'
 
-const heroSupportCards = [
-  {
-    eyebrow: 'Cadastros',
-    title: 'Empresas e pesquisadores entram pelo mesmo acesso.',
-  },
-  {
-    eyebrow: 'Perfis',
-    title: 'Curriculos, experiencias e habilidades em um perfil.',
-  },
-  {
-    eyebrow: 'Pesquisas',
-    title: 'Demandas abertas para descoberta e interesse.',
-  },
-]
-
 const featureCards = [
   {
-    icon: appIcons.matchmaking,
-    title: 'Perfis completos',
-    description: 'Dados essenciais para empresas e pesquisadores.',
+    icon: appIcons.proposals,
+    title: 'Empresa publica uma demanda',
+    description: 'Cadastre problemas, desafios ou oportunidades de P&D que precisam de apoio tecnico ou academico.',
   },
   {
-    icon: appIcons.proposals,
-    title: 'Pesquisas e interesses',
-    description: 'Publique demandas e acompanhe pesquisadores interessados.',
+    icon: appIcons.matchmaking,
+    title: 'Pesquisador monta seu perfil',
+    description: 'Informe formacao, experiencias, habilidades e areas de atuacao para ser encontrado com mais precisao.',
   },
   {
     icon: appIcons.search,
-    title: 'Busca da plataforma',
-    description: 'Filtre empresas, pesquisadores, universidades e pesquisas.',
+    title: 'A IA sugere conexoes',
+    description: 'O sistema compara demandas e perfis para destacar pesquisadores com maior aderencia ao desafio.',
+  },
+  {
+    icon: appIcons.indicators,
+    title: 'A colaboracao comeca',
+    description: 'Empresas e pesquisadores avancam para conversas, propostas e possiveis projetos em conjunto.',
   },
 ]
 
@@ -44,85 +33,60 @@ export default function HomePage() {
         <div className="hero__bg-glow"></div>
         <div className="hero__bg-glow hero__bg-glow--right"></div>
 
-        <div className="container">
-          <div className="hero__content hero__content--centered">
-            <div className="hero__badge">
-              <span className="badge-dot"></span>
-              ODS 9 | Pesquisa, industria e inovacao conectadas
-            </div>
+        <div className="hero__shell">
+          <div className="container">
+            <div className="hero__layout">
+              <div className="hero__content">
+                <div className="hero__ai-mark" aria-hidden="true">IA</div>
 
-            <h1 className="hero__title">Conecte empresas e pesquisadores</h1>
+                <div className="hero__badge">
+                  <span className="badge-dot"></span>
+                  Match inteligente para pesquisa e inovacao
+                </div>
 
-            <p className="hero__description">
-              Uma plataforma para publicar pesquisas, encontrar perfis e criar conexoes de P&amp;D.
-            </p>
+                <h1 className="hero__title">Conectamos empresas com pesquisadores usando IA</h1>
 
-            <div className="hero__actions hero__actions--centered">
-              <Link to="/login" className="btn btn-primary btn-lg">
-                Entrar na plataforma
-              </Link>
-              <Link to="/como-funciona" className="btn btn-outline btn-lg">
-                Ver como funciona
-              </Link>
-            </div>
-          </div>
+                <p className="hero__description">
+                  Empresas publicam desafios de P&amp;D, pesquisadores cadastram seus perfis e a
+                  plataforma sugere conexoes com maior compatibilidade tecnica.
+                </p>
 
-          <div className="hero__support hero__support--compact">
-            <div className="hero__support-grid">
-              {heroSupportCards.map((card) => (
-                <article key={card.eyebrow} className="hero__support-card">
-                  <span className="hero__support-card-eyebrow">{card.eyebrow}</span>
-                  <h3 className="hero__support-card-title">{card.title}</h3>
-                </article>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section
-        className="section section--muted home-features home-features--focused"
-        id="funcionalidades"
-      >
-        <div className="container">
-          <Reveal className="text-center">
-            <span className="section-label">Funcionalidades</span>
-            <h2 className="section-title">
-              Funcionalidades para <span className="text-gradient">operar melhor</span>
-            </h2>
-            <p className="section-subtitle">O essencial para descobrir, publicar e acompanhar.</p>
-          </Reveal>
-
-          <div className="features__grid features__grid--three">
-            {featureCards.map((card) => (
-              <Reveal key={card.title}>
-                <FeatureCard icon={card.icon} title={card.title} description={card.description} />
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="section cta-section">
-        <div className="container">
-          <Reveal>
-            <div className="cta-box">
-              <h2 className="cta-box__title">
-                Comece a usar a <span className="text-gradient">P&amp;D Connect</span>
-              </h2>
-              <p className="cta-box__subtitle">
-                Entre para explorar perfis, pesquisas e indicadores.
-              </p>
-              <div className="cta-box__buttons">
-                <Link to="/login" className="btn btn-primary btn-lg">
-                  Entrar na plataforma
-                </Link>
-                <Link to="/login#cadastro" className="btn btn-outline btn-lg">
-                  Cadastrar
-                </Link>
+                <div className="cta-box">
+                  <h2 className="cta-box__title">
+                    Da demanda ao pesquisador certo
+                  </h2>
+                  <p className="cta-box__subtitle">
+                    A empresa descreve seu desafio, o pesquisador mantem seu perfil atualizado e
+                    a IA cruza informacoes para indicar conexoes com maior potencial de colaboracao.
+                  </p>
+                  <div className="cta-box__buttons">
+                    <Link to="/login" className="btn btn-primary btn-lg">
+                      Entrar na plataforma
+                    </Link>
+                    <Link to="/login#cadastro" className="btn btn-outline btn-lg">
+                      Criar cadastro
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
-          </Reveal>
+          </div>
+
+          <aside className="hero__steps" aria-label="Como o P&D Connect funciona">
+            <div className="hero__steps-head">
+              <span className="section-label">Como funciona</span>
+              <h2>4 passos para conectar demanda e pesquisa</h2>
+            </div>
+
+            {featureCards.map((card, index) => (
+              <FeatureCard
+                key={card.title}
+                icon={card.icon}
+                title={`${index + 1}. ${card.title}`}
+                description={card.description}
+              />
+            ))}
+          </aside>
         </div>
       </section>
     </>
