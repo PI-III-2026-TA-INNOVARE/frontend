@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { listPublicUniversities, lookupCompanyCnpj } from '../../../services/pdConnectApi'
+import authBrandImage from '../../../../imagem_referencia/pd_connect.png'
 import './LoginPage.scss'
 
 const defaultLoginForm = {
@@ -368,8 +369,20 @@ export default function LoginPage() {
       </div>
 
       <div className="login-shell">
-        <aside className="login-brand-panel" aria-label="Apresentacao P&D Connect">
-          <div className="login-brand-panel__mark">PD</div>
+        <aside className="login-brand-panel" aria-label="Apresentação P&D Connect">
+          <img
+            src={authBrandImage}
+            alt=""
+            className="login-brand-panel__image"
+            aria-hidden="true"
+          />
+          <div className="login-brand-panel__overlay"></div>
+          <div className="login-brand-panel__content">
+            <span className="login-brand-panel__brand">P&amp;D Connect</span>
+            <p className="login-brand-panel__tagline">
+              Pesquisa aplicada, oportunidades reais e conexões inteligentes.
+            </p>
+          </div>
         </aside>
 
         <main className="login-shell__form" aria-label="Acesso e cadastro">

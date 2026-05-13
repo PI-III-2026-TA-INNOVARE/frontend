@@ -51,6 +51,53 @@ function IndicatorCard({ item, shouldReduceMotion }) {
   )
 }
 
+function DashboardNav({ activeIndex, sections, onPrevious, onNext, onSelect }) {
+  const activeSection = sections[activeIndex]
+
+  return (
+    <div className="indicators-dashboard-nav" aria-label="Navegação dos indicadores">
+      <button
+        type="button"
+        className="indicators-dashboard-nav__button"
+        onClick={onPrevious}
+        aria-label="Ver seção anterior"
+      >
+        ‹
+      </button>
+
+      <div className="indicators-dashboard-nav__current">
+        <span className="indicators-dashboard-nav__eyebrow">
+          {activeIndex + 1} de {sections.length}
+        </span>
+        <strong>{activeSection.title}</strong>
+        <small>{activeSection.description}</small>
+      </div>
+
+      <div className="indicators-dashboard-nav__dots" aria-label="Selecionar seção">
+        {sections.map((section, index) => (
+          <button
+            key={section.id}
+            type="button"
+            className={`indicators-dashboard-nav__dot${index === activeIndex ? ' active' : ''}`}
+            onClick={() => onSelect(index)}
+            aria-label={`Abrir seção ${section.title}`}
+            aria-current={index === activeIndex ? 'true' : undefined}
+          />
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="indicators-dashboard-nav__button"
+        onClick={onNext}
+        aria-label="Ver próxima seção"
+      >
+        ›
+      </button>
+    </div>
+  )
+}
+
 function DistributionChart({ eyebrow, title, subtitle, items, secondary = false, shouldReduceMotion }) {
   return (
     <article className="chart-panel">
@@ -85,6 +132,7 @@ function DistributionChart({ eyebrow, title, subtitle, items, secondary = false,
 export default function IndicadoresPage() {
   const shouldReduceMotion = useReducedMotion()
   const { isAuthenticated, isBootstrapping } = useAuth()
+  const [activeSectionIndex, setActiveSectionIndex] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [partialWarnings, setPartialWarnings] = useState([])
@@ -350,6 +398,35 @@ export default function IndicadoresPage() {
   }, [activeCompanies, activeResearchers, availableResearchers, companyCount, researcherCount])
 
   const showPublicFallback = !isAuthenticated && !isBootstrapping
+  const dashboardSections = [
+    {
+      id: 'overview',
+      title: 'Visão geral',
+      description: 'Principais números da plataforma.',
+    },
+    {
+      id: 'academic',
+      title: 'Perfil acadêmico e curricular',
+      description: 'Dados de currículos, formações e habilidades.',
+    },
+    {
+      id: 'rankings',
+      title: 'Rankings e distribuições',
+      description: 'Comparativos de universidades, status e disponibilidade.',
+    },
+  ]
+
+  const handlePreviousSection = () => {
+    setActiveSectionIndex((current) => (
+      current === 0 ? dashboardSections.length - 1 : current - 1
+    ))
+  }
+
+  const handleNextSection = () => {
+    setActiveSectionIndex((current) => (
+      current === dashboardSections.length - 1 ? 0 : current + 1
+    ))
+  }
 
   return (
     <>
@@ -402,46 +479,60 @@ export default function IndicadoresPage() {
 
           {isAuthenticated && !loading && !error ? (
             <>
-              <div className="indicadores__grid">
-                {overviewIndicators.map((item) => (
-                  <Reveal key={item.label}>
-                    <IndicatorCard item={item} shouldReduceMotion={shouldReduceMotion} />
+              <DashboardNav
+                activeIndex={activeSectionIndex}
+                sections={dashboardSections}
+                onPrevious={handlePreviousSection}
+                onNext={handleNextSection}
+                onSelect={setActiveSectionIndex}
+              />
+
+              {dashboardSections[activeSectionIndex].id === 'overview' ? (
+                <div className="indicadores__grid indicadores__grid--overview">
+                  {overviewIndicators.map((item) => (
+                    <Reveal key={item.label}>
+                      <IndicatorCard item={item} shouldReduceMotion={shouldReduceMotion} />
+                    </Reveal>
+                  ))}
+                </div>
+              ) : null}
+
+              {dashboardSections[activeSectionIndex].id === 'academic' ? (
+                <div className="indicadores__grid indicadores__grid--secondary">
+                  {secondaryIndicators.map((item) => (
+                    <Reveal key={item.label}>
+                      <IndicatorCard item={item} shouldReduceMotion={shouldReduceMotion} />
+                    </Reveal>
+                  ))}
+                </div>
+              ) : null}
+
+              {dashboardSections[activeSectionIndex].id === 'rankings' ? (
+                <div className="indicators__charts">
+                  <Reveal>
+                    <DistributionChart
+                      eyebrow="Universidades vinculadas"
+                      title="Pesquisadores por universidade"
+                      subtitle="Top 5 instituições por pesquisadores vinculados."
+                      items={researchersByUniversity.length > 0 ? researchersByUniversity : [
+                        { label: 'Sem dados', value: '0', height: '22%' },
+                      ]}
+                      shouldReduceMotion={shouldReduceMotion}
+                    />
                   </Reveal>
-                ))}
-              </div>
 
-              <div className="indicators__charts">
-                <Reveal>
-                  <DistributionChart
-                    eyebrow="Universidades vinculadas"
-                    title="Pesquisadores por universidade"
-                    subtitle="Top 5 instituicoes por pesquisadores vinculados."
-                    items={researchersByUniversity.length > 0 ? researchersByUniversity : [
-                      { label: 'Sem dados', value: '0', height: '22%' },
-                    ]}
-                    shouldReduceMotion={shouldReduceMotion}
-                  />
-                </Reveal>
-
-                <Reveal>
-                  <DistributionChart
-                    eyebrow="Status dos cadastros"
-                    title="Empresas e pesquisadores por disponibilidade"
-                    subtitle="Distribuicao de status e disponibilidade."
-                    items={statusDistribution}
-                    secondary
-                    shouldReduceMotion={shouldReduceMotion}
-                  />
-                </Reveal>
-              </div>
-
-              <div className="indicadores__grid indicadores__grid--secondary">
-                {secondaryIndicators.map((item) => (
-                  <Reveal key={item.label}>
-                    <IndicatorCard item={item} shouldReduceMotion={shouldReduceMotion} />
+                  <Reveal>
+                    <DistributionChart
+                      eyebrow="Status dos cadastros"
+                      title="Empresas e pesquisadores por disponibilidade"
+                      subtitle="Distribuição de status e disponibilidade."
+                      items={statusDistribution}
+                      secondary
+                      shouldReduceMotion={shouldReduceMotion}
+                    />
                   </Reveal>
-                ))}
-              </div>
+                </div>
+              ) : null}
             </>
           ) : null}
         </div>

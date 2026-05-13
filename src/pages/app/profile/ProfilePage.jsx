@@ -15,10 +15,10 @@ import {
 } from '../../../services/pdConnectApi'
 import './ProfilePage.scss'
 
-const PROFILE_AREA_PAGE_SIZE = 4
+const PROFILE_AREA_PAGE_SIZE = 6
 const PROFILE_EDUCATION_PAGE_SIZE = 3
 const PROFILE_EXPERIENCE_PAGE_SIZE = 3
-const PROFILE_SKILL_PAGE_SIZE = 2
+const PROFILE_SKILL_PAGE_SIZE = 6
 
 const defaultEducationForm = {
   course: '',
@@ -105,6 +105,7 @@ function validateExperienceForm(form) {
 
 export default function ProfilePage() {
   const { refreshUser, user } = useAuth()
+  const [profileUser, setProfileUser] = useState(user)
   const [savedMessage, setSavedMessage] = useState('')
   const [resumeMessage, setResumeMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -130,11 +131,10 @@ export default function ProfilePage() {
     (user?.resume?.skill || []).map((item) => String(item.id_skill))
   ))
 
-  const isEmpresa = user?.type === 'empresa'
-  const resumeData = user?.resume || { education: [], experience: [], skill: [] }
-  const hasLinkedResume = Boolean(user?.researcher?.resume)
-  const researcherUniversityName = user?.university?.name || 'Universidade nao informada'
-  const researcherStatusLabel = formatBooleanLabel(user?.researcher?.status, {
+  const isEmpresa = profileUser?.type === 'empresa'
+  const resumeData = profileUser?.resume || { education: [], experience: [], skill: [] }
+  const researcherUniversityName = profileUser?.university?.name || 'Universidade nao informada'
+  const researcherStatusLabel = formatBooleanLabel(profileUser?.researcher?.status, {
     trueLabel: 'Ativo',
     falseLabel: 'Inativo',
     nullLabel: 'Nao informado',
@@ -217,13 +217,17 @@ export default function ProfilePage() {
   )
 
   useEffect(() => {
-    setFormData(buildInitialProfile(user))
+    setProfileUser(user)
+  }, [user])
+
+  useEffect(() => {
+    setFormData(buildInitialProfile(profileUser))
     setSelectedResearchAreaId('')
     setResearchAreaPage(1)
-    setSelectedSkillIds((user?.resume?.skill || []).map((item) => String(item.id_skill)))
+    setSelectedSkillIds((profileUser?.resume?.skill || []).map((item) => String(item.id_skill)))
     setSkillForm(defaultSkillForm)
     setSkillsPage(1)
-  }, [user])
+  }, [profileUser])
 
   useEffect(() => {
     setResearchAreaPage((current) => Math.min(current, totalResearchAreaPages))
@@ -278,7 +282,7 @@ export default function ProfilePage() {
     return () => {
       isMounted = false
     }
-  }, [isEmpresa, user?.researcher?.id_researcher])
+  }, [isEmpresa, profileUser?.researcher?.id_researcher])
 
   useEffect(() => {
     let isMounted = true
@@ -318,7 +322,7 @@ export default function ProfilePage() {
     return () => {
       isMounted = false
     }
-  }, [isEmpresa, user?.researcher?.id_researcher])
+  }, [isEmpresa, profileUser?.researcher?.id_researcher])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -335,7 +339,7 @@ export default function ProfilePage() {
 
     try {
       if (isEmpresa) {
-        await updateCompany(user.company.id_company, {
+        await updateCompany(profileUser.company.id_company, {
           name: formData.name.trim(),
           status: toBoolean(formData.status),
         })
@@ -344,19 +348,14 @@ export default function ProfilePage() {
           throw new Error('Informe o nome do pesquisador antes de salvar.')
         }
 
-        await updateResearcher(user.researcher.id_researcher, {
+        await updateResearcher(profileUser.researcher.id_researcher, {
           name: formData.name.trim(),
           availability: toBoolean(formData.availability),
           area: (formData.areaIds || []).map((areaId) => Number(areaId)),
         })
       }
 
-      const refreshed = await refreshUser()
-
-      if (!refreshed.ok) {
-        throw new Error(refreshed.message)
-      }
-
+      await refreshProfileView()
       setSavedMessage('Perfil atualizado com sucesso.')
     } catch (error) {
       setErrorMessage(
@@ -432,22 +431,31 @@ export default function ProfilePage() {
     setErrorMessage('')
   }
 
-  const syncResumeAfterChange = async (message) => {
+  const refreshProfileView = async () => {
     const refreshed = await refreshUser()
 
     if (!refreshed.ok) {
       throw new Error(refreshed.message)
     }
 
+    if (refreshed.user) {
+      setProfileUser(refreshed.user)
+    }
+
+    return refreshed.user
+  }
+
+  const syncResumeAfterChange = async (message) => {
+    await refreshProfileView()
     setResumeMessage(message)
   }
 
   const ensureResearcherResume = async () => {
-    if (user?.researcher?.resume) {
-      return Number(user.researcher.resume)
+    if (profileUser?.researcher?.resume) {
+      return Number(profileUser.researcher.resume)
     }
 
-    if (!user?.researcher?.id_researcher) {
+    if (!profileUser?.researcher?.id_researcher) {
       throw new Error('O perfil autenticado nao retornou o ID do pesquisador.')
     }
 
@@ -457,15 +465,11 @@ export default function ProfilePage() {
       throw new Error('Nao foi possivel confirmar o curriculo criado.')
     }
 
-    await updateResearcher(user.researcher.id_researcher, {
+    await updateResearcher(profileUser.researcher.id_researcher, {
       resume: createdResume.id_resume,
     })
 
-    const refreshed = await refreshUser()
-
-    if (!refreshed.ok) {
-      throw new Error(refreshed.message)
-    }
+    await refreshProfileView()
 
     return Number(createdResume.id_resume)
   }
@@ -726,7 +730,7 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'general' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('general')}
                 >
-                  Informacoes gerais
+                  Informações gerais
                 </button>
                 <button
                   type="button"
@@ -735,7 +739,7 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'educations' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('educations')}
                 >
-                  Formacoes
+                  Formações ({resumeData.education?.length || 0})
                 </button>
                 <button
                   type="button"
@@ -744,7 +748,7 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'experiences' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('experiences')}
                 >
-                  Experiencias
+                  Experiências ({resumeData.experience?.length || 0})
                 </button>
                 <button
                   type="button"
@@ -753,7 +757,7 @@ export default function ProfilePage() {
                   className={`profile-tab${activeResearcherTab === 'skills' ? ' active' : ''}`}
                   onClick={() => setActiveResearcherTab('skills')}
                 >
-                  Habilidades
+                  Áreas e habilidades ({selectedResearchAreas.length + selectedSkills.length})
                 </button>
               </div>
 
@@ -762,7 +766,12 @@ export default function ProfilePage() {
 
               {activeResearcherTab === 'general' ? (
                 <div className="profile-tab-panel">
-                  <form className="profile-form-card profile-form-card--embedded" onSubmit={handleSubmit}>
+                  <form className="profile-form-card profile-form-card--embedded profile-form-card--general" onSubmit={handleSubmit}>
+                    <div className="profile-form-card__intro">
+                      <span className="profile-side__eyebrow">Pesquisador</span>
+                      <h3 className="profile-side__title">Informações gerais</h3>
+                    </div>
+
                     <div className="profile-form-grid">
                       <label className="profile-field">
                         <span>Nome completo</span>
@@ -784,153 +793,28 @@ export default function ProfilePage() {
 
                       <div className="profile-field profile-field--readonly">
                         <span>Status do cadastro</span>
-                        <div className="profile-readonly-value">{researcherStatusLabel}</div>
+                        <div className="profile-status-badge profile-status-badge--active">{researcherStatusLabel}</div>
                       </div>
 
-                      <div className="profile-field profile-field--full">
-                        <span>Areas de pesquisa</span>
-                        {researchAreaCatalogError ? (
-                          <div className="profile-readonly-value">
-                            {researchAreaCatalogError}
-                          </div>
-                        ) : null}
-
-                        {!researchAreaCatalogError && researchAreaCatalog.length === 0 ? (
-                          <div className="profile-readonly-value">
-                            Nenhuma area de pesquisa disponivel.
-                          </div>
-                        ) : null}
-
-                        {!researchAreaCatalogError && researchAreaCatalog.length > 0 ? (
-                          <div className="profile-area-picker">
-                            <div className="profile-area-picker__controls">
-                              <label className="profile-area-picker__select">
-                                <span className="sr-only">Area de pesquisa disponivel</span>
-                                <select
-                                  value={selectedResearchAreaId}
-                                  onChange={handleResearchAreaSelectChange}
-                                  disabled={availableResearchAreasToAdd.length === 0}
-                                >
-                                  <option value="">
-                                    {availableResearchAreasToAdd.length > 0
-                                      ? 'Selecione uma area'
-                                      : 'Todas as areas disponiveis foram adicionadas'}
-                                  </option>
-                                  {availableResearchAreasToAdd.map((area) => (
-                                    <option key={area.id_area} value={area.id_area}>
-                                      {area.name}
-                                    </option>
-                                  ))}
-                                </select>
-                              </label>
-
-                              <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={handleResearchAreaAdd}
-                                disabled={!selectedResearchAreaId}
-                              >
-                                Adicionar
-                              </button>
-                            </div>
-
-                            <div className="profile-area-picker__selected" aria-live="polite">
-                              {selectedResearchAreas.length > 0 ? (
-                                paginatedSelectedResearchAreas.map((area) => (
-                                  <span key={area.id_area} className="profile-area-chip">
-                                    <span>{area.name}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleResearchAreaRemove(area.id_area)}
-                                      aria-label={`Remover area ${area.name}`}
-                                    >
-                                      Remover
-                                    </button>
-                                  </span>
-                                ))
-                              ) : (
-                                <span className="profile-area-picker__empty">
-                                  Nenhuma area selecionada.
-                                </span>
-                              )}
-                            </div>
-
-                            {selectedResearchAreas.length > PROFILE_AREA_PAGE_SIZE ? (
-                              <div className="profile-pagination profile-pagination--compact">
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost"
-                                  onClick={() => setResearchAreaPage((current) => Math.max(1, current - 1))}
-                                  disabled={researchAreaPage === 1}
-                                >
-                                  Anterior
-                                </button>
-                                <span className="profile-pagination__status">
-                                  Pagina {researchAreaPage} de {totalResearchAreaPages}
-                                </span>
-                                <button
-                                  type="button"
-                                  className="btn btn-ghost"
-                                  onClick={() => setResearchAreaPage((current) => (
-                                    Math.min(totalResearchAreaPages, current + 1)
-                                  ))}
-                                  disabled={researchAreaPage === totalResearchAreaPages}
-                                >
-                                  Proxima
-                                </button>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        <small className="profile-field__hint">
-                          Selecione as areas em que voce atua.
-                        </small>
-                      </div>
                     </div>
 
                     <div className="profile-form-card__actions">
                       <button type="submit" className="btn btn-primary" disabled={isSaving}>
-                        {isSaving ? 'Salvando...' : 'Salvar alteracoes'}
+                        {isSaving ? 'Salvando...' : 'Salvar alterações'}
                       </button>
                     </div>
                   </form>
 
-                  <section className="profile-side__card profile-side__card--registered">
-                    <span className="profile-side__eyebrow">Curriculo</span>
-                    <h3 className="profile-side__title">Resumo</h3>
-                    {!hasLinkedResume ? (
-                      <article className="profile-side__item">
-                        <strong>Curriculo ainda nao vinculado</strong>
-                        <small>
-                          Adicione formacao, experiencia ou habilidade para iniciar seu curriculo.
-                        </small>
-                      </article>
-                    ) : null}
-                    <div className="profile-side__stack">
-                      <article className="profile-side__item">
-                        <strong>{resumeData.education?.length || 0} formacao(oes)</strong>
-                        <small>Historico academico.</small>
-                      </article>
-                      <article className="profile-side__item">
-                        <strong>{resumeData.experience?.length || 0} experiencia(s)</strong>
-                        <small>Experiencias profissionais.</small>
-                      </article>
-                      <article className="profile-side__item">
-                        <strong>{resumeData.skill?.length || 0} habilidade(s)</strong>
-                        <small>Competencias vinculadas.</small>
-                      </article>
-                    </div>
-                  </section>
                 </div>
               ) : null}
 
               {activeResearcherTab === 'educations' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card profile-side__card--registered">
+                  <section className="profile-side__card profile-side__card--registered profile-side__card--compact-list">
                     <div className="profile-section-head">
                       <div>
-                        <span className="profile-side__eyebrow">Formacoes</span>
-                        <h3 className="profile-side__title">Historico academico</h3>
+                        <span className="profile-side__eyebrow">Formações</span>
+                        <h3 className="profile-side__title">Histórico acadêmico</h3>
                       </div>
                       {resumeData.education?.length > PROFILE_EDUCATION_PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
@@ -943,29 +827,70 @@ export default function ProfilePage() {
                       ) : null}
                     </div>
 
-                    <div className="profile-side__stack">
+                    <form className="profile-inline-form profile-inline-form--grid profile-inline-form--panel" onSubmit={handleEducationSubmit}>
+                      <span className="profile-inline-form__title">+ Nova formação</span>
+                      <label className="profile-field">
+                        <span>Curso</span>
+                        <input
+                          placeholder="Nome do curso"
+                          value={educationForm.course}
+                          onChange={(event) => handleEducationChange('course', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Instituição</span>
+                        <input
+                          placeholder="Nome da instituição"
+                          value={educationForm.institution}
+                          onChange={(event) => handleEducationChange('institution', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de início</span>
+                        <input
+                          type="date"
+                          value={educationForm.startDate}
+                          onChange={(event) => handleEducationChange('startDate', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de término</span>
+                        <input
+                          type="date"
+                          value={educationForm.endDate}
+                          onChange={(event) => handleEducationChange('endDate', event.target.value)}
+                        />
+                      </label>
+                      <button type="submit" className="btn btn-primary" disabled={isEducationSaving}>
+                        {isEducationSaving ? 'Salvando...' : 'Adicionar formação'}
+                      </button>
+                    </form>
+
+                    <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedEducation.length > 0 ? (
                         paginatedEducation.map((item) => (
-                          <article key={item.id_education} className="profile-side__item">
-                            <strong>{item.course}</strong>
-                            <span>{item.institution}</span>
-                            <small>
-                              {formatDateLabel(item.start_date)} ate {formatDateLabel(item.end_date)}
-                            </small>
+                          <article key={item.id_education} className="profile-side__item profile-side__item--timeline">
+                            <div className="profile-side__icon" aria-hidden="true">F</div>
+                            <div className="profile-side__content">
+                              <strong>{item.course}</strong>
+                              <small>
+                                {item.institution} · {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
+                              </small>
+                            </div>
                             <button
                               type="button"
                               className="btn btn-ghost profile-side__action"
                               onClick={() => handleEducationDelete(item.id_education)}
                               disabled={isEducationSaving}
                             >
-                              Remover formacao
+                              Remover
                             </button>
                           </article>
                         ))
                       ) : (
-                        <article className="profile-side__item">
-                          <strong>Nenhuma formacao cadastrada</strong>
-                          <small>Cadastre sua primeira formacao para exibir o historico academico.</small>
+                        <article className="profile-side__item profile-side__item--empty">
+                          <strong>Nenhuma formação cadastrada ainda.</strong>
+                          <small>Adicione sua primeira formação acadêmica para completar seu perfil.</small>
                         </article>
                       )}
                     </div>
@@ -981,7 +906,7 @@ export default function ProfilePage() {
                           Anterior
                         </button>
                         <span className="profile-pagination__status">
-                          Pagina {educationPage} de {totalEducationPages}
+                          Página {educationPage} de {totalEducationPages}
                         </span>
                         <button
                           type="button"
@@ -989,61 +914,21 @@ export default function ProfilePage() {
                           onClick={() => setEducationPage((current) => Math.min(totalEducationPages, current + 1))}
                           disabled={educationPage === totalEducationPages}
                         >
-                          Proxima
+                          Próxima
                         </button>
                       </div>
                     ) : null}
-                  </section>
-
-                  <section className="profile-side__card profile-side__card--actions">
-                    <span className="profile-side__eyebrow">Nova formacao</span>
-                    <h3 className="profile-side__title">Adicionar formacao</h3>
-                    <form className="profile-inline-form" onSubmit={handleEducationSubmit}>
-                      <label className="profile-field">
-                        <span>Curso</span>
-                        <input
-                          value={educationForm.course}
-                          onChange={(event) => handleEducationChange('course', event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-field">
-                        <span>Instituicao</span>
-                        <input
-                          value={educationForm.institution}
-                          onChange={(event) => handleEducationChange('institution', event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-field">
-                        <span>Data de inicio</span>
-                        <input
-                          type="date"
-                          value={educationForm.startDate}
-                          onChange={(event) => handleEducationChange('startDate', event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-field">
-                        <span>Data de termino</span>
-                        <input
-                          type="date"
-                          value={educationForm.endDate}
-                          onChange={(event) => handleEducationChange('endDate', event.target.value)}
-                        />
-                      </label>
-                      <button type="submit" className="btn btn-primary" disabled={isEducationSaving}>
-                        {isEducationSaving ? 'Salvando...' : 'Adicionar formacao'}
-                      </button>
-                    </form>
                   </section>
                 </div>
               ) : null}
 
               {activeResearcherTab === 'experiences' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card profile-side__card--registered">
+                  <section className="profile-side__card profile-side__card--registered profile-side__card--compact-list">
                     <div className="profile-section-head">
                       <div>
-                        <span className="profile-side__eyebrow">Experiencias</span>
-                        <h3 className="profile-side__title">Historico profissional</h3>
+                        <span className="profile-side__eyebrow">Experiências</span>
+                        <h3 className="profile-side__title">Histórico profissional</h3>
                       </div>
                       {resumeData.experience?.length > PROFILE_EXPERIENCE_PAGE_SIZE ? (
                         <span className="profile-pagination__meta">
@@ -1056,28 +941,62 @@ export default function ProfilePage() {
                       ) : null}
                     </div>
 
-                    <div className="profile-side__stack">
+                    <form className="profile-inline-form profile-inline-form--grid profile-inline-form--panel" onSubmit={handleExperienceSubmit}>
+                      <span className="profile-inline-form__title">+ Nova experiência</span>
+                      <label className="profile-field profile-field--full">
+                        <span>Descrição</span>
+                        <textarea
+                          placeholder="Descreva sua experiência"
+                          value={experienceForm.description}
+                          onChange={(event) => handleExperienceChange('description', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de início</span>
+                        <input
+                          type="date"
+                          value={experienceForm.startDate}
+                          onChange={(event) => handleExperienceChange('startDate', event.target.value)}
+                        />
+                      </label>
+                      <label className="profile-field">
+                        <span>Data de término</span>
+                        <input
+                          type="date"
+                          value={experienceForm.endDate}
+                          onChange={(event) => handleExperienceChange('endDate', event.target.value)}
+                        />
+                      </label>
+                      <button type="submit" className="btn btn-primary" disabled={isExperienceSaving}>
+                        {isExperienceSaving ? 'Salvando...' : 'Adicionar experiência'}
+                      </button>
+                    </form>
+
+                    <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedExperience.length > 0 ? (
                         paginatedExperience.map((item) => (
-                          <article key={item.id_experience} className="profile-side__item">
-                            <strong>{item.description}</strong>
-                            <small>
-                              {formatDateLabel(item.start_date)} ate {formatDateLabel(item.end_date)}
-                            </small>
+                          <article key={item.id_experience} className="profile-side__item profile-side__item--timeline">
+                            <div className="profile-side__icon" aria-hidden="true">E</div>
+                            <div className="profile-side__content">
+                              <strong>{item.description}</strong>
+                              <small>
+                                {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
+                              </small>
+                            </div>
                             <button
                               type="button"
                               className="btn btn-ghost profile-side__action"
                               onClick={() => handleExperienceDelete(item.id_experience)}
                               disabled={isExperienceSaving}
                             >
-                              Remover experiencia
+                              Remover
                             </button>
                           </article>
                         ))
                       ) : (
-                        <article className="profile-side__item">
-                          <strong>Nenhuma experiencia cadastrada</strong>
-                          <small>Adicione sua primeira experiencia.</small>
+                        <article className="profile-side__item profile-side__item--empty">
+                          <strong>Nenhuma experiência cadastrada ainda.</strong>
+                          <small>Adicione experiências profissionais para fortalecer seu perfil.</small>
                         </article>
                       )}
                     </div>
@@ -1093,7 +1012,7 @@ export default function ProfilePage() {
                           Anterior
                         </button>
                         <span className="profile-pagination__status">
-                          Pagina {experiencePage} de {totalExperiencePages}
+                          Página {experiencePage} de {totalExperiencePages}
                         </span>
                         <button
                           type="button"
@@ -1101,147 +1020,213 @@ export default function ProfilePage() {
                           onClick={() => setExperiencePage((current) => Math.min(totalExperiencePages, current + 1))}
                           disabled={experiencePage === totalExperiencePages}
                         >
-                          Proxima
+                          Próxima
                         </button>
                       </div>
                     ) : null}
-                  </section>
-
-                  <section className="profile-side__card profile-side__card--actions">
-                    <span className="profile-side__eyebrow">Nova experiencia</span>
-                    <h3 className="profile-side__title">Adicionar experiencia</h3>
-                    <form className="profile-inline-form" onSubmit={handleExperienceSubmit}>
-                      <label className="profile-field profile-field--full">
-                        <span>Descricao</span>
-                        <input
-                          value={experienceForm.description}
-                          onChange={(event) => handleExperienceChange('description', event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-field">
-                        <span>Data de inicio</span>
-                        <input
-                          type="date"
-                          value={experienceForm.startDate}
-                          onChange={(event) => handleExperienceChange('startDate', event.target.value)}
-                        />
-                      </label>
-                      <label className="profile-field">
-                        <span>Data de termino</span>
-                        <input
-                          type="date"
-                          value={experienceForm.endDate}
-                          onChange={(event) => handleExperienceChange('endDate', event.target.value)}
-                        />
-                      </label>
-                      <button type="submit" className="btn btn-primary" disabled={isExperienceSaving}>
-                        {isExperienceSaving ? 'Salvando...' : 'Adicionar experiencia'}
-                      </button>
-                    </form>
                   </section>
                 </div>
               ) : null}
 
               {activeResearcherTab === 'skills' ? (
                 <div className="profile-tab-panel">
-                  <section className="profile-side__card profile-side__card--actions">
-                    <span className="profile-side__eyebrow">Habilidades</span>
-                    <h3 className="profile-side__title">Selecionar do catalogo</h3>
+                  <section className="profile-side__card profile-side__card--compact-list profile-skill-groups">
+                    <div className="profile-skill-group">
+                      <span className="profile-side__eyebrow">Áreas de pesquisa</span>
+                      <h3 className="profile-side__title">Áreas selecionadas</h3>
 
-                    {skillsCatalogError ? (
-                      <article className="profile-side__item">
-                        <strong>Falha ao carregar catalogo</strong>
-                        <small>{skillsCatalogError}</small>
-                      </article>
-                    ) : null}
+                      {researchAreaCatalogError ? (
+                        <article className="profile-side__item">
+                          <strong>Falha ao carregar catálogo</strong>
+                          <small>{researchAreaCatalogError}</small>
+                        </article>
+                      ) : null}
 
-                    <form className="profile-area-picker" onSubmit={handleSkillAttach}>
-                      <div className="profile-area-picker__controls">
-                        <label className="profile-area-picker__select">
-                          <span className="sr-only">Habilidade disponivel</span>
-                          <select
-                            value={skillForm.selectedSkillId}
-                            onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
-                            disabled={isSkillSaving || availableSkillsToLink.length === 0}
-                          >
-                            <option value="">
-                              {availableSkillsToLink.length > 0
-                                ? 'Selecione uma habilidade'
-                                : 'Todas as habilidades disponiveis foram adicionadas'}
-                            </option>
-                            {availableSkillsToLink.map((item) => (
-                              <option key={item.id_skill} value={item.id_skill}>
-                                {item.description}
+                      <form className="profile-area-picker profile-area-picker--flat" onSubmit={handleSubmit}>
+                        <div className="profile-area-picker__controls">
+                          <label className="profile-area-picker__select">
+                            <span className="sr-only">Área disponível</span>
+                            <select
+                              value={selectedResearchAreaId}
+                              onChange={handleResearchAreaSelectChange}
+                              disabled={isSaving || availableResearchAreasToAdd.length === 0}
+                            >
+                              <option value="">
+                                {availableResearchAreasToAdd.length > 0
+                                  ? 'Selecione uma área'
+                                  : 'Todas as áreas disponíveis foram adicionadas'}
                               </option>
-                            ))}
-                          </select>
-                        </label>
+                              {availableResearchAreasToAdd.map((item) => (
+                                <option key={item.id_area} value={item.id_area}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
 
-                        <button
-                          type="submit"
-                          className="btn btn-primary"
-                          disabled={isSkillSaving || !skillForm.selectedSkillId}
-                        >
-                          Adicionar
-                        </button>
-                      </div>
-
-                      <div className="profile-area-picker__selected" aria-live="polite">
-                        {selectedSkills.length > 0 ? (
-                          paginatedSkills.map((item) => (
-                            <span key={item.id_skill} className="profile-area-chip">
-                              <span>{item.description}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleSkillRemove(item.id_skill)}
-                                disabled={isSkillSaving}
-                                aria-label={`Remover habilidade ${item.description}`}
-                              >
-                                Remover
-                              </button>
-                            </span>
-                          ))
-                        ) : (
-                          <span className="profile-area-picker__empty">
-                            Nenhuma habilidade selecionada.
-                          </span>
-                        )}
-                      </div>
-
-                      {selectedSkills.length > PROFILE_SKILL_PAGE_SIZE ? (
-                        <div className="profile-pagination profile-pagination--compact">
                           <button
                             type="button"
-                            className="btn btn-ghost"
-                            onClick={() => setSkillsPage((current) => Math.max(1, current - 1))}
-                            disabled={skillsPage === 1}
+                            className="btn btn-primary"
+                            onClick={handleResearchAreaAdd}
+                            disabled={isSaving || !selectedResearchAreaId}
                           >
-                            Anterior
-                          </button>
-                          <span className="profile-pagination__status">
-                            Pagina {skillsPage} de {totalSkillsPages}
-                          </span>
-                          <button
-                            type="button"
-                            className="btn btn-ghost"
-                            onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
-                            disabled={skillsPage === totalSkillsPages}
-                          >
-                            Proxima
+                            + Adicionar
                           </button>
                         </div>
-                      ) : null}
-                    </form>
 
-                    <div className="profile-form-card__actions">
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        onClick={handleSkillSave}
-                        disabled={isSkillSaving}
-                      >
-                        {isSkillSaving ? 'Salvando...' : 'Salvar habilidades'}
-                      </button>
+                        <div className="profile-area-picker__selected" aria-live="polite">
+                          {selectedResearchAreas.length > 0 ? (
+                            paginatedSelectedResearchAreas.map((item) => (
+                              <span key={item.id_area} className="profile-area-chip">
+                                <span>{item.name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleResearchAreaRemove(item.id_area)}
+                                  disabled={isSaving}
+                                  aria-label={`Remover área ${item.name}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="profile-area-picker__empty">
+                              Nenhuma área selecionada. Selecione áreas de atuação para melhorar o match com demandas de P&D.
+                            </span>
+                          )}
+                        </div>
+
+                        {selectedResearchAreas.length > PROFILE_AREA_PAGE_SIZE ? (
+                          <div className="profile-pagination profile-pagination--compact">
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setResearchAreaPage((current) => Math.max(1, current - 1))}
+                              disabled={researchAreaPage === 1}
+                            >
+                              Anterior
+                            </button>
+                            <span className="profile-pagination__status">
+                              Página {researchAreaPage} de {totalResearchAreaPages}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setResearchAreaPage((current) => Math.min(totalResearchAreaPages, current + 1))}
+                              disabled={researchAreaPage === totalResearchAreaPages}
+                            >
+                              Próxima
+                            </button>
+                          </div>
+                        ) : null}
+
+                        <div className="profile-form-card__actions">
+                          <button type="submit" className="btn btn-primary" disabled={isSaving}>
+                            {isSaving ? 'Salvando...' : 'Salvar áreas'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+
+                    <div className="profile-skill-group">
+                      <span className="profile-side__eyebrow">Habilidades</span>
+                      <h3 className="profile-side__title">Habilidades selecionadas</h3>
+
+                      {skillsCatalogError ? (
+                        <article className="profile-side__item">
+                          <strong>Falha ao carregar catálogo</strong>
+                          <small>{skillsCatalogError}</small>
+                        </article>
+                      ) : null}
+
+                      <form className="profile-area-picker profile-area-picker--flat" onSubmit={handleSkillAttach}>
+                        <div className="profile-area-picker__controls">
+                          <label className="profile-area-picker__select">
+                            <span className="sr-only">Habilidade disponível</span>
+                            <select
+                              value={skillForm.selectedSkillId}
+                              onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
+                              disabled={isSkillSaving || availableSkillsToLink.length === 0}
+                            >
+                              <option value="">
+                                {availableSkillsToLink.length > 0
+                                  ? 'Selecione uma habilidade'
+                                  : 'Todas as habilidades disponíveis foram adicionadas'}
+                              </option>
+                              {availableSkillsToLink.map((item) => (
+                                <option key={item.id_skill} value={item.id_skill}>
+                                  {item.description}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+
+                          <button
+                            type="submit"
+                            className="btn btn-primary"
+                            disabled={isSkillSaving || !skillForm.selectedSkillId}
+                          >
+                            + Adicionar
+                          </button>
+                        </div>
+
+                        <div className="profile-area-picker__selected" aria-live="polite">
+                          {selectedSkills.length > 0 ? (
+                            paginatedSkills.map((item) => (
+                              <span key={item.id_skill} className="profile-area-chip">
+                                <span>{item.description}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSkillRemove(item.id_skill)}
+                                  disabled={isSkillSaving}
+                                  aria-label={`Remover habilidade ${item.description}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))
+                          ) : (
+                            <span className="profile-area-picker__empty">
+                              Nenhuma habilidade selecionada. Vincule habilidades para destacar competências técnicas no perfil.
+                            </span>
+                          )}
+                        </div>
+
+                        {selectedSkills.length > PROFILE_SKILL_PAGE_SIZE ? (
+                          <div className="profile-pagination profile-pagination--compact">
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setSkillsPage((current) => Math.max(1, current - 1))}
+                              disabled={skillsPage === 1}
+                            >
+                              Anterior
+                            </button>
+                            <span className="profile-pagination__status">
+                              Página {skillsPage} de {totalSkillsPages}
+                            </span>
+                            <button
+                              type="button"
+                              className="btn btn-ghost"
+                              onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
+                              disabled={skillsPage === totalSkillsPages}
+                            >
+                              Próxima
+                            </button>
+                          </div>
+                        ) : null}
+                      </form>
+
+                      <div className="profile-form-card__actions">
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          onClick={handleSkillSave}
+                          disabled={isSkillSaving}
+                        >
+                          {isSkillSaving ? 'Salvando...' : 'Salvar habilidades'}
+                        </button>
+                      </div>
                     </div>
                   </section>
                 </div>

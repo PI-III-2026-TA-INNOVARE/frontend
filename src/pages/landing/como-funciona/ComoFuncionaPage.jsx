@@ -20,7 +20,7 @@ const journeySteps = [
       },
       {
         label: 'Pesquisadores',
-        text: 'Selecionam universidade e completam o curriculo depois.',
+        text: 'Selecionam universidade e completam o currículo depois.',
       },
     ],
     tags: [
@@ -28,46 +28,46 @@ const journeySteps = [
       { label: 'Empresa' },
       { label: 'Pesquisador' },
       { label: 'Perfil' },
-      { label: 'Curriculo' },
+      { label: 'Currículo' },
     ],
   },
   {
     id: 'exploracao',
     step: '02',
-    eyebrow: 'Exploracao',
+    eyebrow: 'Exploração',
     title: 'Navegue pela base da plataforma.',
     text: 'Use filtros para encontrar pesquisadores, empresas, universidades e pesquisas.',
     tags: [
       { label: 'Empresas' },
       { label: 'Pesquisadores' },
       { label: 'Universidades' },
-      { label: 'Areas' },
+      { label: 'Áreas' },
       { label: 'Indicadores' },
     ],
   },
   {
     id: 'pesquisas',
     step: '03',
-    eyebrow: 'Publicacao de pesquisas',
+    eyebrow: 'Publicação de pesquisas',
     title: 'Publique pesquisas e acompanhe interesse.',
     text: 'Empresas criam demandas e visualizam candidatos vinculados.',
     tags: [
       { label: 'Research' },
       { label: 'Deadline' },
       { label: 'Budget' },
-      { label: 'Area' },
+      { label: 'Área' },
       { label: 'Candidatos' },
     ],
   },
   {
     id: 'roadmap',
     step: '04',
-    eyebrow: 'Evolucao',
+    eyebrow: 'Evolução',
     title: 'Novos fluxos entram quando estiverem prontos.',
-    text: 'Propostas, notificacoes e IA seguem como proximos passos.',
+    text: 'Propostas, notificações e IA seguem como próximos passos.',
     tags: [
       { label: 'Propostas', tone: 'warning' },
-      { label: 'Notificacoes', tone: 'warning' },
+      { label: 'Notificações', tone: 'warning' },
       { label: 'IA', tone: 'warning' },
       { label: 'Roadmap', tone: 'secondary' },
     ],
@@ -78,17 +78,17 @@ const resourceCards = [
   {
     icon: appIcons.matchmaking,
     title: 'Base integrada',
-    text: 'Perfis, universidades, curriculos e areas no mesmo painel.',
+    text: 'Perfis, universidades, currículos e áreas no mesmo painel.',
   },
   {
     icon: appIcons.proposals,
-    title: 'Pesquisas e interesses',
-    text: 'Demandas publicadas e candidatos acompanhados pela empresa.',
+    title: 'Demandas e interesses',
+    text: 'Demandas publicadas e candidatos organizados para acompanhamento.',
   },
   {
     icon: appIcons.security,
-    title: 'Sessao segura',
-    text: 'Acesso protegido e logout claro.',
+    title: 'Acesso seguro',
+    text: 'Ambiente protegido para acessar, acompanhar e sair com clareza.',
     iconModifier: 'feature-card__icon--warm',
   },
 ]
@@ -112,23 +112,12 @@ export default function ComoFuncionaPage() {
 
   return (
     <>
-      <section className="page-header">
-        <div className="container">
-          <span className="section-label">Como Funciona</span>
-          <h1 className="page-header__title">
-            Do <span className="text-gradient">cadastro</span> a uma{' '}
-            <span className="text-gradient">conexao ativa</span>
-          </h1>
-          <p className="page-header__text">Um fluxo direto para entrar, explorar e publicar.</p>
-        </div>
-      </section>
-
       <section className="section process-journey">
         <div className="container">
           <Reveal className="text-center process-journey__intro">
-            <span className="section-label">Fluxo da Plataforma</span>
+            <span className="section-label">Fluxo da plataforma</span>
             <h2 className="section-title">Quatro etapas principais.</h2>
-            <p className="section-subtitle">Acoes claras para cada perfil.</p>
+            <p className="section-subtitle">Um fluxo direto para entrar, explorar e publicar.</p>
           </Reveal>
 
           <Reveal>
@@ -142,6 +131,7 @@ export default function ComoFuncionaPage() {
                   }`}
                   onClick={() => goToStep(index)}
                   aria-current={index === activeStepIndex ? 'step' : undefined}
+                  aria-label={`Ver etapa ${step.step}: ${step.eyebrow}`}
                 >
                   <span className="process-journey__overview-number">{step.step}</span>
                   <h3 className="process-journey__overview-title">{step.eyebrow}</h3>
@@ -152,36 +142,6 @@ export default function ComoFuncionaPage() {
 
           <div className="process-journey__stack">
             <div className="process-step-carousel">
-              <div className="process-step-carousel__controls">
-                <button
-                  type="button"
-                  className="process-step-carousel__button"
-                  onClick={() => goToStep(activeStepIndex - 1)}
-                  disabled={activeStepIndex === 0}
-                  aria-label="Etapa anterior"
-                >
-                  <IconBadge icon={appIcons.previous} className="process-step-carousel__button-icon" />
-                  <span>Anterior</span>
-                </button>
-
-                <div className="process-step-carousel__status" aria-live="polite">
-                  <span className="process-step-carousel__status-current">{activeStep.step}</span>
-                  <span className="process-step-carousel__status-separator">/</span>
-                  <span className="process-step-carousel__status-total">{totalSteps}</span>
-                </div>
-
-                <button
-                  type="button"
-                  className="process-step-carousel__button"
-                  onClick={() => goToStep(activeStepIndex + 1)}
-                  disabled={activeStepIndex === journeySteps.length - 1}
-                  aria-label="Proxima etapa"
-                >
-                  <span>Proxima</span>
-                  <IconBadge icon={appIcons.next} className="process-step-carousel__button-icon" />
-                </button>
-              </div>
-
               <AnimatePresence mode="wait" initial={false}>
                 <motion.article
                   key={activeStep.id}
@@ -248,7 +208,7 @@ export default function ComoFuncionaPage() {
           <Reveal className="text-center">
             <span className="section-label">Recursos adicionais</span>
             <h2 className="section-title">
-              Recursos para <span className="text-gradient">acompanhar</span>
+              Recursos que apoiam a <span className="text-gradient">conexão</span>
             </h2>
           </Reveal>
 
@@ -273,17 +233,17 @@ export default function ComoFuncionaPage() {
           <Reveal>
             <div className="cta-box">
               <h2 className="cta-box__title">
-                Comece sua <span className="text-gradient">entrada segura</span>
+                Comece a conectar <span className="text-gradient">pesquisa e inovação</span>
               </h2>
               <p className="cta-box__subtitle">
-                Entre ou cadastre sua empresa para comecar.
+                Entre ou crie seu cadastro para explorar oportunidades na plataforma.
               </p>
               <div className="cta-box__buttons">
-                <Link to="/login" className="btn btn-primary btn-lg">
-                  Entrar na plataforma
+                <Link to="/login#cadastro" className="btn btn-primary btn-lg">
+                  Criar cadastro
                 </Link>
-                <Link to="/login#cadastro" className="btn btn-outline btn-lg">
-                  Cadastrar empresa
+                <Link to="/login" className="btn btn-outline btn-lg">
+                  Entrar na plataforma
                 </Link>
               </div>
             </div>

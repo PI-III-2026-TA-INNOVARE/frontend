@@ -1,8 +1,25 @@
 .process-extra {
+  padding: 58px 0;
   background: var(--bg-secondary);
 }
 
 .process-extra .container {
   display: grid;
   gap: 22px;
+}
+
+.process-extra + .cta-section {
+  padding-top: 56px;
+  padding-bottom: 72px;
+}
+
+@media (max-width: 640px) {
+  .process-extra {
+    padding: 48px 0;
+  }
+
+  .process-extra + .cta-section {
+    padding-top: 46px;
+    padding-bottom: 56px;
+  }
 }

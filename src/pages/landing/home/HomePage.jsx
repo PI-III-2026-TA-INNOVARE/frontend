@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
+import heroImage from '../../../../imagem_referencia/chris_sheva_pd.png'
 import './HomePage.scss'
 
 export default function HomePage() {
   return (
     <>
       <section className="hero" id="hero">
-        <div className="hero__bg-glow"></div>
-        <div className="hero__bg-glow hero__bg-glow--right"></div>
+        <img src={heroImage} alt="" className="hero__image" aria-hidden="true" />
+        <div className="hero__image-overlay"></div>
 
         <div className="hero__shell">
           <div className="container">
