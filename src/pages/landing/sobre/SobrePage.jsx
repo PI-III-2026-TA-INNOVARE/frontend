@@ -1,4 +1,6 @@
 import Reveal from '../../../components/Reveal'
+import IconBadge from '../../../components/IconBadge'
+import { appIcons } from '../../../lib/icons'
 import './SobrePage.scss'
 
 const aboutOdsFacts = [
@@ -37,6 +39,7 @@ export default function SobrePage() {
               </div>
 
               <div className="about-hero__support-block">
+                <IconBadge icon={appIcons.search} className="about-hero__support-icon" />
                 <span className="about-hero__support-label">Menos dispersão, mais clareza</span>
                 <p className="about-hero__support">
                   Problema, especialista e oportunidade passam a coexistir em um fluxo mais claro
