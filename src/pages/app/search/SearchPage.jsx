@@ -4,7 +4,6 @@ import { useAuth } from '../../../context/AuthContext'
 import {
   createResearchInterest,
   getResearcherResume,
-  listCompanies,
   listMyResearchInterests,
   listResearchAreas,
   listResearchers,
@@ -13,10 +12,18 @@ import {
 } from '../../../services/pdConnectApi'
 import './SearchPage.scss'
 
-const defaultQuery = 'pesquisar por pesquisa, nome, universidade, cnpj, area ou status'
+function getDefaultQuery(userType) {
+  return userType === 'empresa'
+    ? 'pesquisar por pesquisador, universidade, area ou habilidade'
+    : 'pesquisar por pesquisa, area, status ou prazo'
+}
 
 function getDefaultTab(userType) {
   return userType === 'empresa' ? 'pesquisadores' : 'pesquisas'
+}
+
+function getAllowedTabs(userType) {
+  return userType === 'empresa' ? ['pesquisadores'] : ['pesquisas']
 }
 
 function buildResumeLookup(researchers, resumeResults) {
@@ -40,13 +47,6 @@ function buildUniversityLookup(universities) {
 function buildResearchAreaLookup(researchAreas) {
   return researchAreas.reduce((lookup, item) => {
     lookup[item.id_area] = item
-    return lookup
-  }, {})
-}
-
-function buildCompanyLookup(companies) {
-  return companies.reduce((lookup, item) => {
-    lookup[item.id_company] = item
     return lookup
   }, {})
 }
@@ -78,14 +78,6 @@ function formatDeadlineLabel(value) {
   }).format(parsed)
 }
 
-function getCompanyDisplayName(company) {
-  return company?.razao_social || company?.legal_name || company?.name || company?.cnpj || 'Empresa nao identificada'
-}
-
-function getCompanyRegistrationStatus(company) {
-  return company?.situacao_cadastral || company?.registration_status || 'nao informada'
-}
-
 export default function SearchPage() {
   const { user } = useAuth()
   const [query, setQuery] = useState('')
@@ -105,6 +97,8 @@ export default function SearchPage() {
     myInterests: [],
     resumeLookup: {},
   })
+  const allowedTabs = useMemo(() => getAllowedTabs(user?.type), [user?.type])
+  const searchPlaceholder = useMemo(() => getDefaultQuery(user?.type), [user?.type])
 
   useEffect(() => {
     setActiveTab(getDefaultTab(user?.type))
@@ -119,34 +113,42 @@ export default function SearchPage() {
       setPartialWarnings([])
 
       try {
-        const catalogRequests = [
-          listCompanies(),
-          listResearchers(),
-          listResearches(),
-          listResearchAreas(),
-          listUniversities(),
-          user?.type === 'pesquisador' ? listMyResearchInterests() : Promise.resolve([]),
-        ]
-        const catalogLabels = [
-          'empresas',
-          'pesquisadores',
-          'pesquisas',
-          'areas de pesquisa',
-          'universidades',
-          'interesses do pesquisador',
-        ]
+        const isCompanyUser = user?.type === 'empresa'
+        const catalogRequests = isCompanyUser
+          ? [
+              listResearchers(),
+              listResearchAreas(),
+              listUniversities(),
+            ]
+          : [
+              listResearches(),
+              listResearchAreas(),
+              listMyResearchInterests(),
+            ]
+        const catalogLabels = isCompanyUser
+          ? [
+              'pesquisadores',
+              'areas de pesquisa',
+              'universidades',
+            ]
+          : [
+              'pesquisas',
+              'areas de pesquisa',
+              'interesses do pesquisador',
+            ]
         const catalogResults = await Promise.allSettled(catalogRequests)
-        const [companiesResult, researchersResult, researchesResult, researchAreasResult, universitiesResult, myInterestsResult] = catalogResults
-        const companies = readSettledValue(companiesResult, [])
-        const researchers = readSettledValue(researchersResult, [])
-        const researches = readSettledValue(researchesResult, [])
-        const researchAreas = readSettledValue(researchAreasResult, [])
-        const universities = readSettledValue(universitiesResult, [])
-        const myInterests = readSettledValue(myInterestsResult, [])
+        const companies = []
+        const researchers = isCompanyUser ? readSettledValue(catalogResults[0], []) : []
+        const researches = isCompanyUser ? [] : readSettledValue(catalogResults[0], [])
+        const researchAreas = readSettledValue(catalogResults[1], [])
+        const universities = isCompanyUser ? readSettledValue(catalogResults[2], []) : []
+        const myInterests = isCompanyUser ? [] : readSettledValue(catalogResults[2], [])
 
-        const resumeResults = await Promise.allSettled(
-          researchers.map((item) => getResearcherResume(item.id_researcher))
-        )
+        const resumeResults = isCompanyUser
+          ? await Promise.allSettled(
+              researchers.map((item) => getResearcherResume(item.id_researcher))
+            )
+          : []
         const failedCatalogs = catalogResults
           .map((result, index) => result.status === 'rejected' ? catalogLabels[index] : '')
           .filter(Boolean)
@@ -200,35 +202,10 @@ export default function SearchPage() {
     [catalog.researchAreas]
   )
 
-  const companyLookup = useMemo(
-    () => buildCompanyLookup(catalog.companies),
-    [catalog.companies]
-  )
-
   const interestLookup = useMemo(
     () => buildInterestLookup(catalog.myInterests),
     [catalog.myInterests]
   )
-
-  const companyItems = useMemo(() => (
-    catalog.companies.map((company) => ({
-      id: `company-${company.id_company}`,
-      type: 'empresa',
-      title: getCompanyDisplayName(company),
-      subtitle: company.cnpj,
-      description:
-        `Situacao cadastral: ${getCompanyRegistrationStatus(company)}. ` +
-        `Status do cadastro: ${formatBooleanLabel(company.status, {
-          trueLabel: 'ativo',
-          falseLabel: 'inativo',
-          nullLabel: 'nao informado',
-        })}.`,
-      tags: [
-        getCompanyRegistrationStatus(company),
-        company.status ? 'Ativa' : 'Inativa',
-      ],
-    }))
-  ), [catalog.companies])
 
   const researcherItems = useMemo(() => (
     catalog.researchers.map((researcher) => {
@@ -267,16 +244,18 @@ export default function SearchPage() {
 
   const researchItems = useMemo(() => (
     catalog.researches.map((research) => {
-      const company = companyLookup[research.company]
       const areaName = researchAreaLookup[research.area]?.name || 'Area nao identificada'
       const interest = interestLookup[research.id_research]
       const canShowInterestAction = user?.type === 'pesquisador'
+      const companyLabel = research.company
+        ? `Empresa #${research.company}`
+        : 'Empresa nao identificada'
 
       return {
         id: `research-${research.id_research}`,
         type: 'pesquisa',
         title: research.title,
-        subtitle: `${getCompanyDisplayName(company)} | ${areaName}`,
+        subtitle: `${companyLabel} | ${areaName}`,
         description:
           `${research.goal || 'Objetivo nao informado'} ` +
           `Prazo: ${formatDeadlineLabel(research.deadline)}. ` +
@@ -284,7 +263,6 @@ export default function SearchPage() {
         tags: [
           areaName,
           research.status || 'status nao informado',
-          company?.cnpj || 'empresa sem CNPJ',
           interest ? `Interesse: ${interest.status}` : 'Sem interesse registrado',
         ],
         action: canShowInterestAction
@@ -296,37 +274,16 @@ export default function SearchPage() {
           : null,
       }
     })
-  ), [catalog.researches, companyLookup, interestLookup, researchAreaLookup, user?.type])
-
-  const universityItems = useMemo(() => (
-    catalog.universities.map((university) => {
-      const linkedResearchers = catalog.researchers.filter(
-        (researcher) => researcher.university === university.id_university
-      )
-
-      return {
-        id: `university-${university.id_university}`,
-        type: 'universidade',
-        title: university.name,
-        subtitle: `${linkedResearchers.length} pesquisador(es) vinculado(s)`,
-        description:
-          linkedResearchers.length > 0
-            ? `Cadastros ligados: ${linkedResearchers.map((item) => item.name).join(', ')}.`
-            : 'Nenhum pesquisador vinculado a esta universidade.',
-        tags: ['Universidade', `${linkedResearchers.length} vinculados`],
-      }
-    })
-  ), [catalog.researchers, catalog.universities])
+  ), [catalog.researches, interestLookup, researchAreaLookup, user?.type])
 
   const visibleItems = useMemo(() => {
     const sourceMap = {
       pesquisas: researchItems,
-      empresas: companyItems,
       pesquisadores: researcherItems,
-      universidades: universityItems,
     }
 
-    const source = sourceMap[activeTab] || []
+    const resolvedTab = allowedTabs.includes(activeTab) ? activeTab : getDefaultTab(user?.type)
+    const source = sourceMap[resolvedTab] || []
     const normalizedQuery = normalizeText(activeQuery)
 
     if (!normalizedQuery) {
@@ -339,7 +296,7 @@ export default function SearchPage() {
       item.description,
       ...item.tags,
     ].join(' ')).includes(normalizedQuery))
-  }, [activeQuery, activeTab, companyItems, researcherItems, researchItems, universityItems])
+  }, [activeQuery, activeTab, allowedTabs, researcherItems, researchItems, user?.type])
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -372,46 +329,26 @@ export default function SearchPage() {
         <div className="app-search-layout">
           <aside className="semantic-panel">
             <div className="semantic-panel__block">
-              <span className="semantic-panel__label">Perfil autenticado</span>
-              <p className="semantic-panel__query">{user?.displayName}</p>
-              <p className="semantic-panel__text">
-                {user?.type === 'empresa'
-                  ? 'Pesquisadores aparecem primeiro para empresas.'
-                  : 'Pesquisas aparecem primeiro para pesquisadores.'}
-              </p>
-            </div>
-
-            <div className="semantic-panel__block">
-              <h3 className="semantic-panel__title">Colecoes disponiveis</h3>
+              <h3 className="semantic-panel__title">Filtrar por</h3>
               <div className="semantic-panel__chips">
-                <button
-                  type="button"
-                  className={`semantic-chip semantic-chip--button${activeTab === 'pesquisas' ? ' active' : ''}`}
-                  onClick={() => setActiveTab('pesquisas')}
-                >
-                  Pesquisas
-                </button>
-                <button
-                  type="button"
-                  className={`semantic-chip semantic-chip--button${activeTab === 'pesquisadores' ? ' active' : ''}`}
-                  onClick={() => setActiveTab('pesquisadores')}
-                >
-                  Pesquisadores
-                </button>
-                <button
-                  type="button"
-                  className={`semantic-chip semantic-chip--button${activeTab === 'empresas' ? ' active' : ''}`}
-                  onClick={() => setActiveTab('empresas')}
-                >
-                  Empresas
-                </button>
-                <button
-                  type="button"
-                  className={`semantic-chip semantic-chip--button${activeTab === 'universidades' ? ' active' : ''}`}
-                  onClick={() => setActiveTab('universidades')}
-                >
-                  Universidades
-                </button>
+                {allowedTabs.includes('pesquisas') ? (
+                  <button
+                    type="button"
+                    className={`semantic-chip semantic-chip--button${activeTab === 'pesquisas' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('pesquisas')}
+                  >
+                    Pesquisas
+                  </button>
+                ) : null}
+                {allowedTabs.includes('pesquisadores') ? (
+                  <button
+                    type="button"
+                    className={`semantic-chip semantic-chip--button${activeTab === 'pesquisadores' ? ' active' : ''}`}
+                    onClick={() => setActiveTab('pesquisadores')}
+                  >
+                    Pesquisadores
+                  </button>
+                ) : null}
               </div>
             </div>
           </aside>
@@ -419,12 +356,9 @@ export default function SearchPage() {
           <main className="search-feed">
             <header className="search-feed__header">
               <div>
-                <span className="section-label">Explorar</span>
-                <h1 className="app-page__title search-feed__title">Base da plataforma</h1>
+                <h1 className="app-page__title search-feed__title">Pesquisar</h1>
               </div>
-              <p className="app-page__subtitle search-feed__subtitle">
-                Pesquise empresas, pesquisadores, pesquisas e universidades.
-              </p>
+             
             </header>
 
             <form className="app-search-form" onSubmit={handleSubmit}>
@@ -436,7 +370,7 @@ export default function SearchPage() {
                 className="app-search-form__input"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder={defaultQuery}
+                placeholder={searchPlaceholder}
               />
               <button type="submit" className="btn btn-primary app-search-form__button">
                 Buscar
@@ -450,11 +384,7 @@ export default function SearchPage() {
                 <h2 className="search-results__title">
                   {activeTab === 'pesquisas'
                     ? 'Base de pesquisas'
-                    : activeTab === 'pesquisadores'
-                      ? 'Base de pesquisadores'
-                      : activeTab === 'empresas'
-                        ? 'Base de empresas'
-                        : 'Base de universidades'}
+                    : 'Base de pesquisadores'}
                 </h2>
               </div>
               <p className="search-results__meta">

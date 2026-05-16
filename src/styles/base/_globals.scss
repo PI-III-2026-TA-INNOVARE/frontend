@@ -7,7 +7,9 @@
   --bg-card: #{$color-surface};
   --bg-card-hover: #{$color-surface-hover};
   --bg-card-solid: #{$color-surface-white};
-  --bg-auth-shell: linear-gradient(180deg, rgba(248, 244, 239, 0.92) 0%, rgba(212, 205, 197, 0.96) 100%);
+  --bg-auth-shell:
+    radial-gradient(circle at 50% 8%, rgba(248, 244, 239, 0.92) 0%, rgba(227, 221, 215, 0.7) 34%, transparent 60%),
+    linear-gradient(90deg, rgba(176, 173, 168, 0.72) 0%, rgba(229, 224, 218, 0.96) 42%, rgba(229, 224, 218, 0.96) 58%, rgba(176, 173, 168, 0.76) 100%);
   --bg-auth-radial: rgba(91, 136, 165, 0.1);
   --bg-input: rgba(255, 255, 255, 0.82);
   --bg-input-muted: rgba(36, 58, 105, 0.04);
@@ -74,7 +76,9 @@
   --bg-card: #{$color-surface-dark};
   --bg-card-hover: #{$color-surface-hover-dark};
   --bg-card-solid: #{$color-surface-white-dark};
-  --bg-auth-shell: linear-gradient(180deg, rgba(18, 20, 23, 0.96) 0%, rgba(24, 27, 32, 0.98) 100%);
+  --bg-auth-shell:
+    radial-gradient(circle at 50% 8%, rgba(43, 49, 58, 0.9) 0%, rgba(24, 27, 32, 0.72) 36%, transparent 62%),
+    linear-gradient(90deg, rgba(12, 14, 18, 0.96) 0%, rgba(24, 27, 32, 0.98) 44%, rgba(24, 27, 32, 0.98) 56%, rgba(12, 14, 18, 0.96) 100%);
   --bg-auth-radial: rgba(127, 168, 194, 0.12);
   --bg-input: rgba(32, 36, 43, 0.92);
   --bg-input-muted: rgba(244, 239, 232, 0.06);

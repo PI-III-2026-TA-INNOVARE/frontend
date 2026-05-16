@@ -443,7 +443,7 @@
 }
 
 .profile-skill-groups {
-  gap: 22px;
+  gap: 20px;
 }
 
 .profile-skill-group {
@@ -451,9 +451,116 @@
   gap: 12px;
 }
 
+.profile-skill-group[hidden] {
+  display: none;
+}
+
 .profile-skill-group + .profile-skill-group {
-  padding-top: 22px;
-  border-top: 1px solid var(--border-soft);
+  padding-top: 0;
+  border-top: 0;
+}
+
+.profile-inner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-input-muted);
+  width: fit-content;
+}
+
+.profile-inner-tab {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-primary);
+  font-size: 0.88rem;
+  font-weight: 800;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.profile-inner-tab:hover,
+.profile-inner-tab.active {
+  border-color: var(--border-accent);
+  background: var(--bg-chip-strong);
+  color: var(--accent-primary);
+  box-shadow: var(--shadow-secondary);
+}
+
+.profile-skill-description {
+  max-width: 62ch;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.profile-skill-groups .profile-area-picker {
+  gap: 14px;
+}
+
+.profile-skill-groups .profile-area-picker__select {
+  display: grid;
+  gap: 10px;
+  min-height: 58px;
+  padding: 12px 46px 12px 14px;
+  border: 1px solid var(--border-soft);
+  border-radius: 20px;
+  background: var(--bg-input);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.profile-skill-groups .profile-area-picker__select::after {
+  top: auto;
+  bottom: 24px;
+}
+
+.profile-skill-groups .profile-area-picker__select:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-card-hover);
+}
+
+.profile-skill-groups .profile-area-picker__select:focus-within {
+  border-color: rgba(91, 136, 165, 0.42);
+  box-shadow: var(--shadow-focus);
+}
+
+.profile-skill-groups .profile-area-picker__select select {
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-skill-groups .profile-area-picker__select select:hover,
+.profile-skill-groups .profile-area-picker__select select:focus {
+  background: transparent;
+  box-shadow: none;
+}
+
+.profile-skill-groups .profile-area-picker > .profile-area-picker__selected {
+  display: none;
+}
+
+.profile-multiselect__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 118px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.profile-area-chip--inside {
+  background: var(--bg-chip-strong);
+  box-shadow: 0 8px 18px rgba(11, 31, 61, 0.08);
 }
 
 .profile-field__hint {
@@ -537,6 +644,15 @@
   .profile-area-picker__controls {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .profile-inner-tabs {
+    width: 100%;
+    border-radius: 22px;
+  }
+
+  .profile-inner-tab {
+    flex: 1 1 180px;
   }
 
   .profile-side__item {

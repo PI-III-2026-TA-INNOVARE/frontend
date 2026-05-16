@@ -11,6 +11,11 @@
   min-height: calc(100vh - 88px);
 }
 
+.authenticated-app .app-page,
+.authenticated-app .indicators-stage {
+  background: transparent;
+}
+
 .app-page__container {
   padding-top: 44px;
   padding-bottom: 92px;

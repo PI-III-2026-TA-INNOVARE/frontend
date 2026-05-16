@@ -7,6 +7,10 @@ import {
   createResume,
   deleteEducation,
   deleteExperience,
+  getAuthenticatedProfile,
+  getCompany,
+  getResearcherResume,
+  getUniversity,
   listResearchAreas,
   listSkills,
   updateCompany,
@@ -15,10 +19,8 @@ import {
 } from '../../../services/pdConnectApi'
 import './ProfilePage.scss'
 
-const PROFILE_AREA_PAGE_SIZE = 6
 const PROFILE_EDUCATION_PAGE_SIZE = 3
 const PROFILE_EXPERIENCE_PAGE_SIZE = 3
-const PROFILE_SKILL_PAGE_SIZE = 6
 
 const defaultEducationForm = {
   course: '',
@@ -103,8 +105,61 @@ function validateExperienceForm(form) {
   return ''
 }
 
+async function fetchProfileSnapshot() {
+  const profilePayload = await getAuthenticatedProfile()
+
+  if (profilePayload?.empresa) {
+    const company = profilePayload.empresa
+    const [companyDetailResult] = await Promise.allSettled([
+      company.id_company ? getCompany(company.id_company) : Promise.resolve(null),
+    ])
+    const hydratedCompany =
+      companyDetailResult.status === 'fulfilled' && companyDetailResult.value
+        ? { ...company, ...companyDetailResult.value }
+        : company
+
+    return {
+      idUser: profilePayload.id_user,
+      email: profilePayload.email,
+      userTypeId: profilePayload.id_tipo,
+      userTypeLabel: profilePayload.tipo,
+      type: 'empresa',
+      profileId: hydratedCompany.id_company,
+      displayName: hydratedCompany.razao_social || hydratedCompany.legal_name || hydratedCompany.name || profilePayload.email,
+      company: hydratedCompany,
+      researcher: null,
+      university: null,
+      resume: null,
+    }
+  }
+
+  if (profilePayload?.pesquisador) {
+    const researcher = profilePayload.pesquisador
+    const [universityResult, resumeResult] = await Promise.allSettled([
+      researcher.university ? getUniversity(researcher.university) : Promise.resolve(null),
+      researcher.id_researcher ? getResearcherResume(researcher.id_researcher) : Promise.resolve(null),
+    ])
+
+    return {
+      idUser: profilePayload.id_user,
+      email: profilePayload.email,
+      userTypeId: profilePayload.id_tipo,
+      userTypeLabel: profilePayload.tipo,
+      type: 'pesquisador',
+      profileId: researcher.id_researcher,
+      displayName: researcher.name || profilePayload.email,
+      company: null,
+      researcher,
+      university: universityResult.status === 'fulfilled' ? universityResult.value : null,
+      resume: resumeResult.status === 'fulfilled' ? resumeResult.value : null,
+    }
+  }
+
+  throw new Error('A API autenticada nao retornou um perfil valido.')
+}
+
 export default function ProfilePage() {
-  const { refreshUser, user } = useAuth()
+  const { user } = useAuth()
   const [profileUser, setProfileUser] = useState(user)
   const [savedMessage, setSavedMessage] = useState('')
   const [resumeMessage, setResumeMessage] = useState('')
@@ -120,10 +175,9 @@ export default function ProfilePage() {
   const [experienceForm, setExperienceForm] = useState(defaultExperienceForm)
   const [skillForm, setSkillForm] = useState(defaultSkillForm)
   const [activeResearcherTab, setActiveResearcherTab] = useState('general')
-  const [researchAreaPage, setResearchAreaPage] = useState(1)
+  const [activeSkillInnerTab, setActiveSkillInnerTab] = useState('areas')
   const [educationPage, setEducationPage] = useState(1)
   const [experiencePage, setExperiencePage] = useState(1)
-  const [skillsPage, setSkillsPage] = useState(1)
   const [skillsCatalog, setSkillsCatalog] = useState([])
   const [researchAreaCatalog, setResearchAreaCatalog] = useState([])
   const [selectedResearchAreaId, setSelectedResearchAreaId] = useState('')
@@ -166,11 +220,6 @@ export default function ProfilePage() {
     [resumeData.skill, selectedSkillIds, skillsCatalog]
   )
 
-  const totalSkillsPages = Math.max(
-    1,
-    Math.ceil(selectedSkills.length / PROFILE_SKILL_PAGE_SIZE)
-  )
-
   const paginatedEducation = useMemo(
     () => paginateItems(resumeData.education || [], educationPage, PROFILE_EDUCATION_PAGE_SIZE),
     [educationPage, resumeData.education]
@@ -179,11 +228,6 @@ export default function ProfilePage() {
   const paginatedExperience = useMemo(
     () => paginateItems(resumeData.experience || [], experiencePage, PROFILE_EXPERIENCE_PAGE_SIZE),
     [experiencePage, resumeData.experience]
-  )
-
-  const paginatedSkills = useMemo(
-    () => paginateItems(selectedSkills, skillsPage, PROFILE_SKILL_PAGE_SIZE),
-    [selectedSkills, skillsPage]
   )
 
   const availableSkillsToLink = useMemo(
@@ -201,16 +245,6 @@ export default function ProfilePage() {
     [linkedResearcherAreaIds, researchAreaCatalog]
   )
 
-  const totalResearchAreaPages = Math.max(
-    1,
-    Math.ceil(selectedResearchAreas.length / PROFILE_AREA_PAGE_SIZE)
-  )
-
-  const paginatedSelectedResearchAreas = useMemo(
-    () => paginateItems(selectedResearchAreas, researchAreaPage, PROFILE_AREA_PAGE_SIZE),
-    [researchAreaPage, selectedResearchAreas]
-  )
-
   const availableResearchAreasToAdd = useMemo(
     () => researchAreaCatalog.filter((area) => !linkedResearcherAreaIds.has(String(area.id_area))),
     [linkedResearcherAreaIds, researchAreaCatalog]
@@ -223,15 +257,9 @@ export default function ProfilePage() {
   useEffect(() => {
     setFormData(buildInitialProfile(profileUser))
     setSelectedResearchAreaId('')
-    setResearchAreaPage(1)
     setSelectedSkillIds((profileUser?.resume?.skill || []).map((item) => String(item.id_skill)))
     setSkillForm(defaultSkillForm)
-    setSkillsPage(1)
   }, [profileUser])
-
-  useEffect(() => {
-    setResearchAreaPage((current) => Math.min(current, totalResearchAreaPages))
-  }, [totalResearchAreaPages])
 
   useEffect(() => {
     setEducationPage((current) => Math.min(current, totalEducationPages))
@@ -240,10 +268,6 @@ export default function ProfilePage() {
   useEffect(() => {
     setExperiencePage((current) => Math.min(current, totalExperiencePages))
   }, [totalExperiencePages])
-
-  useEffect(() => {
-    setSkillsPage((current) => Math.min(current, totalSkillsPages))
-  }, [totalSkillsPages])
 
   useEffect(() => {
     let isMounted = true
@@ -407,7 +431,6 @@ export default function ProfilePage() {
       areaIds: [...(current.areaIds || []), String(selectedResearchAreaId)],
     }))
 
-    setResearchAreaPage(Math.ceil((selectedResearchAreas.length + 1) / PROFILE_AREA_PAGE_SIZE))
     setSelectedResearchAreaId('')
     setSavedMessage('')
     setErrorMessage('')
@@ -432,17 +455,9 @@ export default function ProfilePage() {
   }
 
   const refreshProfileView = async () => {
-    const refreshed = await refreshUser()
-
-    if (!refreshed.ok) {
-      throw new Error(refreshed.message)
-    }
-
-    if (refreshed.user) {
-      setProfileUser(refreshed.user)
-    }
-
-    return refreshed.user
+    const nextProfileUser = await fetchProfileSnapshot()
+    setProfileUser(nextProfileUser)
+    return nextProfileUser
   }
 
   const syncResumeAfterChange = async (message) => {
@@ -609,7 +624,6 @@ export default function ProfilePage() {
     }
 
     setSelectedSkillIds((current) => [...current, String(skillForm.selectedSkillId)])
-    setSkillsPage(Math.ceil((selectedSkills.length + 1) / PROFILE_SKILL_PAGE_SIZE))
     setSkillForm((current) => ({
       ...current,
       selectedSkillId: '',
@@ -629,7 +643,6 @@ export default function ProfilePage() {
         'Habilidades atualizadas com sucesso.'
       )
       setActiveResearcherTab('skills')
-      setSkillsPage(1)
     } catch (error) {
       setErrorMessage(
         error.message || 'Nao foi possivel salvar as habilidades selecionadas.'
@@ -651,15 +664,7 @@ export default function ProfilePage() {
   return (
     <section className="app-page profile-page">
       <div className="container app-page__container">
-        <header className="app-page__header">
-          <div>
-            <span className="section-label">Perfil</span>
-            <h1 className="app-page__title">
-              {isEmpresa ? 'Dados da empresa' : 'Perfil do pesquisador'}
-            </h1>
-          </div>
-          <p className="app-page__subtitle">Atualize informacoes essenciais da conta.</p>
-        </header>
+     
 
         {isEmpresa ? (
           <div className="profile-layout">
@@ -717,7 +722,6 @@ export default function ProfilePage() {
               <div className="profile-tabs-card__head">
                 <div>
                   <span className="profile-form-card__eyebrow">Pesquisador</span>
-                  <h2 className="profile-form-card__title">Secoes do perfil</h2>
                 </div>
                 {savedMessage ? <span className="profile-form-card__status">{savedMessage}</span> : null}
               </div>
@@ -1031,9 +1035,33 @@ export default function ProfilePage() {
               {activeResearcherTab === 'skills' ? (
                 <div className="profile-tab-panel">
                   <section className="profile-side__card profile-side__card--compact-list profile-skill-groups">
-                    <div className="profile-skill-group">
+                    <div className="profile-inner-tabs" role="tablist" aria-label="Escolha entre areas de pesquisa e habilidades">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeSkillInnerTab === 'areas'}
+                        className={`profile-inner-tab${activeSkillInnerTab === 'areas' ? ' active' : ''}`}
+                        onClick={() => setActiveSkillInnerTab('areas')}
+                      >
+                        Áreas de pesquisa
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={activeSkillInnerTab === 'skills'}
+                        className={`profile-inner-tab${activeSkillInnerTab === 'skills' ? ' active' : ''}`}
+                        onClick={() => setActiveSkillInnerTab('skills')}
+                      >
+                        Habilidades
+                      </button>
+                    </div>
+
+                    <div className="profile-skill-group" hidden={activeSkillInnerTab !== 'areas'}>
                       <span className="profile-side__eyebrow">Áreas de pesquisa</span>
                       <h3 className="profile-side__title">Áreas selecionadas</h3>
+                      <p className="profile-skill-description">
+                        Escolha as áreas em que você atua para melhorar o match com demandas de P&D.
+                      </p>
 
                       {researchAreaCatalogError ? (
                         <article className="profile-side__item">
@@ -1046,6 +1074,27 @@ export default function ProfilePage() {
                         <div className="profile-area-picker__controls">
                           <label className="profile-area-picker__select">
                             <span className="sr-only">Área disponível</span>
+                            <div className="profile-multiselect__chips" aria-live="polite">
+                              {selectedResearchAreas.length > 0 ? (
+                                selectedResearchAreas.map((item) => (
+                                  <span key={item.id_area} className="profile-area-chip profile-area-chip--inside">
+                                    <span>{item.name}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleResearchAreaRemove(item.id_area)}
+                                      disabled={isSaving}
+                                      aria-label={`Remover área ${item.name}`}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="profile-area-picker__empty">
+                                  Nenhuma área selecionada.
+                                </span>
+                              )}
+                            </div>
                             <select
                               value={selectedResearchAreaId}
                               onChange={handleResearchAreaSelectChange}
@@ -1074,52 +1123,6 @@ export default function ProfilePage() {
                           </button>
                         </div>
 
-                        <div className="profile-area-picker__selected" aria-live="polite">
-                          {selectedResearchAreas.length > 0 ? (
-                            paginatedSelectedResearchAreas.map((item) => (
-                              <span key={item.id_area} className="profile-area-chip">
-                                <span>{item.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleResearchAreaRemove(item.id_area)}
-                                  disabled={isSaving}
-                                  aria-label={`Remover área ${item.name}`}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="profile-area-picker__empty">
-                              Nenhuma área selecionada. Selecione áreas de atuação para melhorar o match com demandas de P&D.
-                            </span>
-                          )}
-                        </div>
-
-                        {selectedResearchAreas.length > PROFILE_AREA_PAGE_SIZE ? (
-                          <div className="profile-pagination profile-pagination--compact">
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              onClick={() => setResearchAreaPage((current) => Math.max(1, current - 1))}
-                              disabled={researchAreaPage === 1}
-                            >
-                              Anterior
-                            </button>
-                            <span className="profile-pagination__status">
-                              Página {researchAreaPage} de {totalResearchAreaPages}
-                            </span>
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              onClick={() => setResearchAreaPage((current) => Math.min(totalResearchAreaPages, current + 1))}
-                              disabled={researchAreaPage === totalResearchAreaPages}
-                            >
-                              Próxima
-                            </button>
-                          </div>
-                        ) : null}
-
                         <div className="profile-form-card__actions">
                           <button type="submit" className="btn btn-primary" disabled={isSaving}>
                             {isSaving ? 'Salvando...' : 'Salvar áreas'}
@@ -1128,9 +1131,12 @@ export default function ProfilePage() {
                       </form>
                     </div>
 
-                    <div className="profile-skill-group">
+                    <div className="profile-skill-group" hidden={activeSkillInnerTab !== 'skills'}>
                       <span className="profile-side__eyebrow">Habilidades</span>
                       <h3 className="profile-side__title">Habilidades selecionadas</h3>
+                      <p className="profile-skill-description">
+                        Vincule competências técnicas ao seu currículo para destacar seu perfil.
+                      </p>
 
                       {skillsCatalogError ? (
                         <article className="profile-side__item">
@@ -1143,6 +1149,27 @@ export default function ProfilePage() {
                         <div className="profile-area-picker__controls">
                           <label className="profile-area-picker__select">
                             <span className="sr-only">Habilidade disponível</span>
+                            <div className="profile-multiselect__chips" aria-live="polite">
+                              {selectedSkills.length > 0 ? (
+                                selectedSkills.map((item) => (
+                                  <span key={item.id_skill} className="profile-area-chip profile-area-chip--inside">
+                                    <span>{item.description}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSkillRemove(item.id_skill)}
+                                      disabled={isSkillSaving}
+                                      aria-label={`Remover habilidade ${item.description}`}
+                                    >
+                                      ×
+                                    </button>
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="profile-area-picker__empty">
+                                  Nenhuma habilidade selecionada.
+                                </span>
+                              )}
+                            </div>
                             <select
                               value={skillForm.selectedSkillId}
                               onChange={(event) => handleSkillChange('selectedSkillId', event.target.value)}
@@ -1170,51 +1197,6 @@ export default function ProfilePage() {
                           </button>
                         </div>
 
-                        <div className="profile-area-picker__selected" aria-live="polite">
-                          {selectedSkills.length > 0 ? (
-                            paginatedSkills.map((item) => (
-                              <span key={item.id_skill} className="profile-area-chip">
-                                <span>{item.description}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSkillRemove(item.id_skill)}
-                                  disabled={isSkillSaving}
-                                  aria-label={`Remover habilidade ${item.description}`}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))
-                          ) : (
-                            <span className="profile-area-picker__empty">
-                              Nenhuma habilidade selecionada. Vincule habilidades para destacar competências técnicas no perfil.
-                            </span>
-                          )}
-                        </div>
-
-                        {selectedSkills.length > PROFILE_SKILL_PAGE_SIZE ? (
-                          <div className="profile-pagination profile-pagination--compact">
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              onClick={() => setSkillsPage((current) => Math.max(1, current - 1))}
-                              disabled={skillsPage === 1}
-                            >
-                              Anterior
-                            </button>
-                            <span className="profile-pagination__status">
-                              Página {skillsPage} de {totalSkillsPages}
-                            </span>
-                            <button
-                              type="button"
-                              className="btn btn-ghost"
-                              onClick={() => setSkillsPage((current) => Math.min(totalSkillsPages, current + 1))}
-                              disabled={skillsPage === totalSkillsPages}
-                            >
-                              Próxima
-                            </button>
-                          </div>
-                        ) : null}
                       </form>
 
                       <div className="profile-form-card__actions">

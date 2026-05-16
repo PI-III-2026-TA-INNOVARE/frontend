@@ -32,7 +32,6 @@ export default function AuthNav() {
           <div className="logo-icon">PD</div>
           <div>
             <div className="auth-nav__brand-title">P&amp;D Connect</div>
-            <div className="auth-nav__brand-subtitle">Área autenticada</div>
           </div>
         </div>
 
