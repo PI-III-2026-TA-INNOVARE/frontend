@@ -2,8 +2,7 @@
 node_modules/
 dist/
 codex_checkpoints/
-ai_instructions.md
-
+/ai_instructions.md
 .DS_Store
 Thumbs.db
 
