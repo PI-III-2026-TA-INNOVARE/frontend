@@ -17,6 +17,10 @@ export default function AuthNav() {
       items.push({ to: '/desafios/novo', label: 'Pesquisas' })
     }
 
+    if (user?.type === 'pesquisador') {
+      items.push({ to: '/meus-interesses', label: 'Pesquisas' })
+    }
+
     return items
   }, [user?.type])
 

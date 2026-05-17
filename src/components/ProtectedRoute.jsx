@@ -9,10 +9,9 @@ export default function ProtectedRoute({ requiredType = null }) {
     return (
       <section className="route-state">
         <div className="container route-state__container">
-          <div className="route-state__card">
-            <span className="section-label">Sessao</span>
-            <h1 className="route-state__title">Restaurando acesso</h1>
-            <p className="route-state__text">Preparando sua area autenticada.</p>
+          <div className="route-state__loader" role="status" aria-live="polite">
+            <span className="route-state__spinner" aria-hidden="true" />
+            <span className="sr-only">Carregando area autenticada</span>
           </div>
         </div>
       </section>

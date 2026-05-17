@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { formatBooleanLabel, formatDateLabel } from '../../../lib/domain'
+import { formatDateLabel } from '../../../lib/domain'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createEducation,
@@ -188,11 +188,6 @@ export default function ProfilePage() {
   const isEmpresa = profileUser?.type === 'empresa'
   const resumeData = profileUser?.resume || { education: [], experience: [], skill: [] }
   const researcherUniversityName = profileUser?.university?.name || 'Universidade nao informada'
-  const researcherStatusLabel = formatBooleanLabel(profileUser?.researcher?.status, {
-    trueLabel: 'Ativo',
-    falseLabel: 'Inativo',
-    nullLabel: 'Nao informado',
-  })
 
   const totalEducationPages = Math.max(
     1,
@@ -688,23 +683,6 @@ export default function ProfilePage() {
                   <div className="profile-readonly-value">{formData.cnpj || 'Nao informado'}</div>
                 </div>
 
-                <div className="profile-field profile-field--readonly profile-field--full">
-                  <span>Situacao cadastral</span>
-                  <div className="profile-readonly-value">
-                    {formData.registrationStatus || 'Nao informada'}
-                  </div>
-                </div>
-
-                <div className="profile-company-status">
-                  <span className="profile-company-status__label">Empresa ativa</span>
-                  <strong
-                    className={`profile-company-status__badge${
-                      formData.status === 'true' ? ' profile-company-status__badge--active' : ''
-                    }`}
-                  >
-                    {formData.status === 'true' ? 'Ativa' : 'Inativa'}
-                  </strong>
-                </div>
               </div>
 
               {errorMessage ? <p className="login-message">{errorMessage}</p> : null}
@@ -793,11 +771,6 @@ export default function ProfilePage() {
                       <div className="profile-field profile-field--readonly">
                         <span>Universidade</span>
                         <div className="profile-readonly-value">{researcherUniversityName}</div>
-                      </div>
-
-                      <div className="profile-field profile-field--readonly">
-                        <span>Status do cadastro</span>
-                        <div className="profile-status-badge profile-status-badge--active">{researcherStatusLabel}</div>
                       </div>
 
                     </div>

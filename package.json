@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js",
     "build": "node ./node_modules/vite/bin/vite.js build",
-    "preview": "node ./node_modules/vite/bin/vite.js preview"
+    "preview": "node ./node_modules/vite/bin/vite.js preview",
+    "seed:semantic-researches": "node ./scripts/dev/seed-semantic-researches.mjs",
+    "seed:250-researches": "node ./scripts/dev/seed-250-researches.mjs"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",

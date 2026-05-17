@@ -16,6 +16,8 @@ const candidateStatusOptions = [
   { value: 'rejected', label: 'Rejeitado' },
 ]
 
+const PUBLISHED_RESEARCH_PAGE_SIZE = 8
+
 const defaultResearchForm = {
   title: '',
   scope: '',
@@ -62,12 +64,19 @@ function buildLookup(items, idKey, labelKey) {
   }, {})
 }
 
-function buildCandidatesLookup(researches, candidateResults) {
-  return researches.reduce((lookup, research, index) => {
-    const response = candidateResults[index]
-    lookup[research.id_research] = response?.status === 'fulfilled' ? response.value : []
-    return lookup
-  }, {})
+function paginateItems(items, page, pageSize) {
+  const startIndex = (page - 1) * pageSize
+  return items.slice(startIndex, startIndex + pageSize)
+}
+
+function buildPageLabel(page, totalItems, pageSize) {
+  if (!totalItems) {
+    return '0 de 0'
+  }
+
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(page * pageSize, totalItems)
+  return `${start}-${end} de ${totalItems}`
 }
 
 function formatDeadlineLabel(value) {
@@ -121,8 +130,12 @@ function getCandidateSourceLabel(source) {
 
 export default function PublishChallengePage() {
   const { user } = useAuth()
-  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('create')
+  const [publishedPage, setPublishedPage] = useState(1)
+  const [researchAreasLoading, setResearchAreasLoading] = useState(true)
+  const [researchesLoading, setResearchesLoading] = useState(true)
   const [submitLoading, setSubmitLoading] = useState(false)
+  const [candidateLoadingIds, setCandidateLoadingIds] = useState(() => new Set())
   const [candidateActionLoading, setCandidateActionLoading] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
@@ -137,48 +150,108 @@ export default function PublishChallengePage() {
   useEffect(() => {
     let isMounted = true
 
-    const loadCatalog = async () => {
-      setLoading(true)
-      setErrorMessage('')
+    const loadCandidatesInBackground = async (researchesToLoad) => {
+      const researchIds = researchesToLoad.map((item) => item.id_research)
+      setCandidateLoadingIds(new Set(researchIds))
 
-      try {
-        const [researches, researchAreas] = await Promise.all([
-          listResearches(),
-          listResearchAreas(),
-        ])
-
-        const ownedResearches = researches.filter(
-          (item) => item.company === user?.company?.id_company
-        )
+      for (let index = 0; index < researchesToLoad.length; index += 6) {
+        const batch = researchesToLoad.slice(index, index + 6)
         const candidateResults = await Promise.allSettled(
-          ownedResearches.map((item) => listResearchCandidates(item.id_research))
+          batch.map((item) => listResearchCandidates(item.id_research))
         )
 
         if (!isMounted) {
           return
         }
 
-        setCatalog({
-          researches,
-          researchAreas,
-          candidatesByResearch: buildCandidatesLookup(ownedResearches, candidateResults),
+        setCatalog((current) => {
+          const nextCandidatesByResearch = { ...current.candidatesByResearch }
+
+          batch.forEach((research, batchIndex) => {
+            const result = candidateResults[batchIndex]
+            nextCandidatesByResearch[research.id_research] =
+              result.status === 'fulfilled' ? result.value : []
+          })
+
+          return {
+            ...current,
+            candidatesByResearch: nextCandidatesByResearch,
+          }
         })
+
+        setCandidateLoadingIds((current) => {
+          const next = new Set(current)
+          batch.forEach((research) => next.delete(research.id_research))
+          return next
+        })
+      }
+    }
+
+    const loadResearchAreas = async () => {
+      setResearchAreasLoading(true)
+      setErrorMessage('')
+
+      try {
+        const researchAreas = await listResearchAreas()
+
+        if (!isMounted) {
+          return
+        }
+
+        setCatalog((current) => ({
+          ...current,
+          researchAreas,
+        }))
       } catch (error) {
         if (!isMounted) {
           return
         }
 
         setErrorMessage(
-          error.message || 'Nao foi possivel carregar os dados necessarios para publicar a pesquisa.'
+          error.message || 'Nao foi possivel carregar as areas de pesquisa.'
         )
       } finally {
         if (isMounted) {
-          setLoading(false)
+          setResearchAreasLoading(false)
         }
       }
     }
 
-    loadCatalog()
+    const loadResearches = async () => {
+      setResearchesLoading(true)
+      setCandidateLoadingIds(new Set())
+
+      try {
+        const researches = await listResearches()
+        const ownedResearches = researches.filter(
+          (item) => item.company === user?.company?.id_company
+        )
+
+        if (!isMounted) {
+          return
+        }
+
+        setCatalog((current) => ({
+          ...current,
+          researches,
+          candidatesByResearch: {},
+        }))
+        loadCandidatesInBackground(ownedResearches)
+      } catch (error) {
+        if (!isMounted) {
+          return
+        }
+
+        setErrorMessage(error.message || 'Nao foi possivel carregar as pesquisas publicadas.')
+      } finally {
+        if (isMounted) {
+          setResearchesLoading(false)
+        }
+      }
+    }
+
+    loadResearchAreas()
+    loadResearches()
 
     return () => {
       isMounted = false
@@ -188,6 +261,19 @@ export default function PublishChallengePage() {
   const ownedResearches = useMemo(() => (
     catalog.researches.filter((item) => item.company === user?.company?.id_company)
   ), [catalog.researches, user?.company?.id_company])
+  const totalPublishedPages = Math.max(
+    1,
+    Math.ceil(ownedResearches.length / PUBLISHED_RESEARCH_PAGE_SIZE)
+  )
+
+  useEffect(() => {
+    setPublishedPage((current) => Math.min(current, totalPublishedPages))
+  }, [totalPublishedPages])
+
+  const paginatedOwnedResearches = useMemo(
+    () => paginateItems(ownedResearches, publishedPage, PUBLISHED_RESEARCH_PAGE_SIZE),
+    [ownedResearches, publishedPage]
+  )
 
   const researchAreaLookup = useMemo(
     () => buildLookup(catalog.researchAreas, 'id_area', 'name'),
@@ -253,6 +339,8 @@ export default function PublishChallengePage() {
       }))
       setResearchForm(defaultResearchForm)
       setSuccessMessage('Pesquisa publicada com sucesso.')
+      setPublishedPage(1)
+      setActiveTab('published')
     } catch (error) {
       setErrorMessage(
         error.message || 'Nao foi possivel publicar a pesquisa com os dados informados.'
@@ -324,7 +412,29 @@ export default function PublishChallengePage() {
           </div>
         </header>
 
+        <div className="challenge-tabs" role="tablist" aria-label="Pesquisas da empresa">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'create'}
+            className={`challenge-tab${activeTab === 'create' ? ' active' : ''}`}
+            onClick={() => setActiveTab('create')}
+          >
+            Cadastrar pesquisa
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'published'}
+            className={`challenge-tab${activeTab === 'published' ? ' active' : ''}`}
+            onClick={() => setActiveTab('published')}
+          >
+            Visualizar pesquisas ({researchesLoading ? '...' : ownedResearches.length})
+          </button>
+        </div>
+
         <div className="challenge-page__stack">
+          {activeTab === 'create' ? (
           <div className="challenge-form-card challenge-form-card--editor">
             <div className="challenge-form-card__section-head">
               <div>
@@ -333,21 +443,7 @@ export default function PublishChallengePage() {
               </div>
             </div>
 
-            {loading ? (
-              <div className="challenge-form-card__item">
-                <strong>Carregando dados</strong>
-                <span>Preparando formulario e pesquisas da empresa.</span>
-              </div>
-            ) : null}
-
-            {!loading && errorMessage ? (
-              <div className="challenge-form-card__item">
-                <strong>Falha ao preparar a publicacao</strong>
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            {!loading && !hasResearchAreas ? (
+            {!researchAreasLoading && !hasResearchAreas ? (
               <div className="challenge-form-card__item">
                 <strong>Publicacao bloqueada por catalogo vazio</strong>
                 <span>
@@ -357,7 +453,6 @@ export default function PublishChallengePage() {
               </div>
             ) : null}
 
-            {!loading ? (
               <form className="challenge-form-card__section" onSubmit={handleSubmit} noValidate>
                 <div className="challenge-form-grid">
                   <label className="profile-field">
@@ -388,10 +483,12 @@ export default function PublishChallengePage() {
                     <select
                       value={researchForm.areaId}
                       onChange={(event) => handleChange('areaId', event.target.value)}
-                      disabled={submitLoading || !hasResearchAreas}
+                      disabled={submitLoading || researchAreasLoading || !hasResearchAreas}
                     >
                       <option value="">
-                        {hasResearchAreas
+                        {researchAreasLoading
+                          ? 'Carregando areas...'
+                          : hasResearchAreas
                           ? 'Selecione uma area'
                           : 'Nenhuma area disponivel'}
                       </option>
@@ -471,29 +568,41 @@ export default function PublishChallengePage() {
                   <button
                     type="submit"
                     className="btn btn-primary"
-                    disabled={submitLoading}
+                    disabled={submitLoading || researchAreasLoading || !hasResearchAreas}
                   >
                     {submitLoading ? 'Publicando...' : 'Publicar pesquisa'}
                   </button>
                 </div>
               </form>
-            ) : null}
           </div>
+          ) : null}
 
+          {activeTab === 'published' ? (
           <div className="challenge-form-card challenge-form-card--published">
             <div className="challenge-form-card__section-head">
               <div>
                 <span className="challenge-form-card__eyebrow">Acompanhamento</span>
                 <h2 className="challenge-form-card__title">Pesquisas publicadas</h2>
               </div>
+              {ownedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
+                <span className="challenge-pagination__meta">
+                  {buildPageLabel(publishedPage, ownedResearches.length, PUBLISHED_RESEARCH_PAGE_SIZE)}
+                </span>
+              ) : null}
             </div>
 
             {candidateMessage ? <p className="challenge-form-card__success">{candidateMessage}</p> : null}
 
             <div className="challenge-form-card__list">
-              {ownedResearches.length > 0 ? (
-                ownedResearches.map((item) => {
+              {researchesLoading ? (
+                <article className="challenge-form-card__item">
+                  <strong>Carregando pesquisas</strong>
+                  <span>Preparando a lista de pesquisas publicadas.</span>
+                </article>
+              ) : ownedResearches.length > 0 ? (
+                paginatedOwnedResearches.map((item) => {
                   const candidates = catalog.candidatesByResearch[item.id_research] || []
+                  const isLoadingCandidates = candidateLoadingIds.has(item.id_research)
 
                   return (
                     <article key={item.id_research} className="challenge-form-card__item">
@@ -521,7 +630,9 @@ export default function PublishChallengePage() {
                           {candidates.length} candidato(s)
                         </span>
 
-                        {candidates.length > 0 ? (
+                        {isLoadingCandidates ? (
+                          <span>Carregando candidatos desta pesquisa.</span>
+                        ) : candidates.length > 0 ? (
                           candidates.map((candidate) => (
                             <div key={candidate.id_candidate} className="challenge-candidate">
                               <div>
@@ -569,7 +680,32 @@ export default function PublishChallengePage() {
                 </article>
               )}
             </div>
+
+            {ownedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
+              <div className="challenge-pagination">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setPublishedPage((current) => Math.max(1, current - 1))}
+                  disabled={publishedPage === 1}
+                >
+                  Anterior
+                </button>
+                <span className="challenge-pagination__status">
+                  Pagina {publishedPage} de {totalPublishedPages}
+                </span>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={() => setPublishedPage((current) => Math.min(totalPublishedPages, current + 1))}
+                  disabled={publishedPage === totalPublishedPages}
+                >
+                  Proxima
+                </button>
+              </div>
+            ) : null}
           </div>
+          ) : null}
         </div>
       </div>
     </section>

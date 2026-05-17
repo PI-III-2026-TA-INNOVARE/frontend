@@ -50,6 +50,28 @@ export function listResearchers() {
   return fetchPaginatedCollection('/researchers/')
 }
 
+function buildQueryString(params = {}) {
+  const query = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      query.set(key, value)
+    }
+  })
+
+  return query.toString() ? `?${query.toString()}` : ''
+}
+
+export function searchResearchers(params = {}) {
+  const suffix = buildQueryString(params)
+  return apiRequest(`/search/researchers/${suffix}`)
+}
+
+export function searchResearch(params = {}) {
+  const suffix = buildQueryString(params)
+  return apiRequest(`/search/research/${suffix}`)
+}
+
 export function getResearcher(id) {
   return apiRequest(`/researchers/${id}`)
 }
@@ -73,6 +95,10 @@ export function listResearches() {
   return fetchPaginatedCollection('/research/')
 }
 
+export function getResearch(id) {
+  return apiRequest(`/research/${id}`)
+}
+
 export function listMyResearchInterests() {
   return fetchPaginatedCollection('/research/my-interests/')
 }
@@ -92,15 +118,7 @@ export function createResearchInterest(researchId, payload = {}) {
 }
 
 export function listResearchCandidates(researchId, params = {}) {
-  const query = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      query.set(key, value)
-    }
-  })
-
-  const suffix = query.toString() ? `?${query.toString()}` : ''
+  const suffix = buildQueryString(params)
   return fetchPaginatedCollection(`/research/${researchId}/candidates/${suffix}`)
 }
 

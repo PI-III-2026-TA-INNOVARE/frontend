@@ -272,10 +272,34 @@
   gap: 14px;
 }
 
+.login-company-cnpj-step {
+  display: grid;
+  gap: 14px;
+}
+
+.login-cnpj-feedback {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.login-cnpj-feedback--success {
+  color: var(--accent-green);
+}
+
+.login-cnpj-feedback--error {
+  color: var(--accent-error);
+}
+
 .login-register-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px 16px;
+}
+
+.login-register-grid__confirm {
+  grid-column: 2;
 }
 
 .login-register-grid .form-group,
@@ -349,6 +373,10 @@
   .login-register-grid,
   .form-row {
     grid-template-columns: 1fr;
+  }
+
+  .login-register-grid__confirm {
+    grid-column: auto;
   }
 
   .login-register-preview__secondary-action {

@@ -11,6 +11,7 @@ import LoginPage from './pages/auth/login'
 import SearchPage from './pages/app/search'
 import ProfilePage from './pages/app/profile'
 import PublishChallengePage from './pages/app/publish-challenge'
+import MyInterestsPage from './pages/app/my-interests'
 
 function App() {
   return (
@@ -31,6 +32,10 @@ function App() {
             <Route path="/pesquisa" element={<SearchPage />} />
             <Route path="/app/indicadores" element={<IndicadoresPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
+
+            <Route element={<ProtectedRoute requiredType="pesquisador" />}>
+              <Route path="/meus-interesses" element={<MyInterestsPage />} />
+            </Route>
 
             <Route element={<ProtectedRoute requiredType="empresa" />}>
               <Route path="/desafios/novo" element={<PublishChallengePage />} />

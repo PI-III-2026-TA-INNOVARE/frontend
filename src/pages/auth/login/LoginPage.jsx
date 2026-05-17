@@ -48,6 +48,31 @@ function formatCnpj(value) {
     .replace(/(\d{4})(\d)/, '$1-$2')
 }
 
+function isValidCnpj(value) {
+  const digits = normalizeCnpjDigits(value)
+
+  if (digits.length !== 14 || digits === digits[0]?.repeat(14)) {
+    return false
+  }
+
+  const numbers = digits.split('').map((digit) => Number(digit))
+  const firstWeights = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+  const secondWeights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+
+  const firstSum = firstWeights.reduce((sum, weight, index) => sum + numbers[index] * weight, 0)
+  const firstCheck = 11 - (firstSum % 11)
+  const firstDigit = firstCheck >= 10 ? 0 : firstCheck
+
+  const secondSum = secondWeights.reduce((sum, weight, index) => {
+    const number = index < 12 ? numbers[index] : firstDigit
+    return sum + number * weight
+  }, 0)
+  const secondCheck = 11 - (secondSum % 11)
+  const secondDigit = secondCheck >= 10 ? 0 : secondCheck
+
+  return numbers[12] === firstDigit && numbers[13] === secondDigit
+}
+
 function validateLoginForm(form) {
   if (!form.email.trim() || !form.password) {
     return 'Informe e-mail e senha para continuar.'
@@ -56,7 +81,7 @@ function validateLoginForm(form) {
   return ''
 }
 
-function validateCompanyForm(form) {
+function validateCompanyForm(form, { companyLookup } = {}) {
   if (!form.email.trim()) {
     return 'Informe um e-mail para criar o acesso.'
   }
@@ -73,8 +98,15 @@ function validateCompanyForm(form) {
     return 'A confirmacao da senha nao confere.'
   }
 
-  if (normalizeCnpjDigits(form.cnpj).length !== 14) {
-    return 'Informe um CNPJ com 14 digitos.'
+  if (!isValidCnpj(form.cnpj)) {
+    return 'CNPJ nao encontrado'
+  }
+
+  if (
+    !companyLookup?.pode_cadastrar ||
+    normalizeCnpjDigits(companyLookup.cnpj) !== normalizeCnpjDigits(form.cnpj)
+  ) {
+    return 'Consulte um CNPJ valido antes de cadastrar.'
   }
 
   return ''
@@ -136,6 +168,8 @@ export default function LoginPage() {
   const [submitLoading, setSubmitLoading] = useState(false)
   const [companyLookupLoading, setCompanyLookupLoading] = useState(false)
   const [companyLookup, setCompanyLookup] = useState(null)
+  const [companyRegistrationStep, setCompanyRegistrationStep] = useState('cnpj')
+  const [companyCnpjFeedback, setCompanyCnpjFeedback] = useState({ type: '', message: '' })
   const [loginMessage, setLoginMessage] = useState('')
   const [registerMessage, setRegisterMessage] = useState('')
   const [loginForm, setLoginForm] = useState(defaultLoginForm)
@@ -225,6 +259,15 @@ export default function LoginPage() {
     setLoginMessage('')
   }
 
+  const handleRegisterTabChange = (nextTab) => {
+    setRegTab(nextTab)
+    setRegisterMessage('')
+
+    if (nextTab === 'empresa') {
+      setCompanyRegistrationStep(companyLookup ? 'details' : 'cnpj')
+    }
+  }
+
   const handleCompanyChange = (field, value) => {
     setCompanyForm((current) => ({
       ...current,
@@ -232,6 +275,8 @@ export default function LoginPage() {
     }))
     if (field === 'cnpj') {
       setCompanyLookup(null)
+      setCompanyRegistrationStep('cnpj')
+      setCompanyCnpjFeedback({ type: '', message: '' })
     }
     setRegisterMessage('')
   }
@@ -268,7 +313,7 @@ export default function LoginPage() {
   const handleRegisterSubmit = async (event) => {
     event.preventDefault()
 
-    const validationMessage = validateCompanyForm(companyForm)
+    const validationMessage = validateCompanyForm(companyForm, { companyLookup })
     if (validationMessage) {
       setRegisterMessage(validationMessage)
       return
@@ -340,22 +385,33 @@ export default function LoginPage() {
   }
 
   const handleCompanyLookup = async () => {
-    if (normalizeCnpjDigits(companyForm.cnpj).length !== 14) {
-      setRegisterMessage('Informe um CNPJ com 14 digitos antes de consultar.')
+    if (!isValidCnpj(companyForm.cnpj)) {
+      setCompanyCnpjFeedback({ type: 'error', message: 'CNPJ nao encontrado' })
       return
     }
 
     setCompanyLookupLoading(true)
     setRegisterMessage('')
+    setCompanyCnpjFeedback({ type: '', message: '' })
     setCompanyLookup(null)
 
     try {
       const result = await lookupCompanyCnpj({
         cnpj: companyForm.cnpj,
       })
+
+      if (!result?.pode_cadastrar) {
+        setCompanyCnpjFeedback({ type: 'error', message: 'CNPJ nao encontrado' })
+        return
+      }
+
       setCompanyLookup(result)
+      setCompanyCnpjFeedback({ type: 'success', message: 'CNPJ valido' })
+      window.setTimeout(() => {
+        setCompanyRegistrationStep('details')
+      }, 2000)
     } catch (error) {
-      setRegisterMessage(error.message || 'Nao foi possivel consultar o CNPJ.')
+      setCompanyCnpjFeedback({ type: 'error', message: 'CNPJ nao encontrado' })
     } finally {
       setCompanyLookupLoading(false)
     }
@@ -462,19 +518,13 @@ export default function LoginPage() {
           <div className="login-tabs">
             <div
               className={`login-tab${regTab === 'empresa' ? ' active' : ''}`}
-              onClick={() => {
-                setRegTab('empresa')
-                setRegisterMessage('')
-              }}
+              onClick={() => handleRegisterTabChange('empresa')}
             >
               Empresa
             </div>
             <div
               className={`login-tab${regTab === 'pesquisador' ? ' active' : ''}`}
-              onClick={() => {
-                setRegTab('pesquisador')
-                setRegisterMessage('')
-              }}
+              onClick={() => handleRegisterTabChange('pesquisador')}
             >
               Pesquisador
             </div>
@@ -482,98 +532,104 @@ export default function LoginPage() {
 
           {regTab === 'empresa' ? (
             <form onSubmit={handleRegisterSubmit} className="login-register-preview">
-              <div className="login-register-grid">
-                <div className="form-group">
-                  <label className="form-label" htmlFor="company-cnpj">
-                    CNPJ
-                  </label>
-                  <input
-                    id="company-cnpj"
-                    className="form-input"
-                    value={companyForm.cnpj}
-                    onChange={(event) => handleCompanyChange('cnpj', event.target.value)}
-                    placeholder="00.000.000/0000-00"
-                    disabled={submitLoading}
-                  />
-                </div>
+              {companyRegistrationStep === 'cnpj' ? (
+                <div className="login-company-cnpj-step">
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="company-cnpj">
+                      CNPJ
+                    </label>
+                    {companyCnpjFeedback.message ? (
+                      <span className={`login-cnpj-feedback login-cnpj-feedback--${companyCnpjFeedback.type}`}>
+                        {companyCnpjFeedback.message}
+                      </span>
+                    ) : null}
+                    <input
+                      id="company-cnpj"
+                      className="form-input"
+                      value={companyForm.cnpj}
+                      onChange={(event) => handleCompanyChange('cnpj', event.target.value)}
+                      placeholder="00.000.000/0000-00"
+                      disabled={submitLoading || companyLookupLoading}
+                    />
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="company-email">
-                    E-mail de acesso
-                  </label>
-                  <input
-                    id="company-email"
-                    type="email"
-                    className="form-input"
-                    value={companyForm.email}
-                    onChange={(event) => handleCompanyChange('email', event.target.value)}
-                    placeholder="contato@empresa.com"
-                    autoComplete="email"
-                    disabled={submitLoading}
-                  />
+                  <button
+                    type="button"
+                    className="btn btn-outline login-register-preview__secondary-action"
+                    onClick={handleCompanyLookup}
+                    disabled={submitLoading || companyLookupLoading}
+                  >
+                    {companyLookupLoading ? 'Consultando CNPJ...' : 'Consultar CNPJ'}
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <div className="login-feedback">
+                    <strong>{companyLookup?.razao_social || 'CNPJ valido'}</strong>
+                    <p>CNPJ validado. Continue o cadastro da empresa.</p>
+                  </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="company-password">
-                    Senha
-                  </label>
-                  <input
-                    id="company-password"
-                    type="password"
-                    className="form-input"
-                    value={companyForm.password}
-                    onChange={(event) => handleCompanyChange('password', event.target.value)}
-                    placeholder="Minimo de 8 caracteres"
-                    autoComplete="new-password"
-                    disabled={submitLoading}
-                  />
-                </div>
+                  <div className="login-register-grid">
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="company-email">
+                        E-mail de acesso
+                      </label>
+                      <input
+                        id="company-email"
+                        type="email"
+                        className="form-input"
+                        value={companyForm.email}
+                        onChange={(event) => handleCompanyChange('email', event.target.value)}
+                        placeholder="contato@empresa.com"
+                        autoComplete="email"
+                        disabled={submitLoading}
+                      />
+                    </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="company-password-confirm">
-                    Confirmacao da senha
-                  </label>
-                  <input
-                    id="company-password-confirm"
-                    type="password"
-                    className="form-input"
-                    value={companyForm.confirmPassword}
-                    onChange={(event) => handleCompanyChange('confirmPassword', event.target.value)}
-                    placeholder="Repita a senha"
-                    autoComplete="new-password"
-                    disabled={submitLoading}
-                  />
-                </div>
-              </div>
+                    <div className="form-group">
+                      <label className="form-label" htmlFor="company-password">
+                        Senha
+                      </label>
+                      <input
+                        id="company-password"
+                        type="password"
+                        className="form-input"
+                        value={companyForm.password}
+                        onChange={(event) => handleCompanyChange('password', event.target.value)}
+                        placeholder="Minimo de 8 caracteres"
+                        autoComplete="new-password"
+                        disabled={submitLoading}
+                      />
+                    </div>
 
-              <button
-                type="button"
-                className="btn btn-outline login-register-preview__secondary-action"
-                onClick={handleCompanyLookup}
-                disabled={submitLoading || companyLookupLoading}
-              >
-                {companyLookupLoading ? 'Consultando CNPJ...' : 'Consultar CNPJ'}
-              </button>
-
-              {companyLookup ? (
-                <div className="login-feedback">
-                  <strong>{companyLookup.razao_social || 'CNPJ consultado'}</strong>
-                  <p>
-                    Situacao cadastral: {companyLookup.situacao_cadastral || 'nao informada'}.
-                    {companyLookup.pode_cadastrar
-                      ? ' CNPJ liberado para cadastro.'
-                      : ` ${companyLookup.motivo_bloqueio || 'Cadastro nao liberado para este CNPJ.'}`}
-                  </p>
-                </div>
-              ) : null}
+                    <div className="form-group login-register-grid__confirm">
+                      <label className="form-label" htmlFor="company-password-confirm">
+                        Confirmacao da senha
+                      </label>
+                      <input
+                        id="company-password-confirm"
+                        type="password"
+                        className="form-input"
+                        value={companyForm.confirmPassword}
+                        onChange={(event) => handleCompanyChange('confirmPassword', event.target.value)}
+                        placeholder="Repita a senha"
+                        autoComplete="new-password"
+                        disabled={submitLoading}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               {registerMessage ? <p className="login-message">{registerMessage}</p> : null}
 
-              <div className="form-actions">
-                <button type="submit" className="btn btn-primary" disabled={submitLoading}>
-                  {submitLoading ? 'Salvando...' : 'Cadastrar empresa'}
-                </button>
-              </div>
+              {companyRegistrationStep === 'details' ? (
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary" disabled={submitLoading}>
+                    {submitLoading ? 'Salvando...' : 'Cadastrar empresa'}
+                  </button>
+                </div>
+              ) : null}
             </form>
           ) : (
             <form onSubmit={handleResearcherRegisterSubmit} className="login-register-preview">
