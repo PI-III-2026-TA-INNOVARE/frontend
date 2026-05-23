@@ -1,5 +1,7 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useEffect, useMemo, useState } from 'react'
-import { formatDateLabel } from '../../../lib/domain'
+import { buildPageLabel, formatDateLabel, paginateItems } from '../../../lib/domain'
+import { appIcons } from '../../../lib/icons'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createEducation,
@@ -66,28 +68,13 @@ function toBoolean(value) {
   return value === 'true'
 }
 
-function paginateItems(items, page, pageSize) {
-  const startIndex = (page - 1) * pageSize
-  return items.slice(startIndex, startIndex + pageSize)
-}
-
-function buildPageLabel(page, totalItems, pageSize) {
-  if (!totalItems) {
-    return '0 de 0'
-  }
-
-  const start = (page - 1) * pageSize + 1
-  const end = Math.min(page * pageSize, totalItems)
-  return `${start}-${end} de ${totalItems}`
-}
-
 function validateEducationForm(form) {
   if (!form.course.trim() || !form.institution.trim() || !form.startDate || !form.endDate) {
-    return 'Preencha curso, instituicao, data de inicio e data de termino.'
+    return 'Preencha curso, instituição, data de início e data de término.'
   }
 
   if (form.endDate < form.startDate) {
-    return 'A data de termino nao pode ser anterior a data de inicio.'
+    return 'A data de término não pode ser anterior à data de início.'
   }
 
   return ''
@@ -95,11 +82,11 @@ function validateEducationForm(form) {
 
 function validateExperienceForm(form) {
   if (!form.description.trim() || !form.startDate) {
-    return 'Preencha descricao e data de inicio da experiencia.'
+    return 'Preencha descrição e data de início da experiência.'
   }
 
   if (form.endDate && form.endDate < form.startDate) {
-    return 'A data de termino nao pode ser anterior a data de inicio.'
+    return 'A data de término não pode ser anterior à data de início.'
   }
 
   return ''
@@ -164,6 +151,7 @@ export default function ProfilePage() {
   const [savedMessage, setSavedMessage] = useState('')
   const [resumeMessage, setResumeMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const [resumeErrorMessage, setResumeErrorMessage] = useState('')
   const [skillsCatalogError, setSkillsCatalogError] = useState('')
   const [researchAreaCatalogError, setResearchAreaCatalogError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -187,7 +175,7 @@ export default function ProfilePage() {
 
   const isEmpresa = profileUser?.type === 'empresa'
   const resumeData = profileUser?.resume || { education: [], experience: [], skill: [] }
-  const researcherUniversityName = profileUser?.university?.name || 'Universidade nao informada'
+  const researcherUniversityName = profileUser?.university?.name || 'Universidade não informada'
 
   const totalEducationPages = Math.max(
     1,
@@ -388,35 +376,35 @@ export default function ProfilePage() {
   const handleEducationChange = (field, value) => {
     setEducationForm((current) => ({ ...current, [field]: value }))
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleExperienceChange = (field, value) => {
     setExperienceForm((current) => ({ ...current, [field]: value }))
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleSkillChange = (field, value) => {
     setSkillForm((current) => ({ ...current, [field]: value }))
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleResearchAreaSelectChange = (event) => {
     setSelectedResearchAreaId(event.target.value)
     setSavedMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleResearchAreaAdd = () => {
     if (!selectedResearchAreaId) {
-      setErrorMessage('Selecione uma area de pesquisa antes de adicionar.')
+      setResumeErrorMessage('Selecione uma área de pesquisa antes de adicionar.')
       return
     }
 
     if (linkedResearcherAreaIds.has(String(selectedResearchAreaId))) {
-      setErrorMessage('Esta area de pesquisa ja esta selecionada.')
+      setResumeErrorMessage('Esta área de pesquisa já está selecionada.')
       setSelectedResearchAreaId('')
       return
     }
@@ -428,7 +416,7 @@ export default function ProfilePage() {
 
     setSelectedResearchAreaId('')
     setSavedMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleResearchAreaRemove = (areaId) => {
@@ -446,7 +434,7 @@ export default function ProfilePage() {
     }
 
     setSavedMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const refreshProfileView = async () => {
@@ -458,6 +446,7 @@ export default function ProfilePage() {
   const syncResumeAfterChange = async (message) => {
     await refreshProfileView()
     setResumeMessage(message)
+    setResumeErrorMessage('')
   }
 
   const ensureResearcherResume = async () => {
@@ -489,13 +478,13 @@ export default function ProfilePage() {
 
     const validationMessage = validateEducationForm(educationForm)
     if (validationMessage) {
-      setErrorMessage(validationMessage)
+      setResumeErrorMessage(validationMessage)
       return
     }
 
     setIsEducationSaving(true)
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     try {
       const resumeId = await ensureResearcherResume()
@@ -508,13 +497,13 @@ export default function ProfilePage() {
         resume: resumeId,
       })
 
-      await syncResumeAfterChange('Formacao adicionada com sucesso.')
+      await syncResumeAfterChange('Formação adicionada com sucesso.')
       setEducationForm(defaultEducationForm)
       setActiveResearcherTab('educations')
       setEducationPage(1)
     } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel adicionar a formacao ao curriculo.'
+      setResumeErrorMessage(
+        error.message || 'Não foi possível adicionar a formação ao currículo.'
       )
     } finally {
       setIsEducationSaving(false)
@@ -524,14 +513,14 @@ export default function ProfilePage() {
   const handleEducationDelete = async (educationId) => {
     setIsEducationSaving(true)
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     try {
       await deleteEducation(educationId)
-      await syncResumeAfterChange('Formacao removida com sucesso.')
+      await syncResumeAfterChange('Formação removida com sucesso.')
     } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel remover a formacao selecionada.'
+      setResumeErrorMessage(
+        error.message || 'Não foi possível remover a formação selecionada.'
       )
     } finally {
       setIsEducationSaving(false)
@@ -543,13 +532,13 @@ export default function ProfilePage() {
 
     const validationMessage = validateExperienceForm(experienceForm)
     if (validationMessage) {
-      setErrorMessage(validationMessage)
+      setResumeErrorMessage(validationMessage)
       return
     }
 
     setIsExperienceSaving(true)
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     try {
       const resumeId = await ensureResearcherResume()
@@ -561,13 +550,13 @@ export default function ProfilePage() {
         resume: resumeId,
       })
 
-      await syncResumeAfterChange('Experiencia adicionada com sucesso.')
+      await syncResumeAfterChange('Experiência adicionada com sucesso.')
       setExperienceForm(defaultExperienceForm)
       setActiveResearcherTab('experiences')
       setExperiencePage(1)
     } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel adicionar a experiencia ao curriculo.'
+      setResumeErrorMessage(
+        error.message || 'Não foi possível adicionar a experiência ao currículo.'
       )
     } finally {
       setIsExperienceSaving(false)
@@ -577,14 +566,14 @@ export default function ProfilePage() {
   const handleExperienceDelete = async (experienceId) => {
     setIsExperienceSaving(true)
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     try {
       await deleteExperience(experienceId)
-      await syncResumeAfterChange('Experiencia removida com sucesso.')
+      await syncResumeAfterChange('Experiência removida com sucesso.')
     } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel remover a experiencia selecionada.'
+      setResumeErrorMessage(
+        error.message || 'Não foi possível remover a experiência selecionada.'
       )
     } finally {
       setIsExperienceSaving(false)
@@ -605,12 +594,12 @@ export default function ProfilePage() {
     event.preventDefault()
 
     if (!skillForm.selectedSkillId) {
-      setErrorMessage('Selecione uma habilidade existente para vincular ao curriculo.')
+      setResumeErrorMessage('Selecione uma habilidade para vincular ao currículo.')
       return
     }
 
     if (selectedSkillIdSet.has(String(skillForm.selectedSkillId))) {
-      setErrorMessage('Esta habilidade ja esta selecionada.')
+      setResumeErrorMessage('Esta habilidade já está selecionada.')
       setSkillForm((current) => ({
         ...current,
         selectedSkillId: '',
@@ -624,13 +613,13 @@ export default function ProfilePage() {
       selectedSkillId: '',
     }))
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
   }
 
   const handleSkillSave = async () => {
     setIsSkillSaving(true)
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     try {
       await syncResumeSkills(
@@ -639,8 +628,8 @@ export default function ProfilePage() {
       )
       setActiveResearcherTab('skills')
     } catch (error) {
-      setErrorMessage(
-        error.message || 'Nao foi possivel salvar as habilidades selecionadas.'
+      setResumeErrorMessage(
+        error.message || 'Não foi possível salvar as habilidades selecionadas.'
       )
     } finally {
       setIsSkillSaving(false)
@@ -649,7 +638,7 @@ export default function ProfilePage() {
 
   const handleSkillRemove = (skillId) => {
     setResumeMessage('')
-    setErrorMessage('')
+    setResumeErrorMessage('')
 
     setSelectedSkillIds((current) => (
       (current || []).filter((currentId) => String(currentId) !== String(skillId))
@@ -743,7 +732,6 @@ export default function ProfilePage() {
                 </button>
               </div>
 
-              {errorMessage ? <p className="login-message">{errorMessage}</p> : null}
               {resumeMessage ? <p className="profile-side__message">{resumeMessage}</p> : null}
 
               {activeResearcherTab === 'general' ? (
@@ -774,6 +762,8 @@ export default function ProfilePage() {
                       </div>
 
                     </div>
+
+                    {errorMessage ? <p className="login-message">{errorMessage}</p> : null}
 
                     <div className="profile-form-card__actions">
                       <button type="submit" className="btn btn-primary" disabled={isSaving}>
@@ -843,11 +833,15 @@ export default function ProfilePage() {
                       </button>
                     </form>
 
+                    {resumeErrorMessage ? <p className="login-message">{resumeErrorMessage}</p> : null}
+
                     <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedEducation.length > 0 ? (
                         paginatedEducation.map((item) => (
                           <article key={item.id_education} className="profile-side__item profile-side__item--timeline">
-                            <div className="profile-side__icon" aria-hidden="true">F</div>
+                            <div className="profile-side__icon" aria-hidden="true">
+                              <FontAwesomeIcon icon={appIcons.education} />
+                            </div>
                             <div className="profile-side__content">
                               <strong>{item.course}</strong>
                               <small>
@@ -949,11 +943,15 @@ export default function ProfilePage() {
                       </button>
                     </form>
 
+                    {resumeErrorMessage ? <p className="login-message">{resumeErrorMessage}</p> : null}
+
                     <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedExperience.length > 0 ? (
                         paginatedExperience.map((item) => (
                           <article key={item.id_experience} className="profile-side__item profile-side__item--timeline">
-                            <div className="profile-side__icon" aria-hidden="true">E</div>
+                            <div className="profile-side__icon" aria-hidden="true">
+                              <FontAwesomeIcon icon={appIcons.experience} />
+                            </div>
                             <div className="profile-side__content">
                               <strong>{item.description}</strong>
                               <small>
@@ -1096,6 +1094,9 @@ export default function ProfilePage() {
                           </button>
                         </div>
 
+                        {resumeErrorMessage ? <p className="login-message">{resumeErrorMessage}</p> : null}
+                        {errorMessage ? <p className="login-message">{errorMessage}</p> : null}
+
                         <div className="profile-form-card__actions">
                           <button type="submit" className="btn btn-primary" disabled={isSaving}>
                             {isSaving ? 'Salvando...' : 'Salvar áreas'}
@@ -1171,6 +1172,8 @@ export default function ProfilePage() {
                         </div>
 
                       </form>
+
+                      {resumeErrorMessage ? <p className="login-message">{resumeErrorMessage}</p> : null}
 
                       <div className="profile-form-card__actions">
                         <button

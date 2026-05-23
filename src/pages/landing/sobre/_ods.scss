@@ -1,22 +1,25 @@
 @use '../../../styles/mixins' as *;
 
+// The ODS section continues the dark navy from the hero — no beige gap
 .about-ods-section {
-  margin-top: -108px;
-  padding-top: 0;
-  padding-bottom: 42px;
-  background: transparent;
+  margin-top: 0;
+  padding: 0 0 80px;
+  background: #111d38;
 }
 
 .about-ods-panel {
   display: grid;
-  gap: 24px;
+  gap: 28px;
   width: min(100%, 980px);
   margin: 0 auto;
-  padding: clamp(34px, 4vw, 52px);
-  border-radius: 28px;
-  background: linear-gradient(135deg, rgba(36, 58, 105, 0.98) 0%, rgba(47, 74, 120, 0.95) 100%);
-  border: 1px solid rgba(248, 244, 239, 0.14);
-  box-shadow: 0 30px 70px rgba(11, 31, 61, 0.32);
+  padding: clamp(36px, 4vw, 56px);
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(36, 58, 105, 0.98) 0%, rgba(43, 68, 118, 0.95) 100%);
+  border: 1px solid rgba(91, 136, 165, 0.3);
+  box-shadow:
+    0 0 0 1px rgba(248, 244, 239, 0.05) inset,
+    0 0 60px rgba(91, 136, 165, 0.1),
+    0 40px 80px rgba(4, 8, 18, 0.55);
   color: var(--text-inverse);
 }
 
@@ -27,15 +30,13 @@
 }
 
 .about-ods-panel .section-label {
-  color: rgba(189, 211, 223, 0.94);
+  color: #7fa8c2;
+  letter-spacing: 0.22em;
 }
 
 .about-ods-panel .section-title {
-  color: var(--text-inverse);
-}
-
-.about-ods-panel .section-subtitle {
-  color: rgba(248, 244, 239, 0.84);
+  color: #f8f4ef;
+  font-size: clamp(1.7rem, 3vw, 2.4rem);
 }
 
 .about-ods-panel__title {
@@ -43,30 +44,24 @@
   margin-right: auto;
   margin-left: auto;
   margin-bottom: 0;
-  color: var(--text-inverse);
 }
 
 .about-ods-panel__body {
   display: grid;
-  gap: 18px;
+  gap: 20px;
 }
 
 .about-ods-panel__content {
-  max-width: 760px;
+  max-width: 720px;
   margin: 0 auto;
   text-align: center;
 }
 
-.about-ods-panel__text {
-  max-width: 720px;
-  color: rgba(248, 244, 239, 0.84);
-}
-
 .about-ods-panel__text--secondary {
   margin-top: 8px;
-  color: rgba(248, 244, 239, 0.72);
-  font-size: 0.94rem;
-  line-height: 1.58;
+  color: rgba(248, 244, 239, 0.62);
+  font-size: 0.96rem;
+  line-height: 1.62;
 }
 
 .about-ods-panel__facts {
@@ -76,27 +71,27 @@
 }
 
 .about-ods-panel__fact {
-  padding: 24px;
-  border-radius: 20px;
-  background: rgba(248, 244, 239, 0.08);
-  border: 1px solid rgba(248, 244, 239, 0.12);
+  padding: 26px;
+  border-radius: 18px;
+  background: rgba(248, 244, 239, 0.06);
+  border: 1px solid rgba(248, 244, 239, 0.1);
 }
 
 .about-ods-panel__fact-label {
   display: inline-block;
-  margin-bottom: 8px;
-  color: rgba(189, 211, 223, 0.94);
+  margin-bottom: 10px;
+  color: #7fa8c2;
   font-family: var(--font-primary);
-  font-size: 0.72rem;
+  font-size: 0.62rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
 }
 
 .about-ods-panel__fact-text {
-  color: rgba(248, 244, 239, 0.82);
-  font-size: 0.88rem;
-  line-height: 1.54;
+  color: rgba(248, 244, 239, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.58;
 }
 
 @include media-down(lg) {
@@ -107,11 +102,10 @@
 
 @include media-down(sm) {
   .about-ods-section {
-    margin-top: -54px;
-    padding-bottom: 34px;
+    padding-bottom: 56px;
   }
 
   .about-ods-panel {
-    border-radius: 24px;
+    border-radius: 20px;
   }
 }

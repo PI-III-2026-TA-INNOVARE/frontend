@@ -1,13 +1,17 @@
 import {
+  faBriefcase,
   faChartLine,
   faChevronLeft,
   faChevronRight,
   faClipboardCheck,
+  faGraduationCap,
   faHandshake,
   faMagnifyingGlass,
   faMoon,
+  faSearch,
   faShieldHalved,
   faSun,
+  faXmark,
 } from '@fortawesome/free-solid-svg-icons'
 
 export const appIcons = {
@@ -20,4 +24,8 @@ export const appIcons = {
   themeLight: faSun,
   previous: faChevronLeft,
   next: faChevronRight,
+  education: faGraduationCap,
+  experience: faBriefcase,
+  close: faXmark,
+  emptySearch: faSearch,
 }

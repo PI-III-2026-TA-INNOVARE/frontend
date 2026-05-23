@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { NavLink } from 'react-router-dom'
+import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 
@@ -10,7 +10,6 @@ export default function AuthNav() {
     const items = [
       { to: '/pesquisa', label: 'Painel' },
       { to: '/app/indicadores', label: 'Indicadores' },
-      { to: '/perfil', label: 'Perfil' },
     ]
 
     if (user?.type === 'empresa') {
@@ -52,17 +51,14 @@ export default function AuthNav() {
         </nav>
 
         <div className="auth-nav__profile">
-          <div className="auth-nav__profile-text">
-            <span className="auth-nav__profile-name" title={profileName}>
+          <Link to="/perfil" className="auth-nav__profile-text" title="Ir para meu perfil">
+            <span className="auth-nav__profile-name">
               {profileName}
             </span>
-            <span
-              className="auth-nav__profile-meta"
-              title={`${user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | ${profileMeta}`}
-            >
+            <span className="auth-nav__profile-meta">
               {user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | {profileMeta}
             </span>
-          </div>
+          </Link>
 
           <ThemeToggle />
 

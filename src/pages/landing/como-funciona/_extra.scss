@@ -1,13 +1,11 @@
 .process-extra {
-  padding: 42px 0 34px;
-  background:
-    radial-gradient(circle at top center, rgba(91, 136, 165, 0.08) 0%, transparent 42%),
-    var(--bg-secondary);
+  padding: 72px 0 48px;
+  background: var(--bg-secondary);
 }
 
 .process-extra .container {
   display: grid;
-  gap: 24px;
+  gap: 32px;
 }
 
 .process-extra .section-label {
@@ -16,22 +14,30 @@
 
 .process-extra .section-title {
   margin-bottom: 0;
-  font-size: clamp(1.8rem, 3vw, 2.55rem);
+  font-size: clamp(1.9rem, 3vw, 2.6rem);
+  letter-spacing: -0.035em;
 }
 
 .process-extra .features__grid {
   max-width: 1060px;
   margin: 0 auto;
-  gap: 24px;
+  gap: 20px;
 }
 
+// Solid cards — no frosted glass
 .process-extra .feature-card {
   min-height: 128px;
-  padding: 28px;
-  border-radius: 22px;
-  background: rgba(248, 244, 239, 0.86);
-  box-shadow: 0 18px 44px rgba(25, 16, 19, 0.1);
-  backdrop-filter: blur(10px);
+  padding: 30px 28px;
+  border-radius: 20px;
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 20px rgba(11, 31, 61, 0.07);
+  backdrop-filter: none;
+}
+
+.process-extra .feature-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: 0 8px 28px rgba(11, 31, 61, 0.11);
 }
 
 .process-extra .feature-card__title {
@@ -40,21 +46,21 @@
 
 .process-extra .feature-card__text {
   font-size: 0.92rem;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .process-extra + .cta-section {
-  padding-top: 56px;
-  padding-bottom: 72px;
+  padding-top: 0;
+  padding-bottom: 80px;
+  background: var(--bg-secondary);
 }
 
 @media (max-width: 640px) {
   .process-extra {
-    padding: 48px 0;
+    padding: 56px 0 40px;
   }
 
   .process-extra + .cta-section {
-    padding-top: 46px;
-    padding-bottom: 56px;
+    padding-bottom: 60px;
   }
 }

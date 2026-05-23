@@ -29,7 +29,10 @@ export function formatDateLabel(value, fallback = 'Em andamento') {
     return fallback
   }
 
-  const parsedDate = new Date(value)
+  const dateOnlyMatch = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const parsedDate = dateOnlyMatch
+    ? new Date(Number(dateOnlyMatch[1]), Number(dateOnlyMatch[2]) - 1, Number(dateOnlyMatch[3]))
+    : new Date(value)
 
   if (Number.isNaN(parsedDate.getTime())) {
     return value
@@ -40,4 +43,19 @@ export function formatDateLabel(value, fallback = 'Em andamento') {
 
 export function matchesSearch(value, query) {
   return normalizeText(value).includes(normalizeText(query))
+}
+
+export function paginateItems(items, page, pageSize) {
+  const startIndex = (page - 1) * pageSize
+  return items.slice(startIndex, startIndex + pageSize)
+}
+
+export function buildPageLabel(page, totalItems, pageSize) {
+  if (!totalItems) {
+    return '0 de 0'
+  }
+
+  const start = (page - 1) * pageSize + 1
+  const end = Math.min(page * pageSize, totalItems)
+  return `${start}–${end} de ${totalItems}`
 }

@@ -1,23 +1,37 @@
 import { useEffect, useMemo, useState } from 'react'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import { useAuth } from '../../../context/AuthContext'
+import { buildPageLabel, paginateItems } from '../../../lib/domain'
 import {
   createResearch,
   listResearchAreas,
   listResearchCandidates,
   listResearches,
   runResearchMatch,
+  updateResearch,
   updateResearchCandidateStatus,
 } from '../../../services/pdConnectApi'
 import './PublishChallengePage.scss'
 
 const candidateStatusOptions = [
-  { value: 'under_review', label: 'Em analise' },
+  { value: 'under_review', label: 'Em análise' },
   { value: 'approved', label: 'Aprovado' },
   { value: 'rejected', label: 'Rejeitado' },
 ]
 
 const PUBLISHED_RESEARCH_PAGE_SIZE = 8
+
+const researchCandidateFilterOptions = [
+  { value: 'all', label: 'Todas as pesquisas' },
+  { value: 'with_candidates', label: 'Com candidatos' },
+  { value: 'source_interest', label: 'Com interessados' },
+  { value: 'status_interested', label: 'Interesse pendente' },
+  { value: 'status_under_review', label: 'Em analise' },
+  { value: 'status_approved', label: 'Aceitos' },
+  { value: 'status_rejected', label: 'Rejeitados' },
+  { value: 'status_suggested', label: 'Sugeridos' },
+  { value: 'source_ai', label: 'Match por IA' },
+]
 
 const defaultResearchForm = {
   title: '',
@@ -65,21 +79,6 @@ function buildLookup(items, idKey, labelKey) {
   }, {})
 }
 
-function paginateItems(items, page, pageSize) {
-  const startIndex = (page - 1) * pageSize
-  return items.slice(startIndex, startIndex + pageSize)
-}
-
-function buildPageLabel(page, totalItems, pageSize) {
-  if (!totalItems) {
-    return '0 de 0'
-  }
-
-  const start = (page - 1) * pageSize + 1
-  const end = Math.min(page * pageSize, totalItems)
-  return `${start}-${end} de ${totalItems}`
-}
-
 function buildResearchModalPayload(research, researchAreaLookup, user) {
   if (!research) {
     return null
@@ -87,14 +86,14 @@ function buildResearchModalPayload(research, researchAreaLookup, user) {
 
   return {
     ...research,
-    areaLabel: researchAreaLookup[research.area] || 'Area nao identificada',
-    companyLabel: user?.displayName || user?.company?.razao_social || 'Empresa nao informada',
+    areaLabel: researchAreaLookup[research.area] || 'Área não identificada',
+    companyLabel: user?.displayName || user?.company?.razao_social || 'Empresa não informada',
   }
 }
 
 function formatDeadlineLabel(value) {
   if (!value) {
-    return 'prazo nao informado'
+    return 'prazo não informado'
   }
 
   const parsed = new Date(value)
@@ -119,26 +118,94 @@ function normalizeDeadlineToIso(value) {
   return parsed.toISOString()
 }
 
+function formatDatetimeLocalValue(value) {
+  if (!value) {
+    return ''
+  }
+
+  const parsed = new Date(value)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return ''
+  }
+
+  const timezoneOffset = parsed.getTimezoneOffset() * 60000
+  return new Date(parsed.getTime() - timezoneOffset).toISOString().slice(0, 16)
+}
+
+function buildResearchFormFromItem(item) {
+  return {
+    title: item.title || '',
+    scope: item.scope || '',
+    goal: item.goal || '',
+    justification: item.justification || '',
+    results: item.results || '',
+    deadline: formatDatetimeLocalValue(item.deadline),
+    budget: item.budget === null || item.budget === undefined ? '' : String(item.budget),
+    areaId: item.area === null || item.area === undefined ? '' : String(item.area),
+  }
+}
+
+function buildResearchPayload(form) {
+  return {
+    title: form.title.trim(),
+    scope: form.scope.trim(),
+    goal: form.goal.trim(),
+    justification: form.justification.trim(),
+    results: form.results.trim(),
+    deadline: normalizeDeadlineToIso(form.deadline),
+    budget: Number(form.budget),
+    area: Number(form.areaId),
+  }
+}
+
+function researchMatchesCandidateFilter(research, candidatesByResearch, filter) {
+  if (filter === 'all') {
+    return true
+  }
+
+  const candidates = candidatesByResearch[research.id_research] || []
+
+  if (filter === 'with_candidates') {
+    return candidates.length > 0
+  }
+
+  if (filter === 'source_interest') {
+    return candidates.some((candidate) => candidate.source === 'interest')
+  }
+
+  if (filter === 'source_ai') {
+    return candidates.some((candidate) => candidate.source === 'ai')
+  }
+
+  if (filter.startsWith('status_')) {
+    const status = filter.replace('status_', '')
+    return candidates.some((candidate) => candidate.status === status)
+  }
+
+  return true
+}
+
 function getCandidateStatusLabel(status) {
   const labels = {
     suggested: 'Sugerido',
     interested: 'Interessado',
-    under_review: 'Em analise',
+    under_review: 'Em análise',
     approved: 'Aprovado',
     rejected: 'Rejeitado',
   }
 
-  return labels[status] || status || 'nao informado'
+  return labels[status] || status || 'não informado'
 }
 
 function getCandidateSourceLabel(source) {
   const labels = {
-    ai: 'Match',
-    interest: 'Interesse',
-    manual: 'Manual',
+    ai: 'Match por IA',
+    interest: 'Manifestação de interesse',
+    manual: 'Indicação manual',
   }
 
-  return labels[source] || source || 'origem nao informada'
+  return labels[source] || source || 'origem não informada'
 }
 
 export default function PublishChallengePage() {
@@ -154,6 +221,8 @@ export default function PublishChallengePage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
   const [selectedResearch, setSelectedResearch] = useState(null)
+  const [editingResearchId, setEditingResearchId] = useState(null)
+  const [researchCandidateFilter, setResearchCandidateFilter] = useState('all')
   const [catalog, setCatalog] = useState({
     researches: [],
     researchAreas: [],
@@ -275,18 +344,27 @@ export default function PublishChallengePage() {
   const ownedResearches = useMemo(() => (
     catalog.researches.filter((item) => item.company === user?.company?.id_company)
   ), [catalog.researches, user?.company?.id_company])
+  const filteredOwnedResearches = useMemo(() => (
+    ownedResearches.filter((item) => (
+      researchMatchesCandidateFilter(item, catalog.candidatesByResearch, researchCandidateFilter)
+    ))
+  ), [catalog.candidatesByResearch, ownedResearches, researchCandidateFilter])
   const totalPublishedPages = Math.max(
     1,
-    Math.ceil(ownedResearches.length / PUBLISHED_RESEARCH_PAGE_SIZE)
+    Math.ceil(filteredOwnedResearches.length / PUBLISHED_RESEARCH_PAGE_SIZE)
   )
 
   useEffect(() => {
     setPublishedPage((current) => Math.min(current, totalPublishedPages))
   }, [totalPublishedPages])
 
+  useEffect(() => {
+    setPublishedPage(1)
+  }, [researchCandidateFilter])
+
   const paginatedOwnedResearches = useMemo(
-    () => paginateItems(ownedResearches, publishedPage, PUBLISHED_RESEARCH_PAGE_SIZE),
-    [ownedResearches, publishedPage]
+    () => paginateItems(filteredOwnedResearches, publishedPage, PUBLISHED_RESEARCH_PAGE_SIZE),
+    [filteredOwnedResearches, publishedPage]
   )
 
   const researchAreaLookup = useMemo(
@@ -332,16 +410,25 @@ export default function PublishChallengePage() {
     setSuccessMessage('')
 
     try {
-      const createdResearch = await createResearch({
-        title: researchForm.title.trim(),
-        scope: researchForm.scope.trim(),
-        goal: researchForm.goal.trim(),
-        justification: researchForm.justification.trim(),
-        results: researchForm.results.trim(),
-        deadline: normalizeDeadlineToIso(researchForm.deadline),
-        budget: Number(researchForm.budget),
-        area: Number(researchForm.areaId),
-      })
+      const payload = buildResearchPayload(researchForm)
+
+      if (editingResearchId) {
+        const updatedResearch = await updateResearch(editingResearchId, payload)
+
+        setCatalog((current) => ({
+          ...current,
+          researches: current.researches.map((item) => (
+            item.id_research === editingResearchId ? { ...item, ...updatedResearch } : item
+          )),
+        }))
+        setEditingResearchId(null)
+        setResearchForm(defaultResearchForm)
+        setSuccessMessage('Pesquisa atualizada com sucesso.')
+        setActiveTab('published')
+        return
+      }
+
+      const createdResearch = await createResearch(payload)
 
       setCatalog((current) => ({
         ...current,
@@ -362,6 +449,21 @@ export default function PublishChallengePage() {
     } finally {
       setSubmitLoading(false)
     }
+  }
+
+  const handleEditResearch = (research) => {
+    setEditingResearchId(research.id_research)
+    setResearchForm(buildResearchFormFromItem(research))
+    setSuccessMessage('')
+    setErrorMessage('')
+    setActiveTab('create')
+  }
+
+  const handleCancelEdit = () => {
+    setEditingResearchId(null)
+    setResearchForm(defaultResearchForm)
+    setSuccessMessage('')
+    setErrorMessage('')
   }
 
   const handleRunMatch = async (researchId) => {
@@ -434,7 +536,7 @@ export default function PublishChallengePage() {
             className={`challenge-tab${activeTab === 'create' ? ' active' : ''}`}
             onClick={() => setActiveTab('create')}
           >
-            Cadastrar pesquisa
+            {editingResearchId ? 'Editar pesquisa' : 'Cadastrar pesquisa'}
           </button>
           <button
             type="button"
@@ -452,16 +554,25 @@ export default function PublishChallengePage() {
           <div className="challenge-form-card challenge-form-card--editor">
             <div className="challenge-form-card__section-head">
               <div>
-                <span className="challenge-form-card__eyebrow">Criacao</span>
-                <h2 className="challenge-form-card__title">Dados da pesquisa</h2>
+                <span className="challenge-form-card__eyebrow">
+                  {editingResearchId ? 'Edicao' : 'Criacao'}
+                </span>
+                <h2 className="challenge-form-card__title">
+                  {editingResearchId ? 'Editar pesquisa' : 'Dados da pesquisa'}
+                </h2>
               </div>
+              {editingResearchId ? (
+                <button type="button" className="btn btn-ghost" onClick={handleCancelEdit}>
+                  Cancelar edicao
+                </button>
+              ) : null}
             </div>
 
             {!researchAreasLoading && !hasResearchAreas ? (
               <div className="challenge-form-card__item">
-                <strong>Publicacao bloqueada por catalogo vazio</strong>
+                <strong>Publicação bloqueada — catálogo vazio</strong>
                 <span>
-                  Nenhuma area de pesquisa esta disponivel. E necessario ter ao menos uma area
+                  Nenhuma área de pesquisa está disponível. É necessário ter ao menos uma área
                   cadastrada para publicar.
                 </span>
               </div>
@@ -480,7 +591,7 @@ export default function PublishChallengePage() {
                   </label>
 
                   <label className="profile-field">
-                    <span>Orcamento</span>
+                    <span>Orçamento</span>
                     <input
                       type="number"
                       min="0"
@@ -584,7 +695,9 @@ export default function PublishChallengePage() {
                     className="btn btn-primary"
                     disabled={submitLoading || researchAreasLoading || !hasResearchAreas}
                   >
-                    {submitLoading ? 'Publicando...' : 'Publicar pesquisa'}
+                    {submitLoading
+                      ? (editingResearchId ? 'Salvando...' : 'Publicando...')
+                      : (editingResearchId ? 'Salvar alteracoes' : 'Publicar pesquisa')}
                   </button>
                 </div>
               </form>
@@ -598,14 +711,33 @@ export default function PublishChallengePage() {
                 <span className="challenge-form-card__eyebrow">Acompanhamento</span>
                 <h2 className="challenge-form-card__title">Pesquisas publicadas</h2>
               </div>
-              {ownedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
+              {filteredOwnedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
                 <span className="challenge-pagination__meta">
-                  {buildPageLabel(publishedPage, ownedResearches.length, PUBLISHED_RESEARCH_PAGE_SIZE)}
+                  {buildPageLabel(publishedPage, filteredOwnedResearches.length, PUBLISHED_RESEARCH_PAGE_SIZE)}
                 </span>
               ) : null}
             </div>
 
             {candidateMessage ? <p className="challenge-form-card__success">{candidateMessage}</p> : null}
+
+            <div className="challenge-filter-bar">
+              <label className="profile-field">
+                <span>Filtrar pesquisas</span>
+                <select
+                  value={researchCandidateFilter}
+                  onChange={(event) => setResearchCandidateFilter(event.target.value)}
+                >
+                  {researchCandidateFilterOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="challenge-pagination__meta">
+                {filteredOwnedResearches.length} de {ownedResearches.length} pesquisa(s)
+              </span>
+            </div>
 
             <div className="challenge-form-card__list">
               {researchesLoading ? (
@@ -613,7 +745,7 @@ export default function PublishChallengePage() {
                   <strong>Carregando pesquisas</strong>
                   <span>Preparando a lista de pesquisas publicadas.</span>
                 </article>
-              ) : ownedResearches.length > 0 ? (
+              ) : filteredOwnedResearches.length > 0 ? (
                 paginatedOwnedResearches.map((item) => {
                   const candidates = catalog.candidatesByResearch[item.id_research] || []
                   const isLoadingCandidates = candidateLoadingIds.has(item.id_research)
@@ -622,8 +754,8 @@ export default function PublishChallengePage() {
                     <article key={item.id_research} className="challenge-form-card__item">
                       <strong>{item.title}</strong>
                       <span>
-                        {researchAreaLookup[item.area] || 'Area nao identificada'} | status{' '}
-                        {item.status || 'nao informado'} | prazo {formatDeadlineLabel(item.deadline)}
+                        {researchAreaLookup[item.area] || 'Área não identificada'} · status:{' '}
+                        {item.status || 'não informado'} · prazo: {formatDeadlineLabel(item.deadline)}
                       </span>
 
                       <div className="challenge-form-card__actions">
@@ -635,6 +767,13 @@ export default function PublishChallengePage() {
                           )}
                         >
                           Mais detalhes
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-outline"
+                          onClick={() => handleEditResearch(item)}
+                        >
+                          Editar
                         </button>
                         <button
                           type="button"
@@ -659,11 +798,11 @@ export default function PublishChallengePage() {
                           candidates.map((candidate) => (
                             <div key={candidate.id_candidate} className="challenge-candidate">
                               <div>
-                                <strong>{candidate.researcher_name || 'Pesquisador nao identificado'}</strong>
+                                <strong>{candidate.researcher_name || 'Pesquisador não identificado'}</strong>
                                 <span>
-                                  {getCandidateSourceLabel(candidate.source)} |{' '}
+                                  {getCandidateSourceLabel(candidate.source)} ·{' '}
                                   {getCandidateStatusLabel(candidate.status)}
-                                  {candidate.score_match ? ` | score ${candidate.score_match}` : ''}
+                                  {candidate.score_match ? ` · compatibilidade: ${Math.round(candidate.score_match * 100)}%` : ''}
                                 </span>
                               </div>
 
@@ -698,13 +837,21 @@ export default function PublishChallengePage() {
                 })
               ) : (
                 <article className="challenge-form-card__item">
-                  <strong>Nenhuma pesquisa publicada por esta empresa</strong>
-                  <span>Assim que uma publicacao for criada, ela aparecera aqui.</span>
+                  <strong>
+                    {ownedResearches.length > 0
+                      ? 'Nenhuma pesquisa encontrada neste filtro'
+                      : 'Nenhuma pesquisa publicada por esta empresa'}
+                  </strong>
+                  <span>
+                    {ownedResearches.length > 0
+                      ? 'Altere o filtro para ver outras pesquisas publicadas.'
+                      : 'Assim que uma publicacao for criada, ela aparecera aqui.'}
+                  </span>
                 </article>
               )}
             </div>
 
-            {ownedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
+            {filteredOwnedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
               <div className="challenge-pagination">
                 <button
                   type="button"
@@ -715,7 +862,7 @@ export default function PublishChallengePage() {
                   Anterior
                 </button>
                 <span className="challenge-pagination__status">
-                  Pagina {publishedPage} de {totalPublishedPages}
+                  Página {publishedPage} de {totalPublishedPages}
                 </span>
                 <button
                   type="button"
@@ -723,7 +870,7 @@ export default function PublishChallengePage() {
                   onClick={() => setPublishedPage((current) => Math.min(totalPublishedPages, current + 1))}
                   disabled={publishedPage === totalPublishedPages}
                 >
-                  Proxima
+                  Próxima
                 </button>
               </div>
             ) : null}

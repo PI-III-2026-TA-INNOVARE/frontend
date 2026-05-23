@@ -19,7 +19,8 @@ export default function HomePage() {
                 </div>
 
                 <h1 className="hero__title">
-                  Conectamos empresas com pesquisadores usando IA
+                  Conectamos empresas com pesquisadores{' '}
+                  <em className="hero__title-accent">usando IA</em>
                 </h1>
 
                 <p className="hero__description">

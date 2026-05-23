@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
+import ResearcherDetailModal from '../../../components/ResearcherDetailModal'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createResearchInterest,
   getResearch,
   getResearcher,
+  getResearcherResume,
   getUniversity,
   listMyResearchInterests,
   listResearchers,
@@ -19,8 +21,8 @@ const DEFAULT_LIMIT = 20
 
 function getDefaultQuery(userType) {
   return userType === 'empresa'
-    ? 'Busque por area, universidade, experiencia ou habilidade'
-    : 'Busque por tema, area, objetivo ou empresa'
+    ? 'Busque por área, universidade, experiência ou habilidade'
+    : 'Busque por tema, área, objetivo ou empresa'
 }
 
 function getResultLabel(userType) {
@@ -42,10 +44,6 @@ function buildInterestedResearchSet(interests) {
 
     return lookup
   }, new Set())
-}
-
-function readSettledValue(result, fallback) {
-  return result?.status === 'fulfilled' ? result.value : fallback
 }
 
 function normalizeCompact(value) {
@@ -88,10 +86,10 @@ function formatScore(value) {
   const parsed = Number(value)
 
   if (!Number.isFinite(parsed)) {
-    return 'relevancia nao informada'
+    return 'relevância não informada'
   }
 
-  return `${Math.round(parsed * 100)}% de relevancia`
+  return `${Math.round(parsed * 100)}% de relevância`
 }
 
 function normalizeSearchText(value) {
@@ -165,7 +163,11 @@ function buildLocalResearchResults(researches, params, researchAreaLookup) {
 }
 
 function getResearcherAreaIds(researcher) {
-  return (researcher.area || []).map((area) => {
+  if (!Array.isArray(researcher.area)) {
+    return []
+  }
+
+  return researcher.area.map((area) => {
     if (area && typeof area === 'object') {
       return String(area.id_area ?? area.id)
     }
@@ -240,7 +242,11 @@ function buildLocalResearcherResults(researchers, params, researchAreaLookup, un
 }
 
 function getResearcherAreaTags(detail, researchAreaLookup) {
-  const areaList = Array.isArray(detail?.area) ? detail.area : []
+  const areaList = Array.isArray(detail?.area)
+    ? detail.area
+    : detail?.area
+      ? [detail.area]
+      : []
   const areaNames = areaList
     .map((area) => {
       if (area && typeof area === 'object') {
@@ -248,7 +254,7 @@ function getResearcherAreaTags(detail, researchAreaLookup) {
         return area.name || researchAreaLookup[String(areaId)]?.name
       }
 
-      return researchAreaLookup[String(area)]?.name
+      return researchAreaLookup[String(area)]?.name || (Number.isNaN(Number(area)) ? String(area) : '')
     })
     .filter(Boolean)
 
@@ -259,7 +265,7 @@ function formatCurrency(value) {
   const parsed = Number(value)
 
   if (!Number.isFinite(parsed)) {
-    return 'orcamento nao informado'
+    return 'orçamento não informado'
   }
 
   return new Intl.NumberFormat('pt-BR', {
@@ -270,14 +276,14 @@ function formatCurrency(value) {
 
 function getErrorTitle(error) {
   if (error?.status === 403) {
-    return 'Busca indisponivel para este perfil'
+    return 'Busca indisponível para este perfil'
   }
 
   if (error?.status === 401) {
-    return 'Sessao expirada'
+    return 'Sessão expirada'
   }
 
-  return 'Nao foi possivel concluir a busca'
+  return 'Não foi possível concluir a busca'
 }
 
 export default function SearchPage() {
@@ -294,6 +300,7 @@ export default function SearchPage() {
   const [results, setResults] = useState([])
   const [researchDetails, setResearchDetails] = useState({})
   const [researcherDetails, setResearcherDetails] = useState({})
+  const [researcherResumeDetails, setResearcherResumeDetails] = useState({})
   const [selectedResearch, setSelectedResearch] = useState(null)
   const [selectedResearcher, setSelectedResearcher] = useState(null)
   const [companyResearches, setCompanyResearches] = useState([])
@@ -303,7 +310,7 @@ export default function SearchPage() {
   const [loading, setLoading] = useState(false)
   const [supportLoading, setSupportLoading] = useState(true)
   const [error, setError] = useState('')
-  const [errorTitle, setErrorTitle] = useState('Nao foi possivel concluir a busca')
+  const [errorTitle, setErrorTitle] = useState('Não foi possível concluir a busca')
   const [partialWarnings, setPartialWarnings] = useState([])
   const [interestLoading, setInterestLoading] = useState('')
   const [interestMessage, setInterestMessage] = useState('')
@@ -316,37 +323,58 @@ export default function SearchPage() {
     const loadSupportData = async () => {
       setSupportLoading(true)
       setPartialWarnings([])
-
-      const requests = isCompanyUser
-        ? [listResearchAreas(), listResearches()]
-        : [listResearchAreas(), listMyResearchInterests()]
-      const labels = isCompanyUser
-        ? ['areas de pesquisa', 'pesquisas da empresa']
-        : ['areas de pesquisa', 'interesses do pesquisador']
-
-      const settledResults = await Promise.allSettled(requests)
+      const warnings = []
 
       if (!isMounted) {
         return
       }
 
-      setResearchAreas(readSettledValue(settledResults[0], []))
-      setMyInterests(isCompanyUser ? [] : readSettledValue(settledResults[1], []))
-      setCompanyResearches(
-        isCompanyUser
-          ? readSettledValue(settledResults[1], []).filter(
-              (item) => String(item.company) === String(user?.company?.id_company)
-            )
-          : []
-      )
-      setPartialWarnings(
-        settledResults
-          .map((result, index) => (
-            result.status === 'rejected' ? `Nao foi possivel carregar ${labels[index]}.` : ''
-          ))
-          .filter(Boolean)
-      )
+      try {
+        setResearchAreas(await listResearchAreas())
+      } catch {
+        warnings.push('Nao foi possivel carregar areas de pesquisa.')
+        setResearchAreas([])
+      }
+
+      if (!isMounted) {
+        return
+      }
+
       setSupportLoading(false)
+
+      try {
+        if (isCompanyUser) {
+          const researches = await listResearches()
+
+          if (!isMounted) {
+            return
+          }
+
+          setCompanyResearches(
+            researches.filter((item) => String(item.company) === String(user?.company?.id_company))
+          )
+          setMyInterests([])
+        } else {
+          const interests = await listMyResearchInterests()
+
+          if (!isMounted) {
+            return
+          }
+
+          setMyInterests(interests)
+          setCompanyResearches([])
+        }
+      } catch {
+        warnings.push(
+          isCompanyUser
+            ? 'Nao foi possivel carregar pesquisas da empresa.'
+            : 'Nao foi possivel carregar interesses do pesquisador.'
+        )
+      }
+
+      if (isMounted) {
+        setPartialWarnings(warnings)
+      }
     }
 
     setQuery('')
@@ -356,6 +384,7 @@ export default function SearchPage() {
     setResults([])
     setResearchDetails({})
     setResearcherDetails({})
+    setResearcherResumeDetails({})
     setSelectedResearch(null)
     setSelectedResearcher(null)
     setSelectedProjectId('')
@@ -391,14 +420,21 @@ export default function SearchPage() {
     if (isCompanyUser) {
       return results.map((item) => {
         const detail = researcherDetails[item.id_researcher] || {}
+        const resume = researcherResumeDetails[item.id_researcher] || null
+        const tags = getResearcherAreaTags(detail, researchAreaLookup)
+        const fallbackTags = tags.length > 0 ? tags : getResearcherAreaTags(item, researchAreaLookup)
 
         return {
           id: `researcher-${item.id_researcher}`,
           type: 'pesquisador',
           title: detail.name || item.name || 'Pesquisador sem nome informado',
-          subtitle: detail.university_name || item.university || 'Universidade nao informada',
-          tags: getResearcherAreaTags(detail, researchAreaLookup),
-          detail,
+          subtitle: detail.university_name || item.university || 'Universidade não informada',
+          tags: fallbackTags,
+          availability: detail.availability ?? item.availability,
+          detail: {
+            ...detail,
+            resumeData: resume,
+          },
           action: null,
         }
       })
@@ -412,14 +448,14 @@ export default function SearchPage() {
       const detail = researchDetails[item.id_research] || {}
       const budget = detail.budget ?? item.budget
       const status = detail.status || item.status || 'nao informado'
-      const company = item.company || 'Empresa nao informada'
-      const area = item.area || 'Area nao informada'
+      const company = item.company || 'Empresa não informada'
+      const area = item.area || 'Área não informada'
 
       return {
         id: `research-${item.id_research}`,
         type: 'pesquisa',
         researchId: item.id_research,
-        title: detail.title || item.title || 'Pesquisa sem titulo informado',
+        title: detail.title || item.title || 'Pesquisa sem título informado',
         company,
         area,
         status,
@@ -445,10 +481,17 @@ export default function SearchPage() {
         },
       }
     })
-  }, [interestLookup, interestedResearchIds, isCompanyUser, researchAreaLookup, researchDetails, researcherDetails, results])
+  }, [interestLookup, interestedResearchIds, isCompanyUser, researchAreaLookup, researchDetails, researcherDetails, researcherResumeDetails, results])
 
   const shouldShowResults = hasSearched || loading || Boolean(error) || Boolean(interestMessage)
   const hasEmptySearchResult = hasSearched && !loading && !error && visibleItems.length === 0
+  const activeSelectedResearcher = useMemo(() => {
+    if (!selectedResearcher) {
+      return null
+    }
+
+    return visibleItems.find((item) => item.id === selectedResearcher.id) || selectedResearcher
+  }, [selectedResearcher, visibleItems])
 
   const projectGroups = useMemo(() => {
     const normalizedFilter = normalizeCompact(projectSearch)
@@ -490,10 +533,11 @@ export default function SearchPage() {
       setResults([])
       setResearchDetails({})
       setResearcherDetails({})
+      setResearcherResumeDetails({})
       setSelectedResearch(null)
       setSelectedResearcher(null)
-      setErrorTitle('Termo de busca obrigatorio')
-      setError('Digite um termo para iniciar a busca semantica.')
+      setErrorTitle('Termo de busca obrigatório')
+      setError('Digite um termo para iniciar a busca semântica.')
       return
     }
 
@@ -503,7 +547,8 @@ export default function SearchPage() {
     setHasSearched(true)
     setActiveQuery(trimmedQuery)
     setError('')
-    setErrorTitle('Nao foi possivel concluir a busca')
+    setResearcherResumeDetails({})
+    setErrorTitle('Não foi possível concluir a busca')
 
     const params = {
       q: trimmedQuery,
@@ -571,6 +616,7 @@ export default function SearchPage() {
       let nextResults = Array.isArray(data) ? data : []
       let nextDetails = {}
       let nextResearcherDetails = {}
+      let nextResearcherResumeDetails = {}
 
       if (isCompanyUser) {
         allResearchers = allResearchers || await listResearchers()
@@ -585,7 +631,7 @@ export default function SearchPage() {
 
           if (
             selectedAreaId &&
-            !(researcher.area || []).map((areaId) => String(areaId)).includes(String(selectedAreaId))
+            !getResearcherAreaIds(researcher).includes(String(selectedAreaId))
           ) {
             return false
           }
@@ -632,12 +678,22 @@ export default function SearchPage() {
         const detailResults = await Promise.allSettled(
           nextResults.map((item) => getResearcher(item.id_researcher))
         )
+        const resumeResults = await Promise.allSettled(
+          nextResults.map((item) => getResearcherResume(item.id_researcher))
+        )
 
         if (searchRequestRef.current !== requestId) {
           return
         }
 
         nextResearcherDetails = detailResults.reduce((lookup, result, index) => {
+          if (result.status === 'fulfilled' && result.value) {
+            lookup[nextResults[index].id_researcher] = result.value
+          }
+
+          return lookup
+        }, {})
+        nextResearcherResumeDetails = resumeResults.reduce((lookup, result, index) => {
           if (result.status === 'fulfilled' && result.value) {
             lookup[nextResults[index].id_researcher] = result.value
           }
@@ -667,6 +723,7 @@ export default function SearchPage() {
       setResults(nextResults)
       setResearchDetails(nextDetails)
       setResearcherDetails(nextResearcherDetails)
+      setResearcherResumeDetails(nextResearcherResumeDetails)
       setSelectedResearch(null)
     } catch (searchError) {
       if (searchRequestRef.current !== requestId) {
@@ -676,10 +733,11 @@ export default function SearchPage() {
       setResults([])
       setResearchDetails({})
       setResearcherDetails({})
+      setResearcherResumeDetails({})
       setSelectedResearch(null)
       setSelectedResearcher(null)
       setErrorTitle(getErrorTitle(searchError))
-      setError(searchError.message || 'A busca semantica nao retornou uma resposta valida.')
+      setError(searchError.message || 'A busca semântica não retornou uma resposta válida.')
     } finally {
       if (searchRequestRef.current === requestId) {
         setLoading(false)
@@ -710,8 +768,8 @@ export default function SearchPage() {
           : current
       ))
     } catch (interestError) {
-      setErrorTitle('Nao foi possivel registrar interesse')
-      setError(interestError.message || 'Nao foi possivel registrar interesse nesta pesquisa.')
+      setErrorTitle('Não foi possível registrar interesse')
+      setError(interestError.message || 'Não foi possível registrar interesse nesta pesquisa.')
     } finally {
       setInterestLoading('')
     }
@@ -826,6 +884,16 @@ export default function SearchPage() {
               </button>
             </form>
 
+            {!shouldShowResults ? (
+              <div className="search-empty-state">
+                <p className="search-empty-state__text">
+                  {isCompanyUser
+                    ? 'Use a busca acima para encontrar pesquisadores compatíveis com sua demanda.'
+                    : 'Use a busca acima para encontrar pesquisas abertas compatíveis com seu perfil.'}
+                </p>
+              </div>
+            ) : null}
+
             {shouldShowResults ? (
             <div className="search-results">
               {!loading ? (
@@ -839,7 +907,7 @@ export default function SearchPage() {
                     </h2>
                   </div>
                   <p className="search-results__meta">
-                    {hasSearched ? `${visibleItems.length} item(ns) encontrados para "${activeQuery}".` : ''}
+                    {hasSearched ? `${visibleItems.length} resultado(s) para "${activeQuery}".` : ''}
                   </p>
                 </div>
               ) : null}
@@ -884,7 +952,16 @@ export default function SearchPage() {
                         </div>
                       ) : null}
 
-                      <h3 className="search-result-card__title">{item.title}</h3>
+                      {item.type === 'pesquisador' ? (
+                        <div className="search-result-card__researcher-heading">
+                          <h3 className="search-result-card__title">{item.title}</h3>
+                          <span className="researcher-availability-badge">
+                            {item.availability === false ? 'Indisponivel' : item.availability === true ? 'Disponivel' : 'Disponibilidade nao informada'}
+                          </span>
+                        </div>
+                      ) : (
+                        <h3 className="search-result-card__title">{item.title}</h3>
+                      )}
                       <p className="search-result-card__subtitle">{item.subtitle}</p>
 
                       {item.type === 'pesquisa' ? (
@@ -920,15 +997,7 @@ export default function SearchPage() {
                         </button>
                       ) : null}
 
-                      {item.type === 'pesquisador' && item.tags.length > 0 ? (
-                        <div className="search-result-card__tags">
-                          {item.tags.map((tag) => (
-                            <span key={`${item.id}-${tag}`} className="search-result-card__tag">
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
+                     
                     </article>
                   ))}
                 </div>
@@ -957,104 +1026,17 @@ export default function SearchPage() {
         />
       ) : null}
 
-      {selectedResearcher ? (
-        <div
-          className="researcher-detail-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="researcher-detail-title"
-        >
-          <button
-            type="button"
-            className="researcher-detail-modal__backdrop"
-            aria-label="Fechar detalhes do pesquisador"
-            onClick={closeResearcherDetails}
-          />
-          <article className="researcher-detail-modal__card">
-            <header className="researcher-detail-modal__header">
-              <div>
-                <span className="section-label">Detalhes do pesquisador</span>
-                <h2 id="researcher-detail-title">{selectedResearcher.title}</h2>
-                <p>{selectedResearcher.subtitle}</p>
-              </div>
-              <button
-                type="button"
-                className="researcher-detail-modal__close"
-                aria-label="Fechar detalhes"
-                onClick={closeResearcherDetails}
-              >
-                X
-              </button>
-            </header>
-
-            <section className="researcher-detail-modal__section">
-              <h3>Areas de pesquisa</h3>
-              {selectedResearcher.tags.length > 0 ? (
-                <div className="researcher-detail-modal__tags">
-                  {selectedResearcher.tags.map((tag) => (
-                    <span key={`${selectedResearcher.id}-${tag}`} className="search-result-card__tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p>Areas nao informadas.</p>
-              )}
-            </section>
-
-            <section className="researcher-detail-modal__section researcher-detail-modal__invite">
-              <div>
-                <h3>Sugerir participacao</h3>
-                <p>
-                  Escolha uma pesquisa da empresa. O backend ainda nao expoe um endpoint para
-                  registrar sugestao manual para um pesquisador especifico.
-                </p>
-              </div>
-
-              <label className="semantic-field">
-                <span className="semantic-field__label">Pesquisar pesquisa</span>
-                <input
-                  className="semantic-field__control"
-                  value={projectSearch}
-                  onChange={(event) => setProjectSearch(event.target.value)}
-                  placeholder="Filtre por titulo ou area"
-                />
-              </label>
-
-              <label className="semantic-field">
-                <span className="semantic-field__label">Pesquisa da empresa</span>
-                <select
-                  className="semantic-field__control"
-                  value={selectedProjectId}
-                  onChange={(event) => setSelectedProjectId(event.target.value)}
-                >
-                  <option value="">
-                    {companyResearches.length > 0
-                      ? 'Selecione uma pesquisa'
-                      : 'Nenhuma pesquisa publicada pela empresa'}
-                  </option>
-                  {projectGroups.map((group) => (
-                    <optgroup key={group.areaName} label={group.areaName}>
-                      {group.items.map((research) => (
-                        <option key={research.id_research} value={research.id_research}>
-                          {research.title}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </label>
-
-              <button
-                type="button"
-                className="btn btn-primary researcher-detail-modal__button"
-                disabled
-              >
-                Sugerir participacao
-              </button>
-            </section>
-          </article>
-        </div>
+      {activeSelectedResearcher ? (
+        <ResearcherDetailModal
+          researcher={activeSelectedResearcher}
+          onClose={closeResearcherDetails}
+          companyResearches={companyResearches}
+          projectGroups={projectGroups}
+          projectSearch={projectSearch}
+          onProjectSearchChange={(event) => setProjectSearch(event.target.value)}
+          selectedProjectId={selectedProjectId}
+          onSelectedProjectChange={(event) => setSelectedProjectId(event.target.value)}
+        />
       ) : null}
     </section>
   )

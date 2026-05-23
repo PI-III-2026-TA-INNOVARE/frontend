@@ -110,6 +110,13 @@ export function createResearch(payload) {
   })
 }
 
+export function updateResearch(id, payload) {
+  return apiRequest(`/research/${id}`, {
+    method: 'PATCH',
+    body: payload,
+  })
+}
+
 export function createResearchInterest(researchId, payload = {}) {
   return apiRequest(`/research/${researchId}/interest/`, {
     method: 'POST',
@@ -209,4 +216,22 @@ export function deleteExperience(id) {
 
 export function listSkills() {
   return fetchPaginatedCollection('/skills/')
+}
+
+export function forgotPassword(payload) {
+  return apiRequest('/auth/forgot-password/', {
+    method: 'POST',
+    body: payload,
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
+}
+
+export function resetPassword(payload) {
+  return apiRequest('/auth/reset-password/', {
+    method: 'POST',
+    body: payload,
+    skipAuth: true,
+    skipAuthRefresh: true,
+  })
 }

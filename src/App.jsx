@@ -8,6 +8,8 @@ import SobrePage from './pages/landing/sobre'
 import ComoFuncionaPage from './pages/landing/como-funciona'
 import IndicadoresPage from './pages/landing/indicadores'
 import LoginPage from './pages/auth/login'
+import ForgotPasswordPage from './pages/auth/forgot-password'
+import ResetPasswordPage from './pages/auth/reset-password'
 import SearchPage from './pages/app/search'
 import ProfilePage from './pages/app/profile'
 import PublishChallengePage from './pages/app/publish-challenge'
@@ -25,6 +27,8 @@ function App() {
           <Route path="/como-funciona" element={<ComoFuncionaPage />} />
           <Route path="/indicadores" element={<IndicadoresPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/esqueci-minha-senha" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         <Route element={<ProtectedRoute />}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../context/AuthContext'
 import { listPublicUniversities, lookupCompanyCnpj } from '../../../services/pdConnectApi'
 import './LoginPage.scss'
@@ -490,6 +490,10 @@ export default function LoginPage() {
               <button type="submit" className="btn btn-primary" disabled={submitLoading}>
                 {submitLoading ? 'Entrando...' : 'Entrar'}
               </button>
+            </div>
+
+            <div className="form-footer login-forgot-link">
+              <Link to="/esqueci-minha-senha">Esqueci minha senha</Link>
             </div>
           </form>
 

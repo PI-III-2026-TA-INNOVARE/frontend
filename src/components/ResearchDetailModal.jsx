@@ -2,7 +2,7 @@ function formatCurrency(value) {
   const parsed = Number(value)
 
   if (!Number.isFinite(parsed)) {
-    return 'orcamento nao informado'
+    return 'orçamento não informado'
   }
 
   return new Intl.NumberFormat('pt-BR', {
@@ -13,7 +13,7 @@ function formatCurrency(value) {
 
 function formatDateTime(value) {
   if (!value) {
-    return 'prazo nao informado'
+    return 'prazo não informado'
   }
 
   const parsed = new Date(value)
@@ -32,10 +32,10 @@ function formatScore(value) {
   const parsed = Number(value)
 
   if (!Number.isFinite(parsed)) {
-    return 'relevancia nao informada'
+    return 'relevância não informada'
   }
 
-  return `${Math.round(parsed * 100)}% de relevancia`
+  return `${Math.round(parsed * 100)}% de relevância`
 }
 
 function readResearchValue(research, detail, keys, fallback) {
@@ -50,17 +50,17 @@ export default function ResearchDetailModal({ research, onClose, action = null }
   }
 
   const detail = research.detail || research
-  const title = readResearchValue(research, detail, ['title'], 'Pesquisa sem titulo informado')
+  const title = readResearchValue(research, detail, ['title'], 'Pesquisa sem título informado')
   const company = readResearchValue(
     research,
     detail,
     ['companyLabel', 'companyName', 'company'],
-    'Empresa nao informada'
+    'Empresa não informada'
   )
-  const status = readResearchValue(research, detail, ['status'], 'nao informado')
+  const status = readResearchValue(research, detail, ['status'], 'não informado')
   const budget = readResearchValue(research, detail, ['budget'], null)
   const deadline = readResearchValue(research, detail, ['deadline'], null)
-  const area = readResearchValue(research, detail, ['areaLabel', 'areaName', 'area'], 'Area nao informada')
+  const area = readResearchValue(research, detail, ['areaLabel', 'areaName', 'area'], 'Área não informada')
   const relevance = readResearchValue(research, detail, ['score_hybrid'], null)
 
   return (
@@ -102,7 +102,7 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             <dd>{status}</dd>
           </div>
           <div>
-            <dt>Orcamento</dt>
+            <dt>Orçamento</dt>
             <dd>{formatCurrency(budget)}</dd>
           </div>
           <div>
@@ -110,11 +110,11 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             <dd>{formatDateTime(deadline)}</dd>
           </div>
           <div>
-            <dt>Area</dt>
+            <dt>Área</dt>
             <dd>{area}</dd>
           </div>
           <div>
-            <dt>Aderencia</dt>
+            <dt>Aderência</dt>
             <dd>{formatScore(relevance)}</dd>
           </div>
         </dl>
@@ -122,19 +122,19 @@ export default function ResearchDetailModal({ research, onClose, action = null }
         <div className="research-detail-modal__content">
           <section>
             <h3>Escopo</h3>
-            <p>{detail.scope || 'Escopo nao informado.'}</p>
+            <p>{detail.scope || 'Escopo não informado.'}</p>
           </section>
           <section>
             <h3>Objetivo</h3>
-            <p>{detail.goal || 'Objetivo nao informado.'}</p>
+            <p>{detail.goal || 'Objetivo não informado.'}</p>
           </section>
           <section>
             <h3>Justificativa</h3>
-            <p>{detail.justification || 'Justificativa nao informada.'}</p>
+            <p>{detail.justification || 'Justificativa não informada.'}</p>
           </section>
           <section>
             <h3>Resultados esperados</h3>
-            <p>{detail.results || 'Resultados esperados nao informados.'}</p>
+            <p>{detail.results || 'Resultados esperados não informados.'}</p>
           </section>
         </div>
 
