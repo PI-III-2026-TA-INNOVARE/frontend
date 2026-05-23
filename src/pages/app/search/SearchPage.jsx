@@ -94,6 +94,151 @@ function formatScore(value) {
   return `${Math.round(parsed * 100)}% de relevancia`
 }
 
+function normalizeSearchText(value) {
+  return (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+function isMissingSearchEndpoint(error) {
+  return error?.status === 404
+}
+
+function scoreLocalResearchMatch(research, query, researchAreaLookup) {
+  const normalizedQuery = normalizeSearchText(query)
+  const terms = normalizedQuery.split(/[^a-z0-9]+/).filter((term) => term.length >= 2)
+  const areaName = researchAreaLookup[String(research.area)]?.name || ''
+  const fields = [
+    research.title,
+    research.scope,
+    research.goal,
+    research.justification,
+    research.results,
+    areaName,
+  ]
+  const searchableText = normalizeSearchText(fields.filter(Boolean).join(' '))
+
+  if (!searchableText || terms.length === 0) {
+    return 0
+  }
+
+  const matchedTerms = terms.filter((term) => searchableText.includes(term))
+  const titleMatch = normalizeSearchText(research.title).includes(normalizedQuery)
+  const areaMatch = normalizeSearchText(areaName).includes(normalizedQuery)
+  const coverage = matchedTerms.length / terms.length
+  const exactBoost = titleMatch ? 0.25 : areaMatch ? 0.15 : 0
+
+  return Math.min(1, coverage + exactBoost)
+}
+
+function buildLocalResearchResults(researches, params, researchAreaLookup) {
+  const limit = Number(params.limit) || DEFAULT_LIMIT
+
+  return researches
+    .filter((research) => {
+      if (params.area_id && String(research.area) !== String(params.area_id)) {
+        return false
+      }
+
+      if (params.open_only === 'true' && research.status !== 'aberta') {
+        return false
+      }
+
+      return scoreLocalResearchMatch(research, params.q, researchAreaLookup) > 0
+    })
+    .map((research) => {
+      const score = scoreLocalResearchMatch(research, params.q, researchAreaLookup)
+      const areaName = researchAreaLookup[String(research.area)]?.name || 'Area nao informada'
+
+      return {
+        ...research,
+        area: areaName,
+        company: research.company ? `Empresa #${research.company}` : 'Empresa nao informada',
+        score_hybrid: score,
+        score_semantic: score,
+        score_lexical: score,
+      }
+    })
+    .sort((a, b) => b.score_hybrid - a.score_hybrid)
+    .slice(0, limit)
+}
+
+function getResearcherAreaIds(researcher) {
+  return (researcher.area || []).map((area) => {
+    if (area && typeof area === 'object') {
+      return String(area.id_area ?? area.id)
+    }
+
+    return String(area)
+  })
+}
+
+function scoreLocalResearcherMatch(researcher, query, researchAreaLookup, universityName = '') {
+  const normalizedQuery = normalizeSearchText(query)
+  const terms = normalizedQuery.split(/[^a-z0-9]+/).filter((term) => term.length >= 2)
+  const areaNames = getResearcherAreaIds(researcher).map(
+    (areaId) => researchAreaLookup[areaId]?.name || ''
+  )
+  const searchableText = normalizeSearchText([
+    researcher.name,
+    universityName,
+    ...areaNames,
+  ].filter(Boolean).join(' '))
+
+  if (!searchableText || terms.length === 0) {
+    return 0
+  }
+
+  const matchedTerms = terms.filter((term) => searchableText.includes(term))
+  const nameMatch = normalizeSearchText(researcher.name).includes(normalizedQuery)
+  const areaMatch = areaNames.some((areaName) => normalizeSearchText(areaName).includes(normalizedQuery))
+  const universityMatch = normalizeSearchText(universityName).includes(normalizedQuery)
+  const coverage = matchedTerms.length / terms.length
+  const exactBoost = nameMatch ? 0.3 : areaMatch ? 0.18 : universityMatch ? 0.12 : 0
+
+  return Math.min(1, coverage + exactBoost)
+}
+
+function buildLocalResearcherResults(researchers, params, researchAreaLookup, universityLookup) {
+  const limit = Number(params.limit) || DEFAULT_LIMIT
+
+  return researchers
+    .filter((researcher) => {
+      if (researcher.status !== true) {
+        return false
+      }
+
+      if (params.available && String(researcher.availability) !== params.available) {
+        return false
+      }
+
+      if (params.area_id && !getResearcherAreaIds(researcher).includes(String(params.area_id))) {
+        return false
+      }
+
+      const universityName = universityLookup[String(researcher.university)]?.name || ''
+      return scoreLocalResearcherMatch(researcher, params.q, researchAreaLookup, universityName) > 0
+    })
+    .map((researcher) => {
+      const universityName = universityLookup[String(researcher.university)]?.name || null
+      const score = scoreLocalResearcherMatch(researcher, params.q, researchAreaLookup, universityName)
+
+      return {
+        id_researcher: researcher.id_researcher,
+        name: researcher.name,
+        university: universityName,
+        availability: researcher.availability,
+        score_hybrid: score,
+        score_semantic: score,
+        score_lexical: score,
+        score_token_coverage: score,
+      }
+    })
+    .sort((a, b) => b.score_hybrid - a.score_hybrid)
+    .slice(0, limit)
+}
+
 function getResearcherAreaTags(detail, researchAreaLookup) {
   const areaList = Array.isArray(detail?.area) ? detail.area : []
   const areaNames = areaList
@@ -373,9 +518,51 @@ export default function SearchPage() {
     }
 
     try {
-      const data = isCompanyUser
-        ? await searchResearchers(params)
-        : await searchResearch(params)
+      let data
+      let allResearchers = null
+
+      if (isCompanyUser) {
+        try {
+          data = await searchResearchers(params)
+        } catch (searchError) {
+          if (!isMissingSearchEndpoint(searchError)) {
+            throw searchError
+          }
+
+          allResearchers = await listResearchers()
+          const universityIds = [
+            ...new Set(
+              allResearchers
+                .map((researcher) => researcher.university)
+                .filter((universityId) => universityId !== null && universityId !== undefined)
+                .map((universityId) => String(universityId))
+            ),
+          ]
+          const universityResults = await Promise.allSettled(
+            universityIds.map((universityId) => getUniversity(universityId))
+          )
+          const universityLookup = universityResults.reduce((lookup, result, index) => {
+            if (result.status === 'fulfilled' && result.value) {
+              lookup[universityIds[index]] = result.value
+            }
+
+            return lookup
+          }, {})
+
+          data = buildLocalResearcherResults(allResearchers, params, researchAreaLookup, universityLookup)
+        }
+      } else {
+        try {
+          data = await searchResearch(params)
+        } catch (searchError) {
+          if (!isMissingSearchEndpoint(searchError)) {
+            throw searchError
+          }
+
+          const researches = await listResearches()
+          data = buildLocalResearchResults(researches, params, researchAreaLookup)
+        }
+      }
 
       if (searchRequestRef.current !== requestId) {
         return
@@ -386,7 +573,7 @@ export default function SearchPage() {
       let nextResearcherDetails = {}
 
       if (isCompanyUser) {
-        const allResearchers = await listResearchers()
+        allResearchers = allResearchers || await listResearchers()
         const directResearcherMatches = allResearchers.filter((researcher) => {
           if (researcher.status !== true) {
             return false

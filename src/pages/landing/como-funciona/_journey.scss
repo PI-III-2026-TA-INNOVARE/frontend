@@ -7,7 +7,7 @@
   padding: calc(var(--nav-height) + 44px) 0 70px;
   background:
     linear-gradient(180deg, rgba(20, 39, 76, 0.18) 0%, rgba(20, 39, 76, 0.1) 38%, rgba(20, 39, 76, 0.22) 100%),
-    url('../../../../imagem_referencia/slkk.png') center top / cover no-repeat;
+    var(--bg-secondary);
 }
 
 .process-journey::before {

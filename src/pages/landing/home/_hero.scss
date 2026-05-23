@@ -9,19 +9,12 @@
   color: var(--text-primary);
 }
 
-.hero__image,
 .hero__image-overlay {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   pointer-events: none;
-}
-
-.hero__image {
-  object-fit: cover;
-  object-position: center center;
-  z-index: 0;
 }
 
 .hero__image-overlay {
@@ -233,10 +226,6 @@
   .hero {
     min-height: auto;
     padding: calc(var(--nav-height) + 28px) 0 42px;
-  }
-
-  .hero__image {
-    object-position: center top;
   }
 
   .hero__image-overlay {

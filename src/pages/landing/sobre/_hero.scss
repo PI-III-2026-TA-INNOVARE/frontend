@@ -8,7 +8,7 @@
   background:
     linear-gradient(90deg, rgba(11, 31, 61, 0.74) 0%, rgba(22, 43, 81, 0.54) 44%, rgba(11, 31, 61, 0.7) 100%),
     linear-gradient(180deg, rgba(11, 31, 61, 0.82) 0%, rgba(11, 31, 61, 0.52) 58%, rgba(11, 31, 61, 0.82) 100%),
-    url('../../../../imagem_referencia/slkk.png') center top / cover no-repeat;
+    var(--accent-primary);
   background-attachment: fixed;
   color: var(--text-inverse);
 }

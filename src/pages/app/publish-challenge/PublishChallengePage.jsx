@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import { useAuth } from '../../../context/AuthContext'
 import {
   createResearch,
@@ -79,6 +80,18 @@ function buildPageLabel(page, totalItems, pageSize) {
   return `${start}-${end} de ${totalItems}`
 }
 
+function buildResearchModalPayload(research, researchAreaLookup, user) {
+  if (!research) {
+    return null
+  }
+
+  return {
+    ...research,
+    areaLabel: researchAreaLookup[research.area] || 'Area nao identificada',
+    companyLabel: user?.displayName || user?.company?.razao_social || 'Empresa nao informada',
+  }
+}
+
 function formatDeadlineLabel(value) {
   if (!value) {
     return 'prazo nao informado'
@@ -140,6 +153,7 @@ export default function PublishChallengePage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
+  const [selectedResearch, setSelectedResearch] = useState(null)
   const [catalog, setCatalog] = useState({
     researches: [],
     researchAreas: [],
@@ -615,6 +629,15 @@ export default function PublishChallengePage() {
                       <div className="challenge-form-card__actions">
                         <button
                           type="button"
+                          className="btn btn-outline"
+                          onClick={() => setSelectedResearch(
+                            buildResearchModalPayload(item, researchAreaLookup, user)
+                          )}
+                        >
+                          Mais detalhes
+                        </button>
+                        <button
+                          type="button"
                           className="btn btn-ghost"
                           onClick={() => handleRunMatch(item.id_research)}
                           disabled={candidateActionLoading === `match-${item.id_research}`}
@@ -708,6 +731,13 @@ export default function PublishChallengePage() {
           ) : null}
         </div>
       </div>
+
+      {selectedResearch ? (
+        <ResearchDetailModal
+          research={selectedResearch}
+          onClose={() => setSelectedResearch(null)}
+        />
+      ) : null}
     </section>
   )
 }
