@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import ResearcherDetailModal from '../../../components/ResearcherDetailModal'
 import { useAuth } from '../../../context/AuthContext'
+import { buildPageLabel, paginateItems } from '../../../lib/domain'
 import {
   createResearchInterest,
   getResearch,
@@ -18,6 +19,7 @@ import {
 import './SearchPage.scss'
 
 const DEFAULT_LIMIT = 20
+const SEARCH_RESULTS_PAGE_SIZE = 20
 
 function getDefaultQuery(userType) {
   return userType === 'empresa'
@@ -131,8 +133,6 @@ function scoreLocalResearchMatch(research, query, researchAreaLookup) {
 }
 
 function buildLocalResearchResults(researches, params, researchAreaLookup) {
-  const limit = Number(params.limit) || DEFAULT_LIMIT
-
   return researches
     .filter((research) => {
       if (params.area_id && String(research.area) !== String(params.area_id)) {
@@ -159,7 +159,6 @@ function buildLocalResearchResults(researches, params, researchAreaLookup) {
       }
     })
     .sort((a, b) => b.score_hybrid - a.score_hybrid)
-    .slice(0, limit)
 }
 
 function getResearcherAreaIds(researcher) {
@@ -174,6 +173,36 @@ function getResearcherAreaIds(researcher) {
 
     return String(area)
   })
+}
+
+function countResearchesByArea(researches) {
+  return researches.reduce((lookup, research) => {
+    const areaId = research.area
+
+    if (areaId !== null && areaId !== undefined) {
+      lookup[String(areaId)] = (lookup[String(areaId)] || 0) + 1
+    }
+
+    return lookup
+  }, {})
+}
+
+function countResearchersByArea(researchers, availabilityFilter = '') {
+  return researchers.reduce((lookup, researcher) => {
+    if (researcher.status !== true) {
+      return lookup
+    }
+
+    if (availabilityFilter && String(researcher.availability) !== availabilityFilter) {
+      return lookup
+    }
+
+    getResearcherAreaIds(researcher).forEach((areaId) => {
+      lookup[areaId] = (lookup[areaId] || 0) + 1
+    })
+
+    return lookup
+  }, {})
 }
 
 function scoreLocalResearcherMatch(researcher, query, researchAreaLookup, universityName = '') {
@@ -203,8 +232,6 @@ function scoreLocalResearcherMatch(researcher, query, researchAreaLookup, univer
 }
 
 function buildLocalResearcherResults(researchers, params, researchAreaLookup, universityLookup) {
-  const limit = Number(params.limit) || DEFAULT_LIMIT
-
   return researchers
     .filter((researcher) => {
       if (researcher.status !== true) {
@@ -238,7 +265,6 @@ function buildLocalResearcherResults(researchers, params, researchAreaLookup, un
       }
     })
     .sort((a, b) => b.score_hybrid - a.score_hybrid)
-    .slice(0, limit)
 }
 
 function getResearcherAreaTags(detail, researchAreaLookup) {
@@ -298,6 +324,7 @@ export default function SearchPage() {
   const [selectedAreaId, setSelectedAreaId] = useState('')
   const [availabilityFilter, setAvailabilityFilter] = useState('')
   const [results, setResults] = useState([])
+  const [resultsPage, setResultsPage] = useState(1)
   const [researchDetails, setResearchDetails] = useState({})
   const [researcherDetails, setResearcherDetails] = useState({})
   const [researcherResumeDetails, setResearcherResumeDetails] = useState({})
@@ -316,6 +343,7 @@ export default function SearchPage() {
   const [interestMessage, setInterestMessage] = useState('')
   const [researchAreas, setResearchAreas] = useState([])
   const [myInterests, setMyInterests] = useState([])
+  const [areaCountSource, setAreaCountSource] = useState([])
 
   useEffect(() => {
     let isMounted = true
@@ -344,23 +372,31 @@ export default function SearchPage() {
 
       try {
         if (isCompanyUser) {
-          const researches = await listResearches()
+          const [researches, researchers] = await Promise.all([
+            listResearches(),
+            listResearchers(),
+          ])
 
           if (!isMounted) {
             return
           }
 
+          setAreaCountSource(researchers)
           setCompanyResearches(
             researches.filter((item) => String(item.company) === String(user?.company?.id_company))
           )
           setMyInterests([])
         } else {
-          const interests = await listMyResearchInterests()
+          const [interests, researches] = await Promise.all([
+            listMyResearchInterests(),
+            listResearches(),
+          ])
 
           if (!isMounted) {
             return
           }
 
+          setAreaCountSource(researches)
           setMyInterests(interests)
           setCompanyResearches([])
         }
@@ -382,6 +418,7 @@ export default function SearchPage() {
     setSelectedAreaId('')
     setAvailabilityFilter('')
     setResults([])
+    setResultsPage(1)
     setResearchDetails({})
     setResearcherDetails({})
     setResearcherResumeDetails({})
@@ -389,6 +426,7 @@ export default function SearchPage() {
     setSelectedResearcher(null)
     setSelectedProjectId('')
     setProjectSearch('')
+    setAreaCountSource([])
     setHasSearched(false)
     setLoading(false)
     setError('')
@@ -415,6 +453,14 @@ export default function SearchPage() {
       return lookup
     }, {})
   ), [researchAreas])
+  const areaCountLookup = useMemo(() => (
+    isCompanyUser
+      ? countResearchersByArea(areaCountSource, availabilityFilter)
+      : countResearchesByArea(areaCountSource)
+  ), [areaCountSource, availabilityFilter, isCompanyUser])
+  const selectedAreaResultCount = selectedAreaId
+    ? areaCountLookup[String(selectedAreaId)] || 0
+    : 0
 
   const visibleItems = useMemo(() => {
     if (isCompanyUser) {
@@ -485,6 +531,19 @@ export default function SearchPage() {
 
   const shouldShowResults = hasSearched || loading || Boolean(error) || Boolean(interestMessage)
   const hasEmptySearchResult = hasSearched && !loading && !error && visibleItems.length === 0
+  const totalResultPages = Math.max(
+    1,
+    Math.ceil(visibleItems.length / SEARCH_RESULTS_PAGE_SIZE)
+  )
+  const paginatedVisibleItems = useMemo(
+    () => paginateItems(visibleItems, resultsPage, SEARCH_RESULTS_PAGE_SIZE),
+    [resultsPage, visibleItems]
+  )
+
+  useEffect(() => {
+    setResultsPage((current) => Math.min(current, totalResultPages))
+  }, [totalResultPages])
+
   const activeSelectedResearcher = useMemo(() => {
     if (!selectedResearcher) {
       return null
@@ -531,6 +590,7 @@ export default function SearchPage() {
       setHasSearched(false)
       setActiveQuery('')
       setResults([])
+      setResultsPage(1)
       setResearchDetails({})
       setResearcherDetails({})
       setResearcherResumeDetails({})
@@ -546,6 +606,7 @@ export default function SearchPage() {
     setLoading(true)
     setHasSearched(true)
     setActiveQuery(trimmedQuery)
+    setResultsPage(1)
     setError('')
     setResearcherResumeDetails({})
     setErrorTitle('Não foi possível concluir a busca')
@@ -815,7 +876,12 @@ export default function SearchPage() {
                 <>
                   <div className="semantic-field">
                     <label className="semantic-field__label" htmlFor="search-area">
-                      Area
+                      <span>Area</span>
+                      {selectedAreaId ? (
+                        <span className="semantic-field__count-badge">
+                          {selectedAreaResultCount}
+                        </span>
+                      ) : null}
                     </label>
                     <select
                       id="search-area"
@@ -907,7 +973,9 @@ export default function SearchPage() {
                     </h2>
                   </div>
                   <p className="search-results__meta">
-                    {hasSearched ? `${visibleItems.length} resultado(s) para "${activeQuery}".` : ''}
+                    {hasSearched
+                      ? `${buildPageLabel(resultsPage, visibleItems.length, SEARCH_RESULTS_PAGE_SIZE)} resultado(s) para "${activeQuery}".`
+                      : ''}
                   </p>
                 </div>
               ) : null}
@@ -941,9 +1009,10 @@ export default function SearchPage() {
               ) : null}
 
               {!loading && !error && visibleItems.length > 0 ? (
-                <div className="search-results__list">
-                  {visibleItems.map((item) => (
-                    <article key={item.id} className="search-result-card">
+                <>
+                  <div className="search-results__list">
+                    {paginatedVisibleItems.map((item) => (
+                      <article key={item.id} className="search-result-card">
                       {item.type === 'pesquisa' ? (
                         <div className="search-result-card__top">
                           <span className={`search-result-card__type search-result-card__type--${item.type}`}>
@@ -998,9 +1067,34 @@ export default function SearchPage() {
                       ) : null}
 
                      
-                    </article>
-                  ))}
-                </div>
+                      </article>
+                    ))}
+                  </div>
+
+                  {visibleItems.length > SEARCH_RESULTS_PAGE_SIZE ? (
+                    <div className="search-pagination">
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setResultsPage((current) => Math.max(1, current - 1))}
+                        disabled={resultsPage === 1}
+                      >
+                        Anterior
+                      </button>
+                      <span className="search-pagination__status">
+                        Pagina {resultsPage} de {totalResultPages}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={() => setResultsPage((current) => Math.min(totalResultPages, current + 1))}
+                        disabled={resultsPage === totalResultPages}
+                      >
+                        Proxima
+                      </button>
+                    </div>
+                  ) : null}
+                </>
               ) : null}
             </div>
             ) : null}

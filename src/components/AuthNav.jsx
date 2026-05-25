@@ -27,6 +27,7 @@ export default function AuthNav() {
   const profileMeta = user?.type === 'empresa'
     ? user?.company?.cnpj || 'Empresa'
     : user?.university?.name || 'Pesquisador'
+  const profileInitial = profileName.trim().charAt(0).toUpperCase() || 'U'
 
   return (
     <header className="auth-nav">
@@ -51,12 +52,9 @@ export default function AuthNav() {
         </nav>
 
         <div className="auth-nav__profile">
-          <Link to="/perfil" className="auth-nav__profile-text" title="Ir para meu perfil">
+          <Link to="/perfil" className="auth-nav__profile-text" data-initial={profileInitial} title="Ir para meu perfil">
             <span className="auth-nav__profile-name">
               {profileName}
-            </span>
-            <span className="auth-nav__profile-meta">
-              {user?.type === 'empresa' ? 'Empresa' : 'Pesquisador'} | {profileMeta}
             </span>
           </Link>
 

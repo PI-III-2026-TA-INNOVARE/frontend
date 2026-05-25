@@ -19,7 +19,7 @@ const candidateStatusOptions = [
   { value: 'rejected', label: 'Rejeitado' },
 ]
 
-const PUBLISHED_RESEARCH_PAGE_SIZE = 8
+const PUBLISHED_RESEARCH_PAGE_SIZE = 20
 
 const researchCandidateFilterOptions = [
   { value: 'all', label: 'Todas as pesquisas' },

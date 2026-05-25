@@ -166,6 +166,60 @@ ou
 - Como o front trata erro: exibe mensagem amigavel retornada pelo backend; mantem o usuario no formulario.
 - Observacoes e riscos: validacoes de CNPJ ativo, email institucional, unicidade e integridade da universidade ficam no backend. O front faz apenas validacao basica de UX.
 
+## Esqueci a senha (forgot password)
+
+- Endpoint: `/auth/forgot-password/`
+- Metodo HTTP: `POST`
+- Autenticacao:
+  - publica
+  - nao exige JWT
+  - nao usa refresh token
+  - nao depende do usuario autenticado
+- Arquivos onde aparece:
+  - service: `src/services/pdConnectApi.js` (`forgotPassword`)
+  - page: `src/pages/auth/forgot-password/ForgotPasswordPage.jsx`
+- Para que serve: solicitar email de redefinicao de senha. O backend gera um token e envia link `{frontend_url}/reset-password?token=XXX` por email.
+- Input enviado pelo front:
+
+```json
+{
+  "email": "usuario@email.com",
+  "frontend_url": "http://localhost:5173"
+}
+```
+
+- Output esperado pelo front: confirmacao generica (independente do email existir ou nao, para nao vazar quais emails estao cadastrados).
+- Como o front trata sucesso: mostra mensagem "se o email existir, voce recebera as instrucoes".
+- Como o front trata erro: exibe mensagem amigavel no formulario.
+- Observacoes e riscos: o `frontend_url` enviado e `window.location.origin`; se o front for servido sob subpath, o link gerado pode ficar incorreto.
+
+## Resetar senha
+
+- Endpoint: `/auth/reset-password/`
+- Metodo HTTP: `POST`
+- Autenticacao:
+  - publica
+  - nao exige JWT
+  - nao usa refresh token
+  - depende apenas do token de reset enviado por email
+- Arquivos onde aparece:
+  - service: `src/services/pdConnectApi.js` (`resetPassword`)
+  - page: `src/pages/auth/reset-password/ResetPasswordPage.jsx`
+- Para que serve: trocar a senha do usuario consumindo um token de reset que veio no email.
+- Input enviado pelo front:
+
+```json
+{
+  "token": "token-recebido-no-email",
+  "password": "nova-senha"
+}
+```
+
+- Output esperado pelo front: confirmacao de senha atualizada.
+- Como o front trata sucesso: exibe mensagem de sucesso e redireciona para login.
+- Como o front trata erro: token invalido/expirado mostra mensagem clara; senha fraca mostra erro de validacao.
+- Observacoes e riscos: token e lido de `searchParams.get('token')` na URL; sem token, a pagina mostra estado de erro.
+
 ## Consulta publica de CNPJ
 
 - Endpoint: `/companies/cnpj-lookup/`
@@ -337,6 +391,84 @@ ou
 - Como o front trata sucesso: inclui curriculo no usuario autenticado ou nos cards da busca.
 - Como o front trata erro: no AuthContext usa `Promise.allSettled` e permite `resume` nulo; na busca curriculos ausentes nao derrubam a tela.
 - Observacoes e riscos: 404 para pesquisador sem curriculo e aceitavel em alguns fluxos.
+
+## Busca semantica de pesquisadores
+
+- Endpoint: `/search/researchers/`
+- Metodo HTTP: `GET`
+- Autenticacao:
+  - exige JWT
+  - pode usar refresh token
+  - depende do usuario autenticado **empresa** (so empresa pode buscar pesquisadores)
+- Arquivos onde aparece:
+  - service: `src/services/pdConnectApi.js` (`searchResearchers`)
+  - page: `src/pages/app/search/SearchPage.jsx`
+- Para que serve: buscar pesquisadores por similaridade semantica (embeddings MiniLM via pgvector) + ranking lexical FTS do PostgreSQL.
+- Input enviado pelo front (query string):
+
+```
+?q=<termo>&limit=<n>&area_id=<id>&available=<true|false>
+```
+
+- Output esperado pelo front:
+
+```json
+[
+  {
+    "id_researcher": 1,
+    "name": "Nome do pesquisador",
+    "university": "Universidade",
+    "availability": true,
+    "score_hybrid": 0.82,
+    "score_semantic": 0.79,
+    "score_lexical": 0.45,
+    "score_token_coverage": 0.67
+  }
+]
+```
+
+- Como o front trata sucesso: monta cards de resultado ordenados por `score_hybrid`; enriquece com detalhe do pesquisador via `getResearcher(id)` em segundo fetch.
+- Como o front trata erro: em `404` usa `isMissingSearchEndpoint` e cai num fallback local baseado em palavras-chave sobre `/researchers/` + `/research/area/` + `/universities/`. Outros erros mostram mensagem na pagina.
+- Observacoes e riscos: o `score_token_coverage` esta presente na resposta do servico mas pode nao estar no serializer DRF; o front trata como opcional.
+
+## Busca semantica de pesquisas
+
+- Endpoint: `/search/research/`
+- Metodo HTTP: `GET`
+- Autenticacao:
+  - exige JWT
+  - pode usar refresh token
+  - depende do usuario autenticado **pesquisador** (so pesquisador pode buscar pesquisas)
+- Arquivos onde aparece:
+  - service: `src/services/pdConnectApi.js` (`searchResearch`)
+  - page: `src/pages/app/search/SearchPage.jsx`
+- Para que serve: buscar pesquisas por similaridade semantica + lexical, com opcao de filtrar so as abertas.
+- Input enviado pelo front (query string):
+
+```
+?q=<termo>&limit=<n>&area_id=<id>&open_only=<true|false>
+```
+
+- Output esperado pelo front:
+
+```json
+[
+  {
+    "id_research": 1,
+    "title": "Titulo da pesquisa",
+    "status": "aberta",
+    "area": "Nome da area",
+    "company": "Nome da empresa",
+    "score_hybrid": 0.86,
+    "score_semantic": 0.88,
+    "score_lexical": 0.52
+  }
+]
+```
+
+- Como o front trata sucesso: monta cards; faz fetch adicional `getResearch(id)` para preencher `scope`, `goal`, `justification`, `results`, `budget`, `deadline` exibidos no modal de detalhes.
+- Como o front trata erro: em `404` cai no mesmo fallback local (busca por palavras-chave em `/research/`).
+- Observacoes e riscos: o fallback so esta na arvore por seguranca. Se o backend ficar offline, a busca tenta operar com o que ja foi listado.
 
 ## Areas de pesquisa
 
@@ -784,7 +916,24 @@ ou
 
 Estas funcoes existem no service, mas nao foram encontradas como consumo direto em page/context/component no estado atual:
 
-- `getResearcher(id)` -> `GET /researchers/{id}`
 - `getResume(id)` -> `GET /resumes/{id}`
 
+> `getResearcher(id)` antes estava nesta lista; hoje e usado em `SearchPage.jsx` no enriquecimento dos resultados da busca semantica (segundo fetch para popular campos detalhados nao retornados pelo serializer da busca).
+
 Elas devem ser revisadas antes de qualquer uso futuro para confirmar permissao, formato de resposta e necessidade real na UI.
+
+## Diferencas em relacao a auditoria anterior
+
+Comparado a revisao anterior deste documento:
+
+- **Adicionados**: rotas de busca semantica (`/search/researchers/`, `/search/research/`) e de recuperacao de senha (`/auth/forgot-password/`, `/auth/reset-password/`).
+- **Atualizado**: `getResearcher(id)` saiu da lista de "nao usados" e ganhou contexto em SearchPage.
+- **Sem mudanca**: contrato JWT, fluxo de cadastro, perfil, publicacao de pesquisa, candidatos, match (ainda placeholder no backend).
+
+## Pendencias conhecidas no backend
+
+Documentado aqui para evitar criar UI que dependa de endpoints inexistentes:
+
+- `POST /research/{id}/candidates/` — sugestao manual de candidato pela empresa. UI ja existe (`ResearcherDetailModal`), botao `disabled` aguardando endpoint.
+- Match real com IA — `POST /research/{id}/match/run/` existe mas usa placeholder com score `1.0` fixo. Branch `Fix_test_Ai` tem uma implementacao alternativa com Gemini API, mas com arquitetura diferente (nao mergeada em `main`).
+- Edicao de educacao/experiencia via `PATCH` — backend suporta, front nao tem formulario de edicao.

@@ -3,12 +3,20 @@
 .authenticated-app {
   min-height: 100vh;
   background:
-    radial-gradient(circle at top left, var(--bg-auth-radial) 0%, transparent 28%),
+    radial-gradient(ellipse at 78% -6%, rgba(91, 136, 165, 0.13) 0%, transparent 52%),
+    radial-gradient(ellipse at 8%  92%, rgba(91, 136, 165, 0.06) 0%, transparent 40%),
+    var(--bg-auth-shell);
+}
+
+[data-theme='dark'] .authenticated-app {
+  background:
+    radial-gradient(ellipse at 78% -6%, rgba(127, 168, 194, 0.15) 0%, transparent 52%),
+    radial-gradient(ellipse at 8%  92%, rgba(127, 168, 194, 0.07) 0%, transparent 40%),
     var(--bg-auth-shell);
 }
 
 .authenticated-app__main {
-  min-height: calc(100vh - 88px);
+  min-height: calc(100vh - 68px);
 }
 
 .authenticated-app .app-page,
@@ -16,34 +24,36 @@
   background: transparent;
 }
 
+// ─── Page container ───────────────────────────────────────────
 .app-page__container {
   padding-top: 44px;
-  padding-bottom: 92px;
+  padding-bottom: 96px;
 }
 
 .authenticated-app .page-header {
   padding: 96px 0 44px;
 }
 
+// ─── Page header ──────────────────────────────────────────────
 .app-page__header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
-  gap: 18px 28px;
-  margin-bottom: 34px;
+  gap: 16px 24px;
+  margin-bottom: 28px;
 }
 
 .app-page__title {
   color: var(--accent-primary);
   font-family: var(--font-primary);
-  font-size: clamp(1.55rem, 2.8vw, 2.35rem);
+  font-size: clamp(1.7rem, 3vw, 2.6rem);
   font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -0.03em;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
 }
 
 .app-page__subtitle {
-  max-width: 32ch;
+  max-width: 38ch;
   color: var(--text-secondary);
   font-size: 0.92rem;
   line-height: 1.55;
@@ -55,6 +65,7 @@
   gap: 12px;
 }
 
+// ─── Cards — solid, no frosted glass ──────────────────────────
 .search-hero-card,
 .profile-form-card,
 .profile-tabs-card,
@@ -63,11 +74,12 @@
 .semantic-panel,
 .search-result-card {
   border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(10px);
+  background: var(--bg-card-solid);
+  box-shadow: 0 2px 12px rgba(11, 31, 61, 0.06), 0 1px 3px rgba(11, 31, 61, 0.04);
+  backdrop-filter: none;
 }
 
+// ─── Card eyebrow labels — rectangular ────────────────────────
 .search-hero-card__eyebrow,
 .profile-form-card__eyebrow,
 .challenge-form-card__eyebrow,
@@ -75,18 +87,19 @@
 .profile-side__eyebrow {
   display: inline-flex;
   width: fit-content;
-  min-height: 34px;
+  min-height: 26px;
   align-items: center;
-  padding: 0 14px;
-  border-radius: 999px;
+  padding: 0 10px;
+  border-radius: 6px;
   background: var(--bg-chip);
   color: var(--accent-primary);
-  font-size: 0.74rem;
+  font-size: 0.66rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
+// ─── Card titles ──────────────────────────────────────────────
 .search-hero-card__title,
 .profile-form-card__title,
 .challenge-form-card__title,
@@ -95,20 +108,22 @@
 .search-results__title {
   color: var(--accent-primary);
   font-family: var(--font-primary);
-  font-size: 1.16rem;
+  font-size: 1.22rem;
   font-weight: 800;
   line-height: 1.2;
 }
 
+// ─── Form fields ──────────────────────────────────────────────
 .profile-field {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .profile-field span {
   color: var(--text-secondary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .profile-field--full {
@@ -120,15 +135,15 @@
 .profile-field select,
 .profile-field textarea {
   width: 100%;
-  padding: 16px 18px;
-  border-radius: 22px;
+  padding: 13px 16px;
+  border-radius: 14px;
   border: 1px solid var(--border-strong);
   background: var(--bg-input);
   color: var(--text-primary);
   outline: none;
   resize: vertical;
-  font-size: 0.98rem;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.6;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
@@ -146,6 +161,7 @@
   color: var(--text-muted);
 }
 
+// ─── Status/badge chips ───────────────────────────────────────
 .route-state {
   min-height: 100vh;
   display: flex;
@@ -176,9 +192,7 @@
 }
 
 @keyframes route-state-spin {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }
 
 .search-result-card__type,
@@ -186,16 +200,16 @@
 .profile-form-card__status {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  font-size: 0.78rem;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
   font-weight: 700;
 }
 
 .search-result-card__relevance,
 .profile-form-card__status {
-  background: rgba(63, 114, 95, 0.12);
+  background: rgba(63, 114, 95, 0.1);
   color: var(--accent-green);
 }
 
@@ -204,18 +218,18 @@
 .process-step-card__tag {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 6px;
   background: var(--bg-chip);
   border: 1px solid var(--border-strong);
   color: var(--accent-primary);
-  font-size: 0.84rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
 .semantic-panel::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 .semantic-panel::-webkit-scrollbar-thumb {
@@ -227,6 +241,7 @@
   background: transparent;
 }
 
+// ─── Responsive ───────────────────────────────────────────────
 @include media-down(lg) {
   .auth-nav__inner,
   .app-page__header {
@@ -236,20 +251,20 @@
 
 @include media-down(sm) {
   .app-page__container {
-    padding-top: 34px;
+    padding-top: 28px;
     padding-bottom: 72px;
   }
 
   .profile-form-card,
   .challenge-form-card,
   .search-hero-card {
-    padding: 24px;
-    border-radius: 26px;
+    padding: 22px;
+    border-radius: 22px;
   }
 }
 
 @include media-down(xs) {
   .app-page__title {
-    font-size: 1.7rem;
+    font-size: 1.6rem;
   }
 }

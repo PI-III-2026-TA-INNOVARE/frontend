@@ -14,32 +14,42 @@
 }
 
 .my-interests-tabs {
-  display: inline-flex;
-  gap: 8px;
-  margin-bottom: 18px;
-  padding: 6px;
-  border: 1px solid var(--border-soft);
-  border-radius: 999px;
-  background: var(--bg-panel-strong);
-  box-shadow: 0 16px 42px rgba(11, 31, 61, 0.08);
+  display: flex;
+  gap: 0;
+  margin-bottom: 24px;
+  padding: 0;
+  border: none;
+  border-bottom: 2px solid var(--border-soft);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .my-interests-tab {
-  min-height: 40px;
-  padding: 0 18px;
-  border: 0;
-  border-radius: 999px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
-  font-weight: 800;
-  transition: background var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast);
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: -2px;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.my-interests-tab:hover {
+  color: var(--accent-primary);
 }
 
 .my-interests-tab.active {
-  background: var(--bg-chip-strong);
   color: var(--accent-primary);
-  box-shadow: var(--shadow-secondary);
+  border-bottom-color: var(--accent-primary);
+  font-weight: 700;
+  background: transparent;
+  box-shadow: none;
 }
 
 .my-interests-status-tabs {

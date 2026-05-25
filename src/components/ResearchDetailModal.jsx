@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 function formatCurrency(value) {
   const parsed = Number(value)
 
@@ -28,23 +30,22 @@ function formatDateTime(value) {
   }).format(parsed)
 }
 
-function formatScore(value) {
-  const parsed = Number(value)
-
-  if (!Number.isFinite(parsed)) {
-    return 'relevância não informada'
-  }
-
-  return `${Math.round(parsed * 100)}% de relevância`
-}
-
 function readResearchValue(research, detail, keys, fallback) {
   const values = keys.flatMap((key) => [research?.[key], detail?.[key]])
   const value = values.find((item) => item !== null && item !== undefined && item !== '')
   return value ?? fallback
 }
 
+const TABS = [
+  { id: 'escopo',       label: 'Escopo',            field: 'scope',         fallback: 'Escopo não informado.' },
+  { id: 'objetivo',     label: 'Objetivo',           field: 'goal',          fallback: 'Objetivo não informado.' },
+  { id: 'justificativa',label: 'Justificativa',      field: 'justification', fallback: 'Justificativa não informada.' },
+  { id: 'resultados',   label: 'Resultados esperados', field: 'results',    fallback: 'Resultados esperados não informados.' },
+]
+
 export default function ResearchDetailModal({ research, onClose, action = null }) {
+  const [activeTab, setActiveTab] = useState('escopo')
+
   if (!research) {
     return null
   }
@@ -61,7 +62,8 @@ export default function ResearchDetailModal({ research, onClose, action = null }
   const budget = readResearchValue(research, detail, ['budget'], null)
   const deadline = readResearchValue(research, detail, ['deadline'], null)
   const area = readResearchValue(research, detail, ['areaLabel', 'areaName', 'area'], 'Área não informada')
-  const relevance = readResearchValue(research, detail, ['score_hybrid'], null)
+
+  const currentTab = TABS.find((t) => t.id === activeTab) ?? TABS[0]
 
   return (
     <div
@@ -88,7 +90,7 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             aria-label="Fechar detalhes"
             onClick={onClose}
           >
-            X
+            ✕
           </button>
         </header>
 
@@ -98,7 +100,7 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             <dd>{company}</dd>
           </div>
           <div>
-            <dt>Status do projeto</dt>
+            <dt>Status</dt>
             <dd>{status}</dd>
           </div>
           <div>
@@ -113,29 +115,38 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             <dt>Área</dt>
             <dd>{area}</dd>
           </div>
-          <div>
-            <dt>Aderência</dt>
-            <dd>{formatScore(relevance)}</dd>
-          </div>
         </dl>
 
-        <div className="research-detail-modal__content">
-          <section>
-            <h3>Escopo</h3>
-            <p>{detail.scope || 'Escopo não informado.'}</p>
-          </section>
-          <section>
-            <h3>Objetivo</h3>
-            <p>{detail.goal || 'Objetivo não informado.'}</p>
-          </section>
-          <section>
-            <h3>Justificativa</h3>
-            <p>{detail.justification || 'Justificativa não informada.'}</p>
-          </section>
-          <section>
-            <h3>Resultados esperados</h3>
-            <p>{detail.results || 'Resultados esperados não informados.'}</p>
-          </section>
+        <div className="research-detail-modal__tabs-wrap">
+          <nav
+            className="research-detail-modal__tabs"
+            role="tablist"
+            aria-label="Seções da pesquisa"
+          >
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`rdm-panel-${tab.id}`}
+                id={`rdm-tab-${tab.id}`}
+                className={`research-detail-modal__tab${activeTab === tab.id ? ' active' : ''}`}
+                onClick={() => setActiveTab(tab.id)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+
+          <div
+            id={`rdm-panel-${currentTab.id}`}
+            role="tabpanel"
+            aria-labelledby={`rdm-tab-${currentTab.id}`}
+            className="research-detail-modal__panel"
+          >
+            <p>{detail[currentTab.field] || currentTab.fallback}</p>
+          </div>
         </div>
 
         {action ? (
