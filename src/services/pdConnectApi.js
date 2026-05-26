@@ -103,6 +103,11 @@ export function listMyResearchInterests() {
   return fetchPaginatedCollection('/research/my-interests/')
 }
 
+export function listMyRecommendations({ refresh = false } = {}) {
+  const suffix = refresh ? '?refresh=true' : ''
+  return fetchPaginatedCollection(`/research/my-recommendations/${suffix}`)
+}
+
 export function createResearch(payload) {
   return apiRequest('/research/', {
     method: 'POST',

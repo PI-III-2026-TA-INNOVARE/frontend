@@ -208,6 +208,19 @@ function getCandidateSourceLabel(source) {
   return labels[source] || source || 'origem não informada'
 }
 
+const MATCH_REASON_LABELS = {
+  alta_similaridade_semantica: 'Alta similaridade semântica',
+  similaridade_semantica_moderada: 'Similaridade moderada',
+  boa_aderencia_textual: 'Boa aderência textual',
+  mesma_area_de_pesquisa: 'Mesma área',
+  disponibilidade_compativel: 'Disponibilidade compatível',
+}
+
+function formatMatchReason(reason) {
+  if (!reason) return ''
+  return MATCH_REASON_LABELS[reason] || reason.replace(/_/g, ' ')
+}
+
 export default function PublishChallengePage() {
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState('create')
@@ -797,13 +810,25 @@ export default function PublishChallengePage() {
                         ) : candidates.length > 0 ? (
                           candidates.map((candidate) => (
                             <div key={candidate.id_candidate} className="challenge-candidate">
-                              <div>
+                              <div className="challenge-candidate__info">
                                 <strong>{candidate.researcher_name || 'Pesquisador não identificado'}</strong>
                                 <span>
                                   {getCandidateSourceLabel(candidate.source)} ·{' '}
                                   {getCandidateStatusLabel(candidate.status)}
                                   {candidate.score_match ? ` · compatibilidade: ${Math.round(candidate.score_match * 100)}%` : ''}
                                 </span>
+                                {Array.isArray(candidate.match_reasons) && candidate.match_reasons.length > 0 ? (
+                                  <div className="challenge-candidate__reasons" aria-label="Motivos do match">
+                                    {candidate.match_reasons.map((reason) => (
+                                      <span
+                                        key={`${candidate.id_candidate}-${reason}`}
+                                        className="challenge-candidate__reason"
+                                      >
+                                        {formatMatchReason(reason)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
                               </div>
 
                               <select

@@ -237,6 +237,30 @@
   gap: 4px;
 }
 
+.challenge-candidate__info {
+  min-width: 0;
+}
+
+.challenge-candidate__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.challenge-candidate__reason {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px solid rgba(91, 136, 165, 0.32);
+  border-radius: 999px;
+  background: rgba(91, 136, 165, 0.08);
+  color: var(--accent-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .challenge-candidate select {
   min-width: 168px;
 }

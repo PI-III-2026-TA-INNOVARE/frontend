@@ -90,13 +90,14 @@ npm run seed:250-researches
 | **Busca semântica real com pgvector + MiniLM** (novo) | `GET /search/researchers/`, `GET /search/research/` |
 | Publicação de pesquisas pela empresa | `POST /research/`, `GET /research/`, `GET /research/area/` |
 | Pesquisador demonstra interesse em pesquisa | `POST /research/{id}/interest/`, `GET /research/my-interests/` |
-| Empresa gerencia candidatos da pesquisa | `GET /research/{id}/candidates/`, `PATCH /research/{id}/candidates/{candidateId}/` |
-| Match de IA (atualmente placeholder, score fixo `1.0`) | `POST /research/{id}/match/run/` |
+| Empresa gerencia candidatos da pesquisa (com `match_reasons` e `score_match` exibidos) | `GET /research/{id}/candidates/`, `PATCH /research/{id}/candidates/{candidateId}/` |
+| **Match de IA real** com pgvector + MiniLM + rerank Gemini (na branch `match_ia_gemini`) | `POST /research/{id}/match/run/` |
+| **Recomendações personalizadas para pesquisador** (com refresh sob demanda) | `GET /research/my-recommendations/` |
 | Indicadores públicos calculados sobre dados reais | `GET /companies/`, `GET /researchers/`, `GET /universities/`, etc. |
 
 ### ⚠️ Parcial ou mockado no backend
 
-- **Match da IA** — endpoint existe, mas a lógica é placeholder: filtra pesquisadores por área + disponibilidade e atribui `score_match = 1.0` fixo pra todos. Sem embeddings, sem ranking semântico de fato. (O frontend já consome o endpoint corretamente; quando o backend trocar pelo matching real, nenhuma alteração é necessária aqui.)
+- **Match da IA** — depende da branch ativa. Em `main` ainda é placeholder (score `1.0` fixo). Na branch `match_ia_gemini` a IA é real: usa embeddings MiniLM via pgvector, ranking híbrido (semântico + lexical + área + disponibilidade), e rerank do top N com Gemini API. Frontend consome os mesmos endpoints; exibe `score_match` (compatibilidade %) e `match_reasons` (motivos do match) quando disponíveis.
 
 ### ❌ Não implementado em nenhum dos lados
 

@@ -578,6 +578,51 @@ ou
 - Como o front trata erro: busca renderiza parcialmente com aviso.
 - Observacoes e riscos: so e chamado quando `user.type === 'pesquisador'`.
 
+## Recomendacoes da IA (pesquisador)
+
+- Endpoint: `/research/my-recommendations/`
+- Metodo HTTP: `GET`
+- Autenticacao:
+  - exige JWT
+  - pode usar refresh token
+  - depende do usuario autenticado **pesquisador**
+- Disponivel apenas na branch `match_ia_gemini` do backend.
+- Arquivos onde aparece:
+  - service: `src/services/pdConnectApi.js` (`listMyRecommendations`)
+  - page: `src/pages/app/my-interests/MyInterestsPage.jsx`
+- Para que serve: listar pesquisas que a IA considera compativeis com o perfil do pesquisador, ja filtradas por score minimo e razoes fortes (similaridade semantica, mesma area, etc.).
+- Input enviado pelo front (query string opcional):
+
+```
+?refresh=true   → forca re-execucao do match para este pesquisador antes de listar
+```
+
+- Output esperado pelo front:
+
+```json
+[
+  {
+    "id_candidate": 12,
+    "research_id": 5,
+    "research_title": "...",
+    "research_status": "aberta",
+    "research_area": "Agronegocio",
+    "company_name": "Petrobras",
+    "source": "ai",
+    "score_match": 0.78,
+    "status": "suggested",
+    "match_reasons": ["alta_similaridade_semantica", "mesma_area_de_pesquisa"],
+    "score_features": { "semantic": 0.82, "lexical": 0.51 },
+    "created_at": "...",
+    "updated_at": "..."
+  }
+]
+```
+
+- Como o front trata sucesso: alimenta a aba "Sugeridos pela IA" do `MyInterestsPage`; mostra a porcentagem como "Compatibilidade" e os `match_reasons` como tags coloridas; botao "Atualizar sugestoes" dispara o `?refresh=true`.
+- Como o front trata erro: `catch(() => [])` silencioso na carga inicial para permitir que a tela funcione mesmo se o endpoint estiver indisponivel (ex.: ainda em `main`); erro no refresh manual mostra mensagem na toolbar.
+- Observacoes e riscos: a UI degrada graciosamente quando o backend nao implementa o endpoint; nao bloqueia a aba "Seus interesses".
+
 ## Candidatos de pesquisa
 
 - Endpoint: `/research/{id}/candidates/`
@@ -591,7 +636,7 @@ ou
   - page: `src/pages/app/publish-challenge/PublishChallengePage.jsx`
 - Para que serve: listar candidatos/interessados por pesquisa da empresa.
 - Input enviado pelo front: parametro de rota `id_research`; aceita query params opcionais, mas a UI atual chama sem filtros.
-- Output esperado pelo front: lista com `id_candidate`, `researcher_name`, `source`, `status`, `score_match`.
+- Output esperado pelo front: lista com `id_candidate`, `researcher_name`, `source`, `status`, `score_match`, `match_reasons`, `score_features` (na branch `match_ia_gemini`).
 - Como o front trata sucesso: exibe candidatos por pesquisa.
 - Como o front trata erro: carregamento inicial usa `Promise.allSettled` e assume lista vazia para pesquisa que falhar; atualizacao individual mostra erro.
 - Observacoes e riscos: depende de permissao de dona da pesquisa no backend.

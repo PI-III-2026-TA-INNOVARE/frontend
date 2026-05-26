@@ -1,12 +1,32 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import {
   getCompany,
   getResearch,
+  listMyRecommendations,
   listMyResearchInterests,
   listResearchAreas,
 } from '../../../services/pdConnectApi'
 import './MyInterestsPage.scss'
+
+const MATCH_REASON_LABELS = {
+  alta_similaridade_semantica: 'Alta similaridade semântica',
+  similaridade_semantica_moderada: 'Similaridade moderada',
+  boa_aderencia_textual: 'Boa aderência textual',
+  mesma_area_de_pesquisa: 'Mesma área',
+  disponibilidade_compativel: 'Disponibilidade compatível',
+}
+
+function formatMatchReason(reason) {
+  if (!reason) return ''
+  return MATCH_REASON_LABELS[reason] || reason.replace(/_/g, ' ')
+}
+
+function formatMatchScore(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return `${Math.round(parsed * 100)}%`
+}
 
 const tabs = [
   {
@@ -104,10 +124,56 @@ export default function MyInterestsPage() {
   const [selectedResearch, setSelectedResearch] = useState(null)
   const [catalog, setCatalog] = useState({
     interests: [],
+    recommendations: [],
     researchDetails: {},
     companies: {},
     researchAreas: [],
   })
+  const [aiRefreshLoading, setAiRefreshLoading] = useState(false)
+  const [aiRefreshMessage, setAiRefreshMessage] = useState('')
+
+  const loadCatalog = useCallback(async ({ refreshRecommendations = false } = {}) => {
+    const [interests, recommendations, researchAreas] = await Promise.all([
+      listMyResearchInterests(),
+      listMyRecommendations({ refresh: refreshRecommendations }).catch(() => []),
+      listResearchAreas(),
+    ])
+
+    const allItems = [...interests, ...recommendations]
+    const uniqueResearchIds = [
+      ...new Set(allItems.map((item) => String(item.research_id))),
+    ]
+
+    const detailResults = await Promise.allSettled(
+      uniqueResearchIds.map((researchId) => getResearch(researchId))
+    )
+    const researchDetails = detailResults.reduce((lookup, result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        lookup[uniqueResearchIds[index]] = result.value
+      }
+      return lookup
+    }, {})
+
+    const companyIds = [
+      ...new Set(
+        Object.values(researchDetails)
+          .map((detail) => detail.company)
+          .filter((companyId) => companyId !== null && companyId !== undefined)
+          .map((companyId) => String(companyId))
+      ),
+    ]
+    const companyResults = await Promise.allSettled(
+      companyIds.map((companyId) => getCompany(companyId))
+    )
+    const companies = companyResults.reduce((lookup, result, index) => {
+      if (result.status === 'fulfilled' && result.value) {
+        lookup[companyIds[index]] = result.value
+      }
+      return lookup
+    }, {})
+
+    return { interests, recommendations, researchDetails, companies, researchAreas }
+  }, [])
 
   useEffect(() => {
     let isMounted = true
@@ -117,61 +183,14 @@ export default function MyInterestsPage() {
       setErrorMessage('')
 
       try {
-        const [interests, researchAreas] = await Promise.all([
-          listMyResearchInterests(),
-          listResearchAreas(),
-        ])
-
-        const detailResults = await Promise.allSettled(
-          interests.map((item) => getResearch(item.research_id))
-        )
-        const researchDetails = detailResults.reduce((lookup, result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
-            lookup[String(interests[index].research_id)] = result.value
-          }
-
-          return lookup
-        }, {})
-
-        const companyIds = [
-          ...new Set(
-            Object.values(researchDetails)
-              .map((detail) => detail.company)
-              .filter((companyId) => companyId !== null && companyId !== undefined)
-              .map((companyId) => String(companyId))
-          ),
-        ]
-        const companyResults = await Promise.allSettled(
-          companyIds.map((companyId) => getCompany(companyId))
-        )
-        const companies = companyResults.reduce((lookup, result, index) => {
-          if (result.status === 'fulfilled' && result.value) {
-            lookup[companyIds[index]] = result.value
-          }
-
-          return lookup
-        }, {})
-
-        if (!isMounted) {
-          return
-        }
-
-        setCatalog({
-          interests,
-          researchDetails,
-          companies,
-          researchAreas,
-        })
+        const data = await loadCatalog()
+        if (!isMounted) return
+        setCatalog(data)
       } catch (error) {
-        if (!isMounted) {
-          return
-        }
-
+        if (!isMounted) return
         setErrorMessage(error.message || 'Nao foi possivel carregar seus projetos de interesse.')
       } finally {
-        if (isMounted) {
-          setLoading(false)
-        }
+        if (isMounted) setLoading(false)
       }
     }
 
@@ -180,56 +199,76 @@ export default function MyInterestsPage() {
     return () => {
       isMounted = false
     }
-  }, [])
+  }, [loadCatalog])
+
+  const handleRefreshRecommendations = useCallback(async () => {
+    setAiRefreshLoading(true)
+    setAiRefreshMessage('')
+
+    try {
+      const data = await loadCatalog({ refreshRecommendations: true })
+      setCatalog(data)
+      setAiRefreshMessage('Sugestões da IA atualizadas.')
+    } catch (error) {
+      setAiRefreshMessage(error.message || 'Não foi possível atualizar as sugestões da IA.')
+    } finally {
+      setAiRefreshLoading(false)
+    }
+  }, [loadCatalog])
 
   const researchAreaLookup = useMemo(
     () => buildLookup(catalog.researchAreas, 'id_area'),
     [catalog.researchAreas]
   )
 
-  const interestItems = useMemo(() => (
-    catalog.interests.map((interest) => {
-      const detail = catalog.researchDetails[String(interest.research_id)] || {}
-      const company = catalog.companies[String(detail.company)] || {}
-      const companyLabel = (
-        company.razao_social ||
-        company.legal_name ||
-        company.name ||
-        'Empresa nao informada'
-      )
-      const areaLabel = researchAreaLookup[String(detail.area)]?.name || 'Area nao informada'
-      const projectStatus = detail.status || 'nao informado'
-      const projectStatusLabel = getProjectStatusLabel(projectStatus)
+  const buildItem = useCallback((source, candidate) => {
+    const detail = catalog.researchDetails[String(candidate.research_id)] || {}
+    const company = catalog.companies[String(detail.company)] || {}
+    const companyLabel = (
+      candidate.company_name ||
+      company.razao_social ||
+      company.legal_name ||
+      company.name ||
+      'Empresa nao informada'
+    )
+    const areaLabel = (
+      candidate.research_area ||
+      researchAreaLookup[String(detail.area)]?.name ||
+      'Area nao informada'
+    )
+    const projectStatus = candidate.research_status || detail.status || 'nao informado'
+    const projectStatusLabel = getProjectStatusLabel(projectStatus)
 
-      return {
-        id: interest.id_candidate,
-        researchId: interest.research_id,
-        source: interest.source,
-        title: detail.title || interest.research_title || 'Pesquisa sem titulo informado',
+    return {
+      id: `${source}-${candidate.id_candidate}`,
+      researchId: candidate.research_id,
+      source: candidate.source || source,
+      title: detail.title || candidate.research_title || 'Pesquisa sem titulo informado',
+      companyLabel,
+      areaLabel,
+      status: projectStatusLabel,
+      candidateStatus: candidate.status,
+      deadline: detail.deadline,
+      budget: detail.budget,
+      scoreMatch: candidate.score_match ?? null,
+      matchReasons: Array.isArray(candidate.match_reasons) ? candidate.match_reasons : [],
+      detail: {
+        ...detail,
         companyLabel,
         areaLabel,
         status: projectStatusLabel,
-        candidateStatus: interest.status,
-        deadline: detail.deadline,
-        budget: detail.budget,
-        detail: {
-          ...detail,
-          companyLabel,
-          areaLabel,
-          status: projectStatusLabel,
-        },
-      }
-    })
-  ), [catalog.companies, catalog.interests, catalog.researchDetails, researchAreaLookup])
+      },
+    }
+  }, [catalog.companies, catalog.researchDetails, researchAreaLookup])
 
   const interestedItems = useMemo(
-    () => interestItems.filter((item) => item.source === 'interest'),
-    [interestItems]
+    () => catalog.interests.map((interest) => buildItem('interest', interest)),
+    [buildItem, catalog.interests]
   )
 
   const aiItems = useMemo(
-    () => interestItems.filter((item) => item.source === 'ai'),
-    [interestItems]
+    () => catalog.recommendations.map((rec) => buildItem('ai', rec)),
+    [buildItem, catalog.recommendations]
   )
 
   const interestStatusCounts = useMemo(() => (
@@ -302,6 +341,25 @@ export default function MyInterestsPage() {
             >
               Sugeridos pela IA ({aiCount})
             </button>
+          </div>
+        ) : null}
+
+        {!loading && !errorMessage && activeTab === 'ai' ? (
+          <div className="my-interests-ai-toolbar">
+            <p className="my-interests-ai-toolbar__hint">
+              Pesquisas que a IA identificou como compatíveis com seu perfil.
+            </p>
+            <button
+              type="button"
+              className="btn btn-secondary my-interests-ai-toolbar__button"
+              onClick={handleRefreshRecommendations}
+              disabled={aiRefreshLoading}
+            >
+              {aiRefreshLoading ? 'Atualizando...' : 'Atualizar sugestões'}
+            </button>
+            {aiRefreshMessage ? (
+              <span className="my-interests-ai-toolbar__message">{aiRefreshMessage}</span>
+            ) : null}
           </div>
         ) : null}
 
@@ -396,7 +454,22 @@ export default function MyInterestsPage() {
                   <span className="my-interest-status my-interest-status--project">
                     Projeto: {item.status}
                   </span>
+                  {item.source === 'ai' && item.scoreMatch !== null ? (
+                    <span className="my-interest-status my-interest-status--score">
+                      Compatibilidade: {formatMatchScore(item.scoreMatch)}
+                    </span>
+                  ) : null}
                 </div>
+
+                {item.source === 'ai' && item.matchReasons.length > 0 ? (
+                  <div className="my-interest-card__reasons" aria-label="Motivos do match">
+                    {item.matchReasons.map((reason) => (
+                      <span key={`${item.id}-${reason}`} className="my-interest-reason">
+                        {formatMatchReason(reason)}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>

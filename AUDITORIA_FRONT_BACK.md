@@ -21,7 +21,8 @@
 | Perfil empresa | Edicao parcial de empresa autenticada | `GET /api/auth/profile/`, `GET /api/companies/{id}`, `PATCH /api/companies/{id}` | CNPJ e situacao cadastral sao leitura; status ainda esta editavel por decisao pendente. |
 | Perfil pesquisador | Edicao de nome, disponibilidade, areas, curriculo, formacoes, experiencias e habilidades existentes | `GET /api/universities/{id}`, `GET /api/researchers/{id}/resume/`, `PATCH /api/researchers/{id}`, `GET /api/research/area/`, `GET /api/skills/`, `POST /api/resumes/`, `PATCH /api/resumes/{id}`, `POST /api/educations/`, `DELETE /api/educations/{id}`, `POST /api/experiences/`, `DELETE /api/experiences/{id}` | Se nao houver curriculo, o front cria e vincula antes de criar formacao/experiencia/habilidade. **Editar formacao/experiencia (PATCH) nao tem UI ainda.** |
 | **Busca semantica real** | Busca em vetores (pgvector + sentence-transformers MiniLM) + ranking hibrido (semantico + lexical + cobertura) | `GET /api/search/researchers/`, `GET /api/search/research/` | Se o endpoint responder 404, cai num fallback local de busca por palavras-chave (mantido por seguranca). |
-| Publicacao de pesquisa | Empresa cria pesquisa e gerencia candidatos/match suportado | `GET /api/research/`, `POST /api/research/`, `GET /api/research/area/`, `GET /api/research/{id}/candidates/`, `PATCH /api/research/{id}/candidates/{candidateId}/`, `POST /api/research/{id}/match/run/` | Front nao envia `company` nem `researcher` ao criar pesquisa. **Match continua placeholder no backend (score 1.0 fixo).** |
+| Publicacao de pesquisa | Empresa cria pesquisa e gerencia candidatos/match. Tela exibe `score_match` e `match_reasons` por candidato. | `GET /api/research/`, `POST /api/research/`, `GET /api/research/area/`, `GET /api/research/{id}/candidates/`, `PATCH /api/research/{id}/candidates/{candidateId}/`, `POST /api/research/{id}/match/run/` | Em `main` o match e placeholder; na branch `match_ia_gemini` usa IA real (MiniLM + pgvector + rerank Gemini). |
+| **Recomendacoes da IA para pesquisador** | Aba "Sugeridos pela IA" no `MyInterestsPage` consome o endpoint dedicado e exibe motivos/score; botao "Atualizar sugestoes" forca re-execucao do match. | `GET /api/research/my-recommendations/`, `GET /api/research/my-recommendations/?refresh=true` | So existe na branch `match_ia_gemini`. Em `main` o endpoint nao existe e o front cai num catch silencioso (retorna lista vazia). |
 | Indicadores | Metricas calculadas no front a partir de listas reais | `GET /api/companies/`, `GET /api/researchers/`, `GET /api/universities/`, `GET /api/research/`, `GET /api/resumes/`, `GET /api/educations/`, `GET /api/experiences/`, `GET /api/skills/` | Tela publica informa que indicadores reais exigem autenticacao. |
 
 ## Mocks e simulacoes
@@ -61,6 +62,7 @@
 - `POST /api/research/`
 - `POST /api/research/{id}/interest/`
 - `GET /api/research/my-interests/`
+- `GET /api/research/my-recommendations/` **(novo, branch `match_ia_gemini`)**
 - `GET /api/research/{id}/candidates/`
 - `PATCH /api/research/{id}/candidates/{candidateId}/`
 - `POST /api/research/{id}/match/run/`
@@ -94,6 +96,20 @@
 - Notificacoes
 - CRUD administrativo de universidades, areas e skills (existem endpoints mas o front nao usa para evitar mutar catalogo global)
 
-### Branch separada em desenvolvimento (nao mergeada em `main`)
+### Branch `match_ia_gemini` (em desenvolvimento, nao mergeada em `main`)
 
-- `apps/ai_matching/` na branch `Fix_test_Ai` — implementacao com Google Gemini API e modelos proprios (`MatchingProfile`, `Match`, `MatchingHistory`). Arquitetura diferente da atual. **Frontend nao integra ate decisao do time de produto sobre qual API sera mantida.**
+Implementacao real da IA de matching, integrada com o app `apps/search`:
+
+- Pgvector + sentence-transformers MiniLM (mesmos vetores da busca semantica).
+- Ranking hibrido: `WEIGHT_SEMANTIC=0.50`, `WEIGHT_LEXICAL=0.25`, `WEIGHT_AREA=0.15`, `WEIGHT_AVAILABILITY=0.10`.
+- Score minimo: `0.30` (filtra ruido).
+- Rerank opcional do top N candidatos via Gemini API (`AI_MATCH_RERANK_ENABLED`).
+- Processamento assincrono opcional via Celery + Redis (`AI_MATCH_ASYNC_ENABLED`).
+- Novos campos no `ResearchCandidate`: `match_reasons` (JSON array) e `score_features` (JSON).
+- Endpoint novo: `GET /research/my-recommendations/`.
+
+**Frontend ja consome essa branch** (campos extras tratados com graceful fallback quando ausentes).
+
+### Branch `Fix_test_Ai` (alternativa abandonada)
+
+App `apps/ai_matching/` com arquitetura paralela (Gemini API + modelos proprios `MatchingProfile`, `Match`, `MatchingHistory`). Nao foi mergeada e parece ter sido substituida pela `match_ia_gemini`. **Frontend nao consome.**
