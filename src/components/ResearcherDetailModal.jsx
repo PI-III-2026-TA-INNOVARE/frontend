@@ -1,5 +1,24 @@
 import { formatDateLabel } from '../lib/domain'
 
+const MATCH_REASON_LABELS = {
+  alta_similaridade_semantica: 'Alta similaridade semântica',
+  similaridade_semantica_moderada: 'Similaridade moderada',
+  boa_aderencia_textual: 'Boa aderência textual',
+  mesma_area_de_pesquisa: 'Mesma área de pesquisa',
+  disponibilidade_compativel: 'Disponibilidade compatível',
+}
+
+function formatMatchReason(reason) {
+  if (!reason) return ''
+  return MATCH_REASON_LABELS[reason] || reason.replace(/_/g, ' ')
+}
+
+function formatMatchScore(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return null
+  return `${Math.round(parsed * 100)}%`
+}
+
 function getAvailabilityLabel(value) {
   if (value === true) {
     return 'Disponivel'
@@ -48,6 +67,10 @@ export default function ResearcherDetailModal({
   const experiences = resume?.experience || []
   const skills = resume?.skill || []
   const availability = researcher.detail?.availability ?? researcher.availability
+  const matchReasons = Array.isArray(researcher.detail?.matchReasons) ? researcher.detail.matchReasons : []
+  const matchScoreLabel = formatMatchScore(researcher.detail?.scoreMatch)
+  const candidateSource = researcher.detail?.candidateSource || null
+  const interestMessage = researcher.detail?.interestMessage || ''
 
   return (
     <div
@@ -83,6 +106,59 @@ export default function ResearcherDetailModal({
             x
           </button>
         </header>
+
+        {candidateSource === 'ai' && (matchReasons.length > 0 || matchScoreLabel) ? (
+          <section className="researcher-detail-modal__section researcher-detail-modal__match">
+            <div className="researcher-detail-modal__match-head">
+              <h3>Por que a IA recomendou</h3>
+              {matchScoreLabel && matchScoreLabel !== '0%' ? (
+                <span className="researcher-detail-modal__match-score">
+                  Compatibilidade: {matchScoreLabel}
+                </span>
+              ) : null}
+            </div>
+            {matchReasons.length > 0 ? (
+              <div className="researcher-detail-modal__tags">
+                {matchReasons.map((reason) => (
+                  <span
+                    key={`match-${reason}`}
+                    className="researcher-detail-modal__match-reason"
+                  >
+                    {formatMatchReason(reason)}
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {candidateSource === 'interest' ? (
+          <section className="researcher-detail-modal__section researcher-detail-modal__match researcher-detail-modal__match--interest">
+            <div className="researcher-detail-modal__match-head">
+              <h3>Pesquisador se interessou pela pesquisa</h3>
+            </div>
+            {interestMessage ? (
+              <p className="researcher-detail-modal__match-message">
+                <strong>Mensagem do pesquisador:</strong> {interestMessage}
+              </p>
+            ) : (
+              <p className="researcher-detail-modal__match-message">
+                O pesquisador manifestou interesse em participar e aguarda retorno da empresa.
+              </p>
+            )}
+          </section>
+        ) : null}
+
+        {candidateSource === 'manual' ? (
+          <section className="researcher-detail-modal__section researcher-detail-modal__match researcher-detail-modal__match--manual">
+            <div className="researcher-detail-modal__match-head">
+              <h3>Indicação manual</h3>
+            </div>
+            <p className="researcher-detail-modal__match-message">
+              Este pesquisador foi indicado manualmente pela empresa.
+            </p>
+          </section>
+        ) : null}
 
         <section className="researcher-detail-modal__section">
           <h3>Areas de pesquisa</h3>

@@ -241,6 +241,74 @@
   min-width: 0;
 }
 
+.challenge-candidate__name {
+  display: inline-block;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--accent-primary);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: left;
+  text-decoration: underline;
+  text-decoration-color: rgba(91, 136, 165, 0.32);
+  text-underline-offset: 4px;
+  cursor: pointer;
+  transition: color var(--transition-fast), text-decoration-color var(--transition-fast);
+}
+
+.challenge-candidate__name:hover:not(:disabled) {
+  color: var(--accent-primary-strong);
+  text-decoration-color: currentColor;
+}
+
+.challenge-candidate__name:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
+.challenge-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 360px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: var(--bg-card-solid);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  box-shadow: 0 20px 48px rgba(11, 31, 61, 0.18);
+}
+
+.challenge-toast--error {
+  border: 1px solid rgba(168, 60, 60, 0.32);
+  background: var(--bg-danger-soft);
+  color: var(--accent-error);
+}
+
+.challenge-toast button {
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(11, 31, 61, 0.08);
+  color: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.challenge-toast button:hover {
+  background: rgba(11, 31, 61, 0.16);
+}
+
 .challenge-candidate__reasons {
   display: flex;
   flex-wrap: wrap;

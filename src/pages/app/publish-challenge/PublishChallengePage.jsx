@@ -1,9 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
+import ResearcherDetailModal from '../../../components/ResearcherDetailModal'
 import { useAuth } from '../../../context/AuthContext'
 import { buildPageLabel, paginateItems } from '../../../lib/domain'
 import {
   createResearch,
+  getResearcher,
+  getResearcherResume,
+  getUniversity,
   listResearchAreas,
   listResearchCandidates,
   listResearches,
@@ -234,6 +238,9 @@ export default function PublishChallengePage() {
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
   const [selectedResearch, setSelectedResearch] = useState(null)
+  const [selectedResearcher, setSelectedResearcher] = useState(null)
+  const [researcherLoadingId, setResearcherLoadingId] = useState(null)
+  const [researcherErrorMessage, setResearcherErrorMessage] = useState('')
   const [editingResearchId, setEditingResearchId] = useState(null)
   const [researchCandidateFilter, setResearchCandidateFilter] = useState('all')
   const [catalog, setCatalog] = useState({
@@ -385,6 +392,59 @@ export default function PublishChallengePage() {
     [catalog.researchAreas]
   )
   const hasResearchAreas = catalog.researchAreas.length > 0
+
+  const handleViewResearcher = useCallback(async (candidate) => {
+    if (!candidate?.researcher) return
+
+    setResearcherLoadingId(candidate.id_candidate)
+    setResearcherErrorMessage('')
+
+    try {
+      const researcher = await getResearcher(candidate.researcher)
+
+      const [resumeResult, universityResult] = await Promise.allSettled([
+        researcher?.resume ? getResearcherResume(candidate.researcher) : Promise.resolve(null),
+        researcher?.university ? getUniversity(researcher.university) : Promise.resolve(null),
+      ])
+
+      const resume = resumeResult.status === 'fulfilled' ? resumeResult.value : null
+      const university = universityResult.status === 'fulfilled' ? universityResult.value : null
+
+      const areaIds = Array.isArray(researcher?.area) ? researcher.area : []
+      const tags = areaIds
+        .map((areaId) => {
+          if (areaId && typeof areaId === 'object') {
+            return areaId.name || researchAreaLookup[String(areaId.id_area ?? areaId.id)]
+          }
+          return researchAreaLookup[String(areaId)]
+        })
+        .filter(Boolean)
+
+      setSelectedResearcher({
+        id: `researcher-${researcher.id_researcher}`,
+        type: 'pesquisador',
+        title: researcher.name || candidate.researcher_name || 'Pesquisador sem nome',
+        subtitle: university?.name || 'Universidade não informada',
+        tags,
+        availability: researcher.availability,
+        detail: {
+          ...researcher,
+          university_name: university?.name,
+          resumeData: resume,
+          matchReasons: Array.isArray(candidate.match_reasons) ? candidate.match_reasons : [],
+          scoreMatch: candidate.score_match ?? null,
+          candidateSource: candidate.source,
+          interestMessage: candidate.interest_message || '',
+        },
+      })
+    } catch (error) {
+      setResearcherErrorMessage(
+        error.message || 'Não foi possível carregar os detalhes deste pesquisador.'
+      )
+    } finally {
+      setResearcherLoadingId(null)
+    }
+  }, [researchAreaLookup])
 
   const handleChange = (field, value) => {
     setResearchForm((current) => ({
@@ -811,7 +871,17 @@ export default function PublishChallengePage() {
                           candidates.map((candidate) => (
                             <div key={candidate.id_candidate} className="challenge-candidate">
                               <div className="challenge-candidate__info">
-                                <strong>{candidate.researcher_name || 'Pesquisador não identificado'}</strong>
+                                <button
+                                  type="button"
+                                  className="challenge-candidate__name"
+                                  onClick={() => handleViewResearcher(candidate)}
+                                  disabled={researcherLoadingId === candidate.id_candidate}
+                                  title="Ver detalhes do pesquisador"
+                                >
+                                  {researcherLoadingId === candidate.id_candidate
+                                    ? 'Carregando...'
+                                    : candidate.researcher_name || 'Pesquisador não identificado'}
+                                </button>
                                 <span>
                                   {getCandidateSourceLabel(candidate.source)} ·{' '}
                                   {getCandidateStatusLabel(candidate.status)}
@@ -909,6 +979,26 @@ export default function PublishChallengePage() {
           research={selectedResearch}
           onClose={() => setSelectedResearch(null)}
         />
+      ) : null}
+
+      {selectedResearcher ? (
+        <ResearcherDetailModal
+          researcher={selectedResearcher}
+          onClose={() => setSelectedResearcher(null)}
+        />
+      ) : null}
+
+      {researcherErrorMessage ? (
+        <div className="challenge-toast challenge-toast--error" role="alert">
+          {researcherErrorMessage}
+          <button
+            type="button"
+            onClick={() => setResearcherErrorMessage('')}
+            aria-label="Fechar mensagem"
+          >
+            ×
+          </button>
+        </div>
       ) : null}
     </section>
   )
