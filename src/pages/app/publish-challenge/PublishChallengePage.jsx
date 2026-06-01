@@ -23,7 +23,8 @@ const candidateStatusOptions = [
   { value: 'rejected', label: 'Rejeitado' },
 ]
 
-const PUBLISHED_RESEARCH_PAGE_SIZE = 20
+const PUBLISHED_RESEARCH_PAGE_SIZE = 5
+const MATCH_POLL_DELAYS = [4000, 8000, 15000, 30000, 60000]
 
 const researchCandidateFilterOptions = [
   { value: 'all', label: 'Todas as pesquisas' },
@@ -237,6 +238,7 @@ export default function PublishChallengePage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
+  const [matchResultByResearch, setMatchResultByResearch] = useState({})
   const [selectedResearch, setSelectedResearch] = useState(null)
   const [selectedResearcher, setSelectedResearcher] = useState(null)
   const [researcherLoadingId, setResearcherLoadingId] = useState(null)
@@ -542,17 +544,52 @@ export default function PublishChallengePage() {
   const handleRunMatch = async (researchId) => {
     const loadingKey = `match-${researchId}`
     setCandidateActionLoading(loadingKey)
-    setCandidateMessage('')
+    setMatchResultByResearch((prev) => ({ ...prev, [researchId]: null }))
     setErrorMessage('')
 
     try {
+      const countBefore = (catalog.candidatesByResearch[researchId] || []).length
       const result = await runResearchMatch(researchId)
-      await refreshCandidates(researchId)
-      setCandidateMessage(
-        `Match solicitado para a pesquisa ${result.research_id}. Job ${result.job_id}.`
-      )
+
+      if (result.status !== 'queued') {
+        await refreshCandidates(researchId)
+        setMatchResultByResearch((prev) => ({
+          ...prev,
+          [researchId]: result.updated === 0
+            ? { type: 'empty', text: 'Nenhum pesquisador compatível encontrado para esta pesquisa.' }
+            : { type: 'success', text: `${result.updated} pesquisador(es) compatível(is) encontrado(s).` },
+        }))
+        return
+      }
+
+      // Assíncrono — libera o botão e faz polling
+      setCandidateActionLoading('')
+      setMatchResultByResearch((prev) => ({
+        ...prev,
+        [researchId]: { type: 'queued', text: 'Match em processamento, verificando resultados...' },
+      }))
+
+      for (const delay of MATCH_POLL_DELAYS) {
+        await new Promise((resolve) => setTimeout(resolve, delay))
+        const candidates = await refreshCandidates(researchId)
+        if (candidates.length > countBefore) {
+          setMatchResultByResearch((prev) => ({
+            ...prev,
+            [researchId]: { type: 'success', text: `${candidates.length - countBefore} pesquisador(es) compatível(is) encontrado(s).` },
+          }))
+          return
+        }
+      }
+
+      setMatchResultByResearch((prev) => ({
+        ...prev,
+        [researchId]: { type: 'empty', text: 'Nenhum pesquisador compatível encontrado para esta pesquisa.' },
+      }))
     } catch (error) {
-      setErrorMessage(error.message || 'Nao foi possivel executar o match desta pesquisa.')
+      setMatchResultByResearch((prev) => ({
+        ...prev,
+        [researchId]: { type: 'error', text: error.message || 'Não foi possível executar o match desta pesquisa.' },
+      }))
     } finally {
       setCandidateActionLoading('')
     }
@@ -859,6 +896,12 @@ export default function PublishChallengePage() {
                             : 'Rodar match suportado'}
                         </button>
                       </div>
+
+                      {matchResultByResearch[item.id_research] ? (
+                        <p className={`challenge-match-result challenge-match-result--${matchResultByResearch[item.id_research].type}`}>
+                          {matchResultByResearch[item.id_research].text}
+                        </p>
+                      ) : null}
 
                       <div className="challenge-candidates">
                         <span className="challenge-form-card__eyebrow">

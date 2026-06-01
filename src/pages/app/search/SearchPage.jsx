@@ -4,6 +4,7 @@ import ResearcherDetailModal from '../../../components/ResearcherDetailModal'
 import { useAuth } from '../../../context/AuthContext'
 import { buildPageLabel, paginateItems } from '../../../lib/domain'
 import {
+  createManualCandidate,
   createResearchInterest,
   getResearch,
   getResearcher,
@@ -341,6 +342,9 @@ export default function SearchPage() {
   const [partialWarnings, setPartialWarnings] = useState([])
   const [interestLoading, setInterestLoading] = useState('')
   const [interestMessage, setInterestMessage] = useState('')
+  const [suggestLoading, setSuggestLoading] = useState(false)
+  const [suggestMessage, setSuggestMessage] = useState('')
+  const [suggestError, setSuggestError] = useState('')
   const [researchAreas, setResearchAreas] = useState([])
   const [myInterests, setMyInterests] = useState([])
   const [areaCountSource, setAreaCountSource] = useState([])
@@ -472,14 +476,19 @@ export default function SearchPage() {
 
         return {
           id: `researcher-${item.id_researcher}`,
+          researcherId: item.id_researcher,
           type: 'pesquisador',
           title: detail.name || item.name || 'Pesquisador sem nome informado',
           subtitle: detail.university_name || item.university || 'Universidade não informada',
           tags: fallbackTags,
           availability: detail.availability ?? item.availability,
+          scoreHybrid: item.score_hybrid ?? null,
+          scoreSemantic: item.score_semantic ?? null,
           detail: {
             ...detail,
             resumeData: resume,
+            scoreHybrid: item.score_hybrid ?? null,
+            scoreSemantic: item.score_semantic ?? null,
           },
           action: null,
         }
@@ -844,6 +853,24 @@ export default function SearchPage() {
     setSelectedResearcher(null)
     setSelectedProjectId('')
     setProjectSearch('')
+    setSuggestMessage('')
+    setSuggestError('')
+  }
+
+  const handleSuggestParticipation = async (researchId, researcherId) => {
+    if (!researchId || !researcherId) return
+    setSuggestLoading(true)
+    setSuggestMessage('')
+    setSuggestError('')
+    try {
+      await createManualCandidate(researchId, researcherId)
+      setSuggestMessage('Pesquisador indicado com sucesso para a pesquisa.')
+      setSelectedProjectId('')
+    } catch (err) {
+      setSuggestError(err.message || 'Não foi possível registrar a indicação.')
+    } finally {
+      setSuggestLoading(false)
+    }
   }
 
   return (
@@ -1130,6 +1157,10 @@ export default function SearchPage() {
           onProjectSearchChange={(event) => setProjectSearch(event.target.value)}
           selectedProjectId={selectedProjectId}
           onSelectedProjectChange={(event) => setSelectedProjectId(event.target.value)}
+          onSuggest={handleSuggestParticipation}
+          suggestLoading={suggestLoading}
+          suggestMessage={suggestMessage}
+          suggestError={suggestError}
         />
       ) : null}
     </section>

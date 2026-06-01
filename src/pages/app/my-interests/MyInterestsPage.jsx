@@ -5,6 +5,7 @@ import {
   getResearch,
   listMyRecommendations,
   listMyResearchInterests,
+  listMySuggestions,
   listResearchAreas,
 } from '../../../services/pdConnectApi'
 import './MyInterestsPage.scss'
@@ -32,14 +33,20 @@ const tabs = [
   {
     id: 'interests',
     label: 'Seus interesses',
-    emptyTitle: 'Voce ainda nao demonstrou interesse em nenhum projeto.',
-    emptyText: 'Use a busca semantica para encontrar pesquisas aderentes ao seu perfil.',
+    emptyTitle: 'Você ainda não demonstrou interesse em nenhum projeto.',
+    emptyText: 'Use a busca semântica para encontrar pesquisas aderentes ao seu perfil.',
   },
   {
     id: 'ai',
-    label: 'Sugestoes da IA',
-    emptyTitle: 'A IA ainda nao sugeriu projetos para o seu perfil.',
+    label: 'Sugeridos pela IA',
+    emptyTitle: 'A IA ainda não sugeriu projetos para o seu perfil.',
     emptyText: 'Quando uma empresa executar o match, as pesquisas sugeridas aparecem aqui.',
+  },
+  {
+    id: 'suggestions',
+    label: 'Indicados por empresas',
+    emptyTitle: 'Nenhuma empresa indicou você para um projeto ainda.',
+    emptyText: 'Quando uma empresa indicar seu perfil para uma pesquisa, ela aparece aqui.',
   },
 ]
 
@@ -125,6 +132,7 @@ export default function MyInterestsPage() {
   const [catalog, setCatalog] = useState({
     interests: [],
     recommendations: [],
+    suggestions: [],
     researchDetails: {},
     companies: {},
     researchAreas: [],
@@ -133,13 +141,14 @@ export default function MyInterestsPage() {
   const [aiRefreshMessage, setAiRefreshMessage] = useState('')
 
   const loadCatalog = useCallback(async ({ refreshRecommendations = false } = {}) => {
-    const [interests, recommendations, researchAreas] = await Promise.all([
+    const [interests, recommendations, suggestions, researchAreas] = await Promise.all([
       listMyResearchInterests(),
       listMyRecommendations({ refresh: refreshRecommendations }).catch(() => []),
+      listMySuggestions().catch(() => []),
       listResearchAreas(),
     ])
 
-    const allItems = [...interests, ...recommendations]
+    const allItems = [...interests, ...recommendations, ...suggestions]
     const uniqueResearchIds = [
       ...new Set(allItems.map((item) => String(item.research_id))),
     ]
@@ -172,7 +181,7 @@ export default function MyInterestsPage() {
       return lookup
     }, {})
 
-    return { interests, recommendations, researchDetails, companies, researchAreas }
+    return { interests, recommendations, suggestions, researchDetails, companies, researchAreas }
   }, [])
 
   useEffect(() => {
@@ -271,6 +280,11 @@ export default function MyInterestsPage() {
     [buildItem, catalog.recommendations]
   )
 
+  const suggestionItems = useMemo(
+    () => catalog.suggestions.map((s) => buildItem('manual', s)),
+    [buildItem, catalog.suggestions]
+  )
+
   const interestStatusCounts = useMemo(() => (
     interestedItems.reduce((lookup, item) => {
       lookup.all += 1
@@ -280,26 +294,20 @@ export default function MyInterestsPage() {
   ), [interestedItems])
 
   const tabItems = useMemo(() => {
-    if (activeTab === 'ai') {
-      return aiItems
-    }
+    if (activeTab === 'ai') return aiItems
+    if (activeTab === 'suggestions') return suggestionItems
 
-    if (activeInterestStatus === 'all') {
-      return interestedItems
-    }
-
+    if (activeInterestStatus === 'all') return interestedItems
     return interestedItems.filter((item) => item.candidateStatus === activeInterestStatus)
-  }, [activeInterestStatus, activeTab, aiItems, interestedItems])
+  }, [activeInterestStatus, activeTab, aiItems, interestedItems, suggestionItems])
 
   const interestCount = useMemo(
     () => interestedItems.length,
     [interestedItems]
   )
 
-  const aiCount = useMemo(
-    () => aiItems.length,
-    [aiItems]
-  )
+  const aiCount = useMemo(() => aiItems.length, [aiItems])
+  const suggestionsCount = useMemo(() => suggestionItems.length, [suggestionItems])
 
   const activeTabContent = tabs.find((tab) => tab.id === activeTab) || tabs[0]
   const activeStatusLabel = (
@@ -340,6 +348,15 @@ export default function MyInterestsPage() {
               onClick={() => setActiveTab('ai')}
             >
               Sugeridos pela IA ({aiCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === 'suggestions'}
+              className={`my-interests-tab${activeTab === 'suggestions' ? ' active' : ''}`}
+              onClick={() => setActiveTab('suggestions')}
+            >
+              Indicados por empresas ({suggestionsCount})
             </button>
           </div>
         ) : null}
@@ -448,7 +465,7 @@ export default function MyInterestsPage() {
 
                 <div className="my-interest-card__status-row">
                   <span className="my-interest-status">
-                    {item.source === 'ai' ? 'Match da IA' : 'Candidatura'}:{' '}
+                    {item.source === 'ai' ? 'Match da IA' : item.source === 'manual' ? 'Indicação da empresa' : 'Candidatura'}:{' '}
                     {getCandidateStatusLabel(item.candidateStatus)}
                   </span>
                   <span className="my-interest-status my-interest-status--project">

@@ -103,9 +103,22 @@ export function listMyResearchInterests() {
   return fetchPaginatedCollection('/research/my-interests/')
 }
 
+export function listMySuggestions() {
+  return fetchPaginatedCollection('/research/my-suggestions/')
+}
+
 export function listMyRecommendations({ refresh = false } = {}) {
   const suffix = refresh ? '?refresh=true' : ''
   return fetchPaginatedCollection(`/research/my-recommendations/${suffix}`)
+}
+
+export function getResearcherDashboard() {
+  return apiRequest('/dashboard/researcher/')
+}
+
+export function getCompanyDashboard(researchId = null) {
+  const suffix = researchId ? `?research_id=${researchId}` : ''
+  return apiRequest(`/dashboard/company/${suffix}`)
 }
 
 export function createResearch(payload) {
@@ -132,6 +145,13 @@ export function createResearchInterest(researchId, payload = {}) {
 export function listResearchCandidates(researchId, params = {}) {
   const suffix = buildQueryString(params)
   return fetchPaginatedCollection(`/research/${researchId}/candidates/${suffix}`)
+}
+
+export function createManualCandidate(researchId, researcherId) {
+  return apiRequest(`/research/${researchId}/candidates/`, {
+    method: 'POST',
+    body: { researcher: researcherId },
+  })
 }
 
 export function updateResearchCandidateStatus(researchId, candidateId, status) {

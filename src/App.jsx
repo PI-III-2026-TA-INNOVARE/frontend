@@ -7,6 +7,7 @@ import HomePage from './pages/landing/home'
 import SobrePage from './pages/landing/sobre'
 import ComoFuncionaPage from './pages/landing/como-funciona'
 import IndicadoresPage from './pages/landing/indicadores'
+import AppIndicadoresPage from './pages/app/indicadores'
 import LoginPage from './pages/auth/login'
 import ForgotPasswordPage from './pages/auth/forgot-password'
 import ResetPasswordPage from './pages/auth/reset-password'
@@ -34,7 +35,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route element={<AuthenticatedLayout />}>
             <Route path="/pesquisa" element={<SearchPage />} />
-            <Route path="/app/indicadores" element={<IndicadoresPage />} />
+            <Route path="/app/indicadores" element={<AppIndicadoresPage />} />
             <Route path="/perfil" element={<ProfilePage />} />
 
             <Route element={<ProtectedRoute requiredType="pesquisador" />}>

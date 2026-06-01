@@ -19,16 +19,16 @@ function formatMatchScore(value) {
   return `${Math.round(parsed * 100)}%`
 }
 
+function formatRelevanceScore(value) {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed <= 0) return null
+  return Math.round(parsed * 100)
+}
+
 function getAvailabilityLabel(value) {
-  if (value === true) {
-    return 'Disponivel'
-  }
-
-  if (value === false) {
-    return 'Indisponivel'
-  }
-
-  return 'Nao informada'
+  if (value === true) return 'Disponível'
+  if (value === false) return 'Indisponível'
+  return 'Não informada'
 }
 
 function getResumeData(researcher) {
@@ -36,7 +36,7 @@ function getResumeData(researcher) {
 }
 
 function buildPeriodLabel(startDate, endDate) {
-  return `${formatDateLabel(startDate, 'Data nao informada')} ate ${formatDateLabel(endDate)}`
+  return `${formatDateLabel(startDate, 'Data não informada')} até ${formatDateLabel(endDate)}`
 }
 
 function EmptyDetail({ title, text }) {
@@ -45,6 +45,24 @@ function EmptyDetail({ title, text }) {
       <strong>{title}</strong>
       <span>{text}</span>
     </article>
+  )
+}
+
+function RelevanceBar({ score }) {
+  const pct = Math.min(100, Math.max(0, score))
+  const color = pct >= 70 ? 'var(--accent-primary)' : pct >= 45 ? '#e09c20' : '#b94040'
+  return (
+    <div className="researcher-detail-modal__relevance-bar-wrap">
+      <div className="researcher-detail-modal__relevance-bar-track">
+        <div
+          className="researcher-detail-modal__relevance-bar-fill"
+          style={{ width: `${pct}%`, background: color }}
+        />
+      </div>
+      <span className="researcher-detail-modal__relevance-pct" style={{ color }}>
+        {pct}%
+      </span>
+    </div>
   )
 }
 
@@ -57,10 +75,12 @@ export default function ResearcherDetailModal({
   onProjectSearchChange,
   selectedProjectId = '',
   onSelectedProjectChange,
+  onSuggest,
+  suggestLoading = false,
+  suggestMessage = '',
+  suggestError = '',
 }) {
-  if (!researcher) {
-    return null
-  }
+  if (!researcher) return null
 
   const resume = getResumeData(researcher)
   const educations = resume?.education || []
@@ -71,6 +91,11 @@ export default function ResearcherDetailModal({
   const matchScoreLabel = formatMatchScore(researcher.detail?.scoreMatch)
   const candidateSource = researcher.detail?.candidateSource || null
   const interestMessage = researcher.detail?.interestMessage || ''
+  const scoreHybrid = formatRelevanceScore(researcher.detail?.scoreHybrid ?? researcher.scoreHybrid)
+  const scoreSemantic = formatRelevanceScore(researcher.detail?.scoreSemantic ?? researcher.scoreSemantic)
+
+  const canSuggest = Boolean(selectedProjectId) && !suggestLoading && !suggestMessage
+  const researcherId = researcher.researcherId ?? null
 
   return (
     <div
@@ -91,7 +116,7 @@ export default function ResearcherDetailModal({
             <span className="section-label">Detalhes do pesquisador</span>
             <div className="researcher-detail-modal__title-row">
               <h2 id="researcher-detail-title">{researcher.title}</h2>
-              <span className="researcher-availability-badge">
+              <span className={`researcher-availability-badge researcher-availability-badge--${availability === true ? 'available' : availability === false ? 'unavailable' : 'unknown'}`}>
                 {getAvailabilityLabel(availability)}
               </span>
             </div>
@@ -103,10 +128,32 @@ export default function ResearcherDetailModal({
             aria-label="Fechar detalhes"
             onClick={onClose}
           >
-            x
+            ×
           </button>
         </header>
 
+        {/* Score de relevância semântica da busca */}
+        {(scoreHybrid !== null || scoreSemantic !== null) ? (
+          <section className="researcher-detail-modal__section researcher-detail-modal__scores">
+            <h3>Relevância para a busca</h3>
+            <div className="researcher-detail-modal__scores-grid">
+              {scoreHybrid !== null ? (
+                <div className="researcher-detail-modal__score-item">
+                  <span className="researcher-detail-modal__score-label">Score geral</span>
+                  <RelevanceBar score={scoreHybrid} />
+                </div>
+              ) : null}
+              {scoreSemantic !== null ? (
+                <div className="researcher-detail-modal__score-item">
+                  <span className="researcher-detail-modal__score-label">Semântica</span>
+                  <RelevanceBar score={scoreSemantic} />
+                </div>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {/* Match por IA */}
         {candidateSource === 'ai' && (matchReasons.length > 0 || matchScoreLabel) ? (
           <section className="researcher-detail-modal__section researcher-detail-modal__match">
             <div className="researcher-detail-modal__match-head">
@@ -120,10 +167,7 @@ export default function ResearcherDetailModal({
             {matchReasons.length > 0 ? (
               <div className="researcher-detail-modal__tags">
                 {matchReasons.map((reason) => (
-                  <span
-                    key={`match-${reason}`}
-                    className="researcher-detail-modal__match-reason"
-                  >
+                  <span key={`match-${reason}`} className="researcher-detail-modal__match-reason">
                     {formatMatchReason(reason)}
                   </span>
                 ))}
@@ -132,6 +176,7 @@ export default function ResearcherDetailModal({
           </section>
         ) : null}
 
+        {/* Interesse do pesquisador */}
         {candidateSource === 'interest' ? (
           <section className="researcher-detail-modal__section researcher-detail-modal__match researcher-detail-modal__match--interest">
             <div className="researcher-detail-modal__match-head">
@@ -149,6 +194,7 @@ export default function ResearcherDetailModal({
           </section>
         ) : null}
 
+        {/* Indicação manual */}
         {candidateSource === 'manual' ? (
           <section className="researcher-detail-modal__section researcher-detail-modal__match researcher-detail-modal__match--manual">
             <div className="researcher-detail-modal__match-head">
@@ -160,8 +206,32 @@ export default function ResearcherDetailModal({
           </section>
         ) : null}
 
+        {/* Visão geral — stats rápidos */}
+        <section className="researcher-detail-modal__section researcher-detail-modal__overview">
+          <h3>Visão geral</h3>
+          <div className="researcher-detail-modal__overview-grid">
+            <div className="researcher-detail-modal__overview-item">
+              <span className="researcher-detail-modal__overview-value">{educations.length}</span>
+              <span className="researcher-detail-modal__overview-label">Formações</span>
+            </div>
+            <div className="researcher-detail-modal__overview-item">
+              <span className="researcher-detail-modal__overview-value">{experiences.length}</span>
+              <span className="researcher-detail-modal__overview-label">Experiências</span>
+            </div>
+            <div className="researcher-detail-modal__overview-item">
+              <span className="researcher-detail-modal__overview-value">{skills.length}</span>
+              <span className="researcher-detail-modal__overview-label">Habilidades</span>
+            </div>
+            <div className="researcher-detail-modal__overview-item">
+              <span className="researcher-detail-modal__overview-value">{researcher.tags.length}</span>
+              <span className="researcher-detail-modal__overview-label">Áreas</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Áreas de pesquisa */}
         <section className="researcher-detail-modal__section">
-          <h3>Areas de pesquisa</h3>
+          <h3>Áreas de pesquisa</h3>
           {researcher.tags.length > 0 ? (
             <div className="researcher-detail-modal__tags">
               {researcher.tags.map((tag) => (
@@ -171,27 +241,29 @@ export default function ResearcherDetailModal({
               ))}
             </div>
           ) : (
-            <p>Nenhuma area de pesquisa informada.</p>
+            <p>Nenhuma área de pesquisa informada.</p>
           )}
         </section>
 
+        {/* Habilidades */}
         <section className="researcher-detail-modal__section">
           <h3>Habilidades</h3>
           {skills.length > 0 ? (
             <div className="researcher-detail-modal__tags">
               {skills.map((skill) => (
-                <span key={skill.id_skill} className="search-result-card__tag">
+                <span key={skill.id_skill} className="search-result-card__tag researcher-detail-modal__skill-tag">
                   {skill.description}
                 </span>
               ))}
             </div>
           ) : (
-            <p>Nenhuma habilidade cadastrada no curriculo.</p>
+            <p>Nenhuma habilidade cadastrada no currículo.</p>
           )}
         </section>
 
+        {/* Formação acadêmica */}
         <section className="researcher-detail-modal__section">
-          <h3>Formacao academica</h3>
+          <h3>Formação acadêmica</h3>
           <div className="researcher-detail-modal__timeline">
             {educations.length > 0 ? (
               educations.map((education) => (
@@ -203,15 +275,16 @@ export default function ResearcherDetailModal({
               ))
             ) : (
               <EmptyDetail
-                title="Nenhuma formacao cadastrada"
-                text="Quando o pesquisador completar o curriculo, a empresa vera o historico academico aqui."
+                title="Nenhuma formação cadastrada"
+                text="Quando o pesquisador completar o currículo, a empresa verá o histórico acadêmico aqui."
               />
             )}
           </div>
         </section>
 
+        {/* Experiência profissional */}
         <section className="researcher-detail-modal__section">
-          <h3>Experiencia profissional</h3>
+          <h3>Experiência profissional</h3>
           <div className="researcher-detail-modal__timeline">
             {experiences.length > 0 ? (
               experiences.map((experience) => (
@@ -222,63 +295,80 @@ export default function ResearcherDetailModal({
               ))
             ) : (
               <EmptyDetail
-                title="Nenhuma experiencia cadastrada"
-                text="Experiencias profissionais adicionadas pelo pesquisador aparecerao neste espaco."
+                title="Nenhuma experiência cadastrada"
+                text="Experiências profissionais adicionadas pelo pesquisador aparecerão neste espaço."
               />
             )}
           </div>
         </section>
 
+        {/* Sugerir participação */}
         <section className="researcher-detail-modal__section researcher-detail-modal__invite">
           <div>
-            <h3>Sugerir participacao</h3>
+            <h3>Sugerir participação</h3>
             <p>
-              Selecione uma das pesquisas publicadas pela empresa para indicar este pesquisador.
-              O envio da sugestao estara disponivel em breve.
+              Selecione uma das suas pesquisas publicadas para indicar este pesquisador como candidato.
             </p>
           </div>
 
-          <label className="semantic-field">
-            <span className="semantic-field__label">Filtrar pesquisas</span>
-            <input
-              className="semantic-field__control"
-              value={projectSearch}
-              onChange={onProjectSearchChange}
-              placeholder="Filtre por titulo ou area"
-            />
-          </label>
+          {suggestMessage ? (
+            <div className="researcher-detail-modal__suggest-feedback researcher-detail-modal__suggest-feedback--success">
+              {suggestMessage}
+            </div>
+          ) : null}
 
-          <label className="semantic-field">
-            <span className="semantic-field__label">Pesquisa da empresa</span>
-            <select
-              className="semantic-field__control"
-              value={selectedProjectId}
-              onChange={onSelectedProjectChange}
-            >
-              <option value="">
-                {companyResearches.length > 0
-                  ? 'Selecione uma pesquisa'
-                  : 'Nenhuma pesquisa publicada ainda'}
-              </option>
-              {projectGroups.map((group) => (
-                <optgroup key={group.areaName} label={group.areaName}>
-                  {group.items.map((research) => (
-                    <option key={research.id_research} value={research.id_research}>
-                      {research.title}
-                    </option>
+          {suggestError ? (
+            <div className="researcher-detail-modal__suggest-feedback researcher-detail-modal__suggest-feedback--error">
+              {suggestError}
+            </div>
+          ) : null}
+
+          {!suggestMessage ? (
+            <>
+              <label className="semantic-field">
+                <span className="semantic-field__label">Filtrar pesquisas</span>
+                <input
+                  className="semantic-field__control"
+                  value={projectSearch}
+                  onChange={onProjectSearchChange}
+                  placeholder="Filtre por título ou área"
+                />
+              </label>
+
+              <label className="semantic-field">
+                <span className="semantic-field__label">Pesquisa da empresa</span>
+                <select
+                  className="semantic-field__control"
+                  value={selectedProjectId}
+                  onChange={onSelectedProjectChange}
+                >
+                  <option value="">
+                    {companyResearches.length > 0
+                      ? 'Selecione uma pesquisa'
+                      : 'Nenhuma pesquisa publicada ainda'}
+                  </option>
+                  {projectGroups.map((group) => (
+                    <optgroup key={group.areaName} label={group.areaName}>
+                      {group.items.map((research) => (
+                        <option key={research.id_research} value={research.id_research}>
+                          {research.title}
+                        </option>
+                      ))}
+                    </optgroup>
                   ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+                </select>
+              </label>
 
-          <button
-            type="button"
-            className="btn btn-primary researcher-detail-modal__button"
-            disabled
-          >
-            Sugerir participacao
-          </button>
+              <button
+                type="button"
+                className="btn btn-primary researcher-detail-modal__button"
+                disabled={!canSuggest}
+                onClick={() => onSuggest && onSuggest(selectedProjectId, researcherId)}
+              >
+                {suggestLoading ? 'Enviando...' : 'Sugerir participação'}
+              </button>
+            </>
+          ) : null}
         </section>
       </article>
     </div>

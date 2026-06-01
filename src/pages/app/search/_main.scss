@@ -675,6 +675,140 @@
   justify-self: end;
 }
 
+/* Scores de relevância */
+.researcher-detail-modal__scores {
+  background: var(--bg-input-muted);
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+
+.researcher-detail-modal__scores-grid {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.researcher-detail-modal__score-item {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.researcher-detail-modal__score-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.researcher-detail-modal__relevance-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.researcher-detail-modal__relevance-bar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--border-soft);
+  overflow: hidden;
+}
+
+.researcher-detail-modal__relevance-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.researcher-detail-modal__relevance-pct {
+  font-size: 0.82rem;
+  font-weight: 800;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Visão geral — stats */
+.researcher-detail-modal__overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.researcher-detail-modal__overview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--bg-input-muted);
+  gap: 4px;
+}
+
+.researcher-detail-modal__overview-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  line-height: 1;
+}
+
+.researcher-detail-modal__overview-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Skill tag diferenciada */
+.researcher-detail-modal__skill-tag {
+  background: rgba(36, 58, 105, 0.07);
+  border: 1px solid rgba(36, 58, 105, 0.15);
+}
+
+/* Feedback de sugestão */
+.researcher-detail-modal__suggest-feedback {
+  padding: 12px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.researcher-detail-modal__suggest-feedback--success {
+  background: rgba(34, 139, 90, 0.1);
+  color: #1a7a48;
+  border: 1px solid rgba(34, 139, 90, 0.25);
+}
+
+.researcher-detail-modal__suggest-feedback--error {
+  background: rgba(185, 64, 64, 0.08);
+  color: #b94040;
+  border: 1px solid rgba(185, 64, 64, 0.2);
+}
+
+/* Badge de disponibilidade colorido */
+.researcher-availability-badge--available {
+  background: rgba(34, 139, 90, 0.12);
+  color: #1a7a48;
+  border-color: rgba(34, 139, 90, 0.25);
+}
+
+.researcher-availability-badge--unavailable {
+  background: rgba(185, 64, 64, 0.08);
+  color: #b94040;
+  border-color: rgba(185, 64, 64, 0.2);
+}
+
+.researcher-availability-badge--unknown {
+  background: var(--bg-chip);
+  color: var(--text-secondary);
+}
+
 @include media-down(lg) {
   .app-search-layout {
     grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
@@ -740,6 +874,14 @@
 }
 
 @include media-down(xs) {
+  .researcher-detail-modal__overview-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .researcher-detail-modal__score-item {
+    grid-template-columns: 90px 1fr;
+  }
+
   .search-result-card,
   .semantic-panel {
     padding: 20px;
