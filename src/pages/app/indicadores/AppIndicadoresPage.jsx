@@ -250,6 +250,7 @@ function ResearcherDashboard({ data }) {
 }
 
 const TABLE_PAGE_SIZE = 5
+const CHIP_PAGE_SIZE  = 10
 
 function normalizeText(v) {
   return (v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
@@ -259,21 +260,27 @@ function CompanyDashboard({ data }) {
   const researches = useMemo(() => data.researches || [], [data.researches])
 
   // ── Research selection (drives charts + table) ──────────────────────
-  const [activeResearches, setActiveResearches] = useState(
-    () => new Set(researches.map((r) => r.research_id))
-  )
+  const allIds = useMemo(() => researches.map((r) => r.research_id), [researches])
+  const [activeResearches, setActiveResearches] = useState(() => new Set(allIds))
+  const [chipPage, setChipPage] = useState(1)
+
   const toggleResearch = useCallback((id) => {
     setActiveResearches((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) {
-        if (next.size > 1) next.delete(id)
-      } else {
-        next.add(id)
-      }
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
     setTablePage(1)
   }, [])
+
+  const selectAllResearches  = useCallback(() => { setActiveResearches(new Set(allIds)); setTablePage(1) }, [allIds])
+  const deselectAllResearches = useCallback(() => { setActiveResearches(new Set()); setTablePage(1) }, [])
+
+  const totalChipPages   = Math.max(1, Math.ceil(researches.length / CHIP_PAGE_SIZE))
+  const paginatedChips   = useMemo(
+    () => researches.slice((chipPage - 1) * CHIP_PAGE_SIZE, chipPage * CHIP_PAGE_SIZE),
+    [researches, chipPage]
+  )
 
   // ── Aggregates from selected researches ─────────────────────────────
   const selected = useMemo(
@@ -330,49 +337,19 @@ function CompanyDashboard({ data }) {
     setTablePage((p) => Math.min(p, Math.max(1, Math.ceil(filteredTable.length / TABLE_PAGE_SIZE))))
   }, [filteredTable.length])
 
-  // ── Research chips for filtering ─────────────────────────────────────
-  const researchChips = useMemo(() => researches.map((r) => ({
-    key: r.research_id,
-    label: r.title,
-    color: 'var(--accent-primary)',
-  })), [researches])
-
   return (
-    <div className="app-ind-content">
-      <div className="app-ind-stats-grid">
-        <StatCard label="Pesquisas selecionadas" value={`${selected.length} / ${researches.length}`} />
-        <StatCard label="Total de candidatos" value={computedTotal} />
-        <StatCard
-          label="Score médio de compatibilidade"
-          value={formatScore(data.summary.average_score)}
-          sub="média dos candidatos com score"
-        />
-        <StatCard label="Aprovados" value={computedApproved} />
-      </div>
+    <div className="app-ind-company-layout">
 
-      {/* Research filter chips — sync charts + table */}
-      {researches.length > 1 ? (
-        <section className="app-ind-panel app-ind-panel--full">
-          <div className="app-ind-panel__head">
-            <h3>Filtrar por pesquisa</h3>
-            <span className="app-ind-chips-hint">Clique para incluir/excluir dos gráficos e tabela</span>
-          </div>
-          <div className="app-ind-research-chips">
-            {researchChips.map((chip) => (
-              <button
-                key={chip.key}
-                type="button"
-                className={`app-ind-chip${activeResearches.has(chip.key) ? ' app-ind-chip--active' : ''}`}
-                style={activeResearches.has(chip.key) ? { borderColor: chip.color, color: chip.color } : {}}
-                onClick={() => toggleResearch(chip.key)}
-              >
-                <span className="app-ind-chip__dot" style={{ background: chip.color }} />
-                {chip.label}
-              </button>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      {/* ── Coluna esquerda: stats + gráficos + tabela ── */}
+      <div className="app-ind-content">
+
+        {/* Stats */}
+        <div className="app-ind-stats-grid">
+          <StatCard label="Pesquisas selecionadas" value={`${selected.length} / ${researches.length}`} />
+          <StatCard label="Total de candidatos" value={computedTotal} />
+          <StatCard label="Score médio" value={formatScore(data.summary.average_score)} sub="candidatos com score" />
+          <StatCard label="Aprovados" value={computedApproved} />
+        </div>
 
       <div className="app-ind-charts-grid">
         <ChartSection
@@ -391,7 +368,7 @@ function CompanyDashboard({ data }) {
       </div>
 
       {researches.length > 0 ? (
-        <section className="app-ind-panel app-ind-panel--full">
+        <section className="app-ind-panel">
           <div className="app-ind-panel__head">
             <h3>Candidatos por pesquisa</h3>
             <input
@@ -459,6 +436,46 @@ function CompanyDashboard({ data }) {
           ) : null}
         </section>
       ) : null}
+      </div>
+
+      {/* ── Sidebar direita: filtro de pesquisas ── */}
+      {researches.length > 1 ? (
+        <aside className="app-ind-projects-sidebar">
+          <div className="app-ind-sidebar-filter">
+            <div className="app-ind-sidebar-filter__head">
+              <span className="app-ind-sidebar-filter__title">Pesquisas</span>
+              <span className="app-ind-chips-hint">{activeResearches.size}/{researches.length}</span>
+            </div>
+            <div className="app-ind-sidebar-filter__actions">
+              <button type="button" className="app-ind-text-btn" onClick={selectAllResearches}>todas</button>
+              <span className="app-ind-text-sep">·</span>
+              <button type="button" className="app-ind-text-btn" onClick={deselectAllResearches}>nenhuma</button>
+            </div>
+            <div className="app-ind-sidebar-chips">
+              {paginatedChips.map((r) => (
+                <button
+                  key={r.research_id}
+                  type="button"
+                  className={`app-ind-sidebar-chip${activeResearches.has(r.research_id) ? ' app-ind-sidebar-chip--active' : ''}`}
+                  onClick={() => toggleResearch(r.research_id)}
+                  title={r.title}
+                >
+                  <span className="app-ind-chip__dot" />
+                  <span className="app-ind-sidebar-chip__label">{r.title}</span>
+                </button>
+              ))}
+            </div>
+            {totalChipPages > 1 ? (
+              <div className="app-ind-sidebar-filter__pag">
+                <button type="button" className="app-ind-text-btn" disabled={chipPage === 1} onClick={() => setChipPage((p) => p - 1)}>← ant</button>
+                <span className="app-ind-chips-hint">{chipPage}/{totalChipPages}</span>
+                <button type="button" className="app-ind-text-btn" disabled={chipPage === totalChipPages} onClick={() => setChipPage((p) => p + 1)}>próx →</button>
+              </div>
+            ) : null}
+          </div>
+        </aside>
+      ) : null}
+
     </div>
   )
 }

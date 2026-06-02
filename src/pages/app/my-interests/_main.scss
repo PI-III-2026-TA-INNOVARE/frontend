@@ -172,6 +172,37 @@
   color: var(--accent-secondary);
 }
 
+.my-interest-card__llm-reason {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(36, 58, 105, 0.05);
+  border: 1px solid rgba(36, 58, 105, 0.1);
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  font-style: italic;
+}
+
+.my-interest-card__llm-badge {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(36, 58, 105, 0.12);
+  color: var(--accent-primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
 .my-interest-card__reasons {
   display: flex;
   flex-wrap: wrap;
@@ -225,6 +256,70 @@
   color: var(--text-muted);
   font-size: 0.82rem;
   font-weight: 600;
+}
+
+.my-interests-suggestion-feedback {
+  flex-basis: 100%;
+  font-size: 0.84rem;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+
+.my-interests-suggestion-feedback--success {
+  background: rgba(34, 139, 90, 0.1);
+  color: #1a7a48;
+  border: 1px solid rgba(34, 139, 90, 0.22);
+}
+
+.my-interests-suggestion-feedback--error {
+  background: rgba(185, 64, 64, 0.08);
+  color: #b94040;
+  border: 1px solid rgba(185, 64, 64, 0.2);
+}
+
+.my-interest-card__respond {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px dashed rgba(36, 58, 105, 0.2);
+  background: rgba(36, 58, 105, 0.03);
+}
+
+.my-interest-card__respond-hint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.my-interest-card__respond-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.my-interest-card__respond-btn {
+  min-height: 36px;
+  padding: 0 18px;
+  font-size: 0.86rem;
+}
+
+.my-interest-card__respond-btn--reject {
+  color: #b94040;
+  border-color: rgba(185, 64, 64, 0.3);
+}
+
+.my-interest-card__respond-btn--reject:hover {
+  background: rgba(185, 64, 64, 0.06);
+}
+
+.my-interest-card__responded {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--text-muted);
 }
 
 .my-interests-feedback {

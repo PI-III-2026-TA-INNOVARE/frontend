@@ -79,6 +79,7 @@ export default function ResearcherDetailModal({
   suggestLoading = false,
   suggestMessage = '',
   suggestError = '',
+  hideSuggest = false,
 }) {
   if (!researcher) return null
 
@@ -89,6 +90,7 @@ export default function ResearcherDetailModal({
   const availability = researcher.detail?.availability ?? researcher.availability
   const matchReasons = Array.isArray(researcher.detail?.matchReasons) ? researcher.detail.matchReasons : []
   const matchScoreLabel = formatMatchScore(researcher.detail?.scoreMatch)
+  const llmReason = researcher.detail?.llmReason || researcher.detail?.score_features?.llm_reason || null
   const candidateSource = researcher.detail?.candidateSource || null
   const interestMessage = researcher.detail?.interestMessage || ''
   const scoreHybrid = formatRelevanceScore(researcher.detail?.scoreHybrid ?? researcher.scoreHybrid)
@@ -154,7 +156,7 @@ export default function ResearcherDetailModal({
         ) : null}
 
         {/* Match por IA */}
-        {candidateSource === 'ai' && (matchReasons.length > 0 || matchScoreLabel) ? (
+        {candidateSource === 'ai' && (llmReason || matchReasons.length > 0 || matchScoreLabel) ? (
           <section className="researcher-detail-modal__section researcher-detail-modal__match">
             <div className="researcher-detail-modal__match-head">
               <h3>Por que a IA recomendou</h3>
@@ -164,7 +166,9 @@ export default function ResearcherDetailModal({
                 </span>
               ) : null}
             </div>
-            {matchReasons.length > 0 ? (
+            {llmReason ? (
+              <p className="researcher-detail-modal__llm-reason">{llmReason}</p>
+            ) : matchReasons.length > 0 ? (
               <div className="researcher-detail-modal__tags">
                 {matchReasons.map((reason) => (
                   <span key={`match-${reason}`} className="researcher-detail-modal__match-reason">
@@ -302,7 +306,8 @@ export default function ResearcherDetailModal({
           </div>
         </section>
 
-        {/* Sugerir participação */}
+        {/* Sugerir participação — oculto quando acessado de lista de candidatos existentes */}
+        {!hideSuggest ? (
         <section className="researcher-detail-modal__section researcher-detail-modal__invite">
           <div>
             <h3>Sugerir participação</h3>
@@ -370,6 +375,7 @@ export default function ResearcherDetailModal({
             </>
           ) : null}
         </section>
+        ) : null}
       </article>
     </div>
   )

@@ -43,7 +43,7 @@ const TABS = [
   { id: 'resultados',   label: 'Resultados esperados', field: 'results',    fallback: 'Resultados esperados não informados.' },
 ]
 
-export default function ResearchDetailModal({ research, onClose, action = null }) {
+export default function ResearchDetailModal({ research, onClose, action = null, respond = null }) {
   const [activeTab, setActiveTab] = useState('escopo')
 
   if (!research) {
@@ -159,6 +159,32 @@ export default function ResearchDetailModal({ research, onClose, action = null }
             >
               {action.loading ? action.loadingLabel : action.label}
             </button>
+          </footer>
+        ) : null}
+
+        {respond ? (
+          <footer className="research-detail-modal__actions research-detail-modal__actions--respond">
+            <p className="research-detail-modal__respond-hint">
+              Deseja participar desta pesquisa?
+            </p>
+            <div className="research-detail-modal__respond-btns">
+              <button
+                type="button"
+                className="btn btn-ghost research-detail-modal__respond-reject"
+                onClick={respond.onReject}
+                disabled={respond.loading}
+              >
+                Recusar
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={respond.onAccept}
+                disabled={respond.loading}
+              >
+                {respond.loading ? 'Enviando...' : 'Aceitar indicação'}
+              </button>
+            </div>
           </footer>
         ) : null}
       </article>

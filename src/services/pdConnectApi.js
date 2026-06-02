@@ -107,6 +107,13 @@ export function listMySuggestions() {
   return fetchPaginatedCollection('/research/my-suggestions/')
 }
 
+export function respondToSuggestion(candidateId, status) {
+  return apiRequest(`/research/my-suggestions/${candidateId}/`, {
+    method: 'PATCH',
+    body: { status },
+  })
+}
+
 export function listMyRecommendations({ refresh = false } = {}) {
   const suffix = refresh ? '?refresh=true' : ''
   return fetchPaginatedCollection(`/research/my-recommendations/${suffix}`)

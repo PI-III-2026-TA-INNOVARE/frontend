@@ -7,6 +7,7 @@ import {
   listMyResearchInterests,
   listMySuggestions,
   listResearchAreas,
+  respondToSuggestion,
 } from '../../../services/pdConnectApi'
 import './MyInterestsPage.scss'
 
@@ -139,6 +140,9 @@ export default function MyInterestsPage() {
   })
   const [aiRefreshLoading, setAiRefreshLoading] = useState(false)
   const [aiRefreshMessage, setAiRefreshMessage] = useState('')
+  const [suggestionActionLoading, setSuggestionActionLoading] = useState('')
+  const [suggestionActionMessage, setSuggestionActionMessage] = useState('')
+  const [suggestionActionError, setSuggestionActionError] = useState('')
 
   const loadCatalog = useCallback(async ({ refreshRecommendations = false } = {}) => {
     const [interests, recommendations, suggestions, researchAreas] = await Promise.all([
@@ -225,6 +229,32 @@ export default function MyInterestsPage() {
     }
   }, [loadCatalog])
 
+  const handleRespondSuggestion = useCallback(async (candidateId, status) => {
+    setSuggestionActionLoading(String(candidateId))
+    setSuggestionActionMessage('')
+    setSuggestionActionError('')
+    try {
+      await respondToSuggestion(candidateId, status)
+      const label = status === 'interested' ? 'aceita' : 'recusada'
+      setSuggestionActionMessage(`Indicação ${label} com sucesso.`)
+      // atualiza localmente o status do candidato
+      setCatalog((prev) => ({
+        ...prev,
+        suggestions: prev.suggestions.map((s) =>
+          s.id_candidate === candidateId ? { ...s, status } : s
+        ),
+      }))
+    } catch (err) {
+      setSuggestionActionError(
+        err?.status === 404
+          ? 'Esta funcionalidade ainda não está disponível no servidor.'
+          : err.message || 'Não foi possível registrar sua resposta.'
+      )
+    } finally {
+      setSuggestionActionLoading('')
+    }
+  }, [])
+
   const researchAreaLookup = useMemo(
     () => buildLookup(catalog.researchAreas, 'id_area'),
     [catalog.researchAreas]
@@ -250,6 +280,7 @@ export default function MyInterestsPage() {
 
     return {
       id: `${source}-${candidate.id_candidate}`,
+      candidateId: candidate.id_candidate,
       researchId: candidate.research_id,
       source: candidate.source || source,
       title: detail.title || candidate.research_title || 'Pesquisa sem titulo informado',
@@ -261,6 +292,7 @@ export default function MyInterestsPage() {
       budget: detail.budget,
       scoreMatch: candidate.score_match ?? null,
       matchReasons: Array.isArray(candidate.match_reasons) ? candidate.match_reasons : [],
+      llmReason: candidate.score_features?.llm_reason || null,
       detail: {
         ...detail,
         companyLabel,
@@ -358,6 +390,24 @@ export default function MyInterestsPage() {
             >
               Indicados por empresas ({suggestionsCount})
             </button>
+          </div>
+        ) : null}
+
+        {!loading && !errorMessage && activeTab === 'suggestions' ? (
+          <div className="my-interests-ai-toolbar">
+            <p className="my-interests-ai-toolbar__hint">
+              Pesquisas em que uma empresa indicou seu perfil como candidato.
+            </p>
+            {suggestionActionMessage ? (
+              <span className="my-interests-suggestion-feedback my-interests-suggestion-feedback--success">
+                {suggestionActionMessage}
+              </span>
+            ) : null}
+            {suggestionActionError ? (
+              <span className="my-interests-suggestion-feedback my-interests-suggestion-feedback--error">
+                {suggestionActionError}
+              </span>
+            ) : null}
           </div>
         ) : null}
 
@@ -478,14 +528,32 @@ export default function MyInterestsPage() {
                   ) : null}
                 </div>
 
-                {item.source === 'ai' && item.matchReasons.length > 0 ? (
-                  <div className="my-interest-card__reasons" aria-label="Motivos do match">
-                    {item.matchReasons.map((reason) => (
-                      <span key={`${item.id}-${reason}`} className="my-interest-reason">
-                        {formatMatchReason(reason)}
-                      </span>
-                    ))}
-                  </div>
+                {item.source === 'ai' ? (
+                  item.llmReason ? (
+                    <p className="my-interest-card__llm-reason">
+                      <span className="my-interest-card__llm-badge">IA</span>
+                      {item.llmReason}
+                    </p>
+                  ) : item.matchReasons.length > 0 ? (
+                    <div className="my-interest-card__reasons" aria-label="Motivos do match">
+                      {item.matchReasons.map((reason) => (
+                        <span key={`${item.id}-${reason}`} className="my-interest-reason">
+                          {formatMatchReason(reason)}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null
+                ) : null}
+
+                {/* Resposta já dada */}
+                {item.source === 'manual' && item.candidateStatus !== 'under_review' ? (
+                  <p className="my-interest-card__responded">
+                    {item.candidateStatus === 'interested'
+                      ? '✓ Você aceitou participar desta pesquisa.'
+                      : item.candidateStatus === 'rejected'
+                      ? '✗ Você recusou esta indicação.'
+                      : null}
+                  </p>
                 ) : null}
               </article>
             ))}
@@ -497,6 +565,15 @@ export default function MyInterestsPage() {
         <ResearchDetailModal
           research={selectedResearch}
           onClose={() => setSelectedResearch(null)}
+          respond={
+            selectedResearch.source === 'manual' && selectedResearch.candidateStatus === 'under_review'
+              ? {
+                  loading: suggestionActionLoading === String(selectedResearch.candidateId),
+                  onAccept: () => handleRespondSuggestion(selectedResearch.candidateId, 'interested'),
+                  onReject: () => handleRespondSuggestion(selectedResearch.candidateId, 'rejected'),
+                }
+              : null
+          }
         />
       ) : null}
     </section>
