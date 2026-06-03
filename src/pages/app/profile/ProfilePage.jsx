@@ -16,6 +16,8 @@ import {
   listResearchAreas,
   listSkills,
   updateCompany,
+  updateEducation,
+  updateExperience,
   updateResearcher,
   updateResume,
 } from '../../../services/pdConnectApi'
@@ -157,6 +159,10 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isEducationSaving, setIsEducationSaving] = useState(false)
   const [isExperienceSaving, setIsExperienceSaving] = useState(false)
+  const [editingEducationId, setEditingEducationId] = useState(null)
+  const [editingEducationForm, setEditingEducationForm] = useState(defaultEducationForm)
+  const [editingExperienceId, setEditingExperienceId] = useState(null)
+  const [editingExperienceForm, setEditingExperienceForm] = useState(defaultExperienceForm)
   const [isSkillSaving, setIsSkillSaving] = useState(false)
   const [formData, setFormData] = useState(() => buildInitialProfile(user))
   const [educationForm, setEducationForm] = useState(defaultEducationForm)
@@ -580,6 +586,102 @@ export default function ProfilePage() {
     }
   }
 
+  const handleEducationEditStart = (item) => {
+    setEditingEducationId(item.id_education)
+    setEditingEducationForm({
+      course: item.course || '',
+      institution: item.institution || '',
+      startDate: item.start_date || '',
+      endDate: item.end_date || '',
+    })
+    setResumeMessage('')
+    setResumeErrorMessage('')
+  }
+
+  const handleEducationEditCancel = () => {
+    setEditingEducationId(null)
+    setEditingEducationForm(defaultEducationForm)
+    setResumeErrorMessage('')
+  }
+
+  const handleEducationEditSave = async (event) => {
+    event.preventDefault()
+
+    const validationMessage = validateEducationForm(editingEducationForm)
+    if (validationMessage) {
+      setResumeErrorMessage(validationMessage)
+      return
+    }
+
+    setIsEducationSaving(true)
+    setResumeMessage('')
+    setResumeErrorMessage('')
+
+    try {
+      await updateEducation(editingEducationId, {
+        course: editingEducationForm.course.trim(),
+        institution: editingEducationForm.institution.trim(),
+        start_date: editingEducationForm.startDate,
+        end_date: editingEducationForm.endDate,
+      })
+
+      setEditingEducationId(null)
+      setEditingEducationForm(defaultEducationForm)
+      await syncResumeAfterChange('Formação atualizada com sucesso.')
+    } catch (error) {
+      setResumeErrorMessage(error.message || 'Não foi possível atualizar a formação.')
+    } finally {
+      setIsEducationSaving(false)
+    }
+  }
+
+  const handleExperienceEditStart = (item) => {
+    setEditingExperienceId(item.id_experience)
+    setEditingExperienceForm({
+      description: item.description || '',
+      startDate: item.start_date || '',
+      endDate: item.end_date || '',
+    })
+    setResumeMessage('')
+    setResumeErrorMessage('')
+  }
+
+  const handleExperienceEditCancel = () => {
+    setEditingExperienceId(null)
+    setEditingExperienceForm(defaultExperienceForm)
+    setResumeErrorMessage('')
+  }
+
+  const handleExperienceEditSave = async (event) => {
+    event.preventDefault()
+
+    const validationMessage = validateExperienceForm(editingExperienceForm)
+    if (validationMessage) {
+      setResumeErrorMessage(validationMessage)
+      return
+    }
+
+    setIsExperienceSaving(true)
+    setResumeMessage('')
+    setResumeErrorMessage('')
+
+    try {
+      await updateExperience(editingExperienceId, {
+        description: editingExperienceForm.description.trim(),
+        start_date: editingExperienceForm.startDate,
+        end_date: editingExperienceForm.endDate || null,
+      })
+
+      setEditingExperienceId(null)
+      setEditingExperienceForm(defaultExperienceForm)
+      await syncResumeAfterChange('Experiência atualizada com sucesso.')
+    } catch (error) {
+      setResumeErrorMessage(error.message || 'Não foi possível atualizar a experiência.')
+    } finally {
+      setIsExperienceSaving(false)
+    }
+  }
+
   const syncResumeSkills = async (nextSkillIds, successMessage) => {
     const resumeId = await ensureResearcherResume()
 
@@ -838,25 +940,79 @@ export default function ProfilePage() {
                     <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedEducation.length > 0 ? (
                         paginatedEducation.map((item) => (
-                          <article key={item.id_education} className="profile-side__item profile-side__item--timeline">
-                            <div className="profile-side__icon" aria-hidden="true">
-                              <FontAwesomeIcon icon={appIcons.education} />
-                            </div>
-                            <div className="profile-side__content">
-                              <strong>{item.course}</strong>
-                              <small>
-                                {item.institution} · {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
-                              </small>
-                            </div>
-                            <button
-                              type="button"
-                              className="btn btn-ghost profile-side__action"
-                              onClick={() => handleEducationDelete(item.id_education)}
-                              disabled={isEducationSaving}
-                            >
-                              Remover
-                            </button>
-                          </article>
+                          editingEducationId === item.id_education ? (
+                            <form key={item.id_education} className="profile-inline-form profile-inline-form--grid profile-inline-form--panel profile-inline-form--edit" onSubmit={handleEducationEditSave}>
+                              <span className="profile-inline-form__title">Editando formação</span>
+                              <label className="profile-field">
+                                <span>Curso</span>
+                                <input
+                                  placeholder="Nome do curso"
+                                  value={editingEducationForm.course}
+                                  onChange={(e) => setEditingEducationForm((f) => ({ ...f, course: e.target.value }))}
+                                />
+                              </label>
+                              <label className="profile-field">
+                                <span>Instituição</span>
+                                <input
+                                  placeholder="Nome da instituição"
+                                  value={editingEducationForm.institution}
+                                  onChange={(e) => setEditingEducationForm((f) => ({ ...f, institution: e.target.value }))}
+                                />
+                              </label>
+                              <label className="profile-field">
+                                <span>Data de início</span>
+                                <input
+                                  type="date"
+                                  value={editingEducationForm.startDate}
+                                  onChange={(e) => setEditingEducationForm((f) => ({ ...f, startDate: e.target.value }))}
+                                />
+                              </label>
+                              <label className="profile-field">
+                                <span>Data de término</span>
+                                <input
+                                  type="date"
+                                  value={editingEducationForm.endDate}
+                                  onChange={(e) => setEditingEducationForm((f) => ({ ...f, endDate: e.target.value }))}
+                                />
+                              </label>
+                              <div className="profile-inline-form__actions">
+                                <button type="submit" className="btn btn-primary" disabled={isEducationSaving}>
+                                  {isEducationSaving ? 'Salvando...' : 'Salvar'}
+                                </button>
+                                <button type="button" className="btn btn-ghost" onClick={handleEducationEditCancel} disabled={isEducationSaving}>
+                                  Cancelar
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <article key={item.id_education} className="profile-side__item profile-side__item--timeline">
+                              <div className="profile-side__icon" aria-hidden="true">
+                                <FontAwesomeIcon icon={appIcons.education} />
+                              </div>
+                              <div className="profile-side__content">
+                                <strong>{item.course}</strong>
+                                <small>
+                                  {item.institution} · {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
+                                </small>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-ghost profile-side__action"
+                                onClick={() => handleEducationEditStart(item)}
+                                disabled={isEducationSaving}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost profile-side__action"
+                                onClick={() => handleEducationDelete(item.id_education)}
+                                disabled={isEducationSaving}
+                              >
+                                Remover
+                              </button>
+                            </article>
+                          )
                         ))
                       ) : (
                         <article className="profile-side__item profile-side__item--empty">
@@ -948,25 +1104,71 @@ export default function ProfilePage() {
                     <div className="profile-side__stack profile-side__stack--compact">
                       {paginatedExperience.length > 0 ? (
                         paginatedExperience.map((item) => (
-                          <article key={item.id_experience} className="profile-side__item profile-side__item--timeline">
-                            <div className="profile-side__icon" aria-hidden="true">
-                              <FontAwesomeIcon icon={appIcons.experience} />
-                            </div>
-                            <div className="profile-side__content">
-                              <strong>{item.description}</strong>
-                              <small>
-                                {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
-                              </small>
-                            </div>
-                            <button
-                              type="button"
-                              className="btn btn-ghost profile-side__action"
-                              onClick={() => handleExperienceDelete(item.id_experience)}
-                              disabled={isExperienceSaving}
-                            >
-                              Remover
-                            </button>
-                          </article>
+                          editingExperienceId === item.id_experience ? (
+                            <form key={item.id_experience} className="profile-inline-form profile-inline-form--grid profile-inline-form--panel profile-inline-form--edit" onSubmit={handleExperienceEditSave}>
+                              <span className="profile-inline-form__title">Editando experiência</span>
+                              <label className="profile-field profile-field--full">
+                                <span>Descrição</span>
+                                <textarea
+                                  placeholder="Descreva sua experiência"
+                                  value={editingExperienceForm.description}
+                                  onChange={(e) => setEditingExperienceForm((f) => ({ ...f, description: e.target.value }))}
+                                />
+                              </label>
+                              <label className="profile-field">
+                                <span>Data de início</span>
+                                <input
+                                  type="date"
+                                  value={editingExperienceForm.startDate}
+                                  onChange={(e) => setEditingExperienceForm((f) => ({ ...f, startDate: e.target.value }))}
+                                />
+                              </label>
+                              <label className="profile-field">
+                                <span>Data de término</span>
+                                <input
+                                  type="date"
+                                  value={editingExperienceForm.endDate}
+                                  onChange={(e) => setEditingExperienceForm((f) => ({ ...f, endDate: e.target.value }))}
+                                />
+                              </label>
+                              <div className="profile-inline-form__actions">
+                                <button type="submit" className="btn btn-primary" disabled={isExperienceSaving}>
+                                  {isExperienceSaving ? 'Salvando...' : 'Salvar'}
+                                </button>
+                                <button type="button" className="btn btn-ghost" onClick={handleExperienceEditCancel} disabled={isExperienceSaving}>
+                                  Cancelar
+                                </button>
+                              </div>
+                            </form>
+                          ) : (
+                            <article key={item.id_experience} className="profile-side__item profile-side__item--timeline">
+                              <div className="profile-side__icon" aria-hidden="true">
+                                <FontAwesomeIcon icon={appIcons.experience} />
+                              </div>
+                              <div className="profile-side__content">
+                                <strong>{item.description}</strong>
+                                <small>
+                                  {formatDateLabel(item.start_date)} até {formatDateLabel(item.end_date)}
+                                </small>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn btn-ghost profile-side__action"
+                                onClick={() => handleExperienceEditStart(item)}
+                                disabled={isExperienceSaving}
+                              >
+                                Editar
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-ghost profile-side__action"
+                                onClick={() => handleExperienceDelete(item.id_experience)}
+                                disabled={isExperienceSaving}
+                              >
+                                Remover
+                              </button>
+                            </article>
+                          )
                         ))
                       ) : (
                         <article className="profile-side__item profile-side__item--empty">

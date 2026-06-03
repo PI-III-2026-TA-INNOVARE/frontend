@@ -551,7 +551,7 @@ export default function IndicadoresPage() {
               <div className="cta-box__buttons">
                 {isAuthenticated ? (
                   <>
-                    <Link to="/pesquisa" className="btn btn-primary btn-lg">
+                    <Link to="/painel" className="btn btn-primary btn-lg">
                       Abrir painel integrado
                     </Link>
                     <Link to="/perfil" className="btn btn-outline btn-lg">

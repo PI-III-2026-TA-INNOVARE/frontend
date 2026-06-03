@@ -71,7 +71,7 @@ export default function Navbar() {
             <ThemeToggle />
             {isAuthenticated ? (
               <>
-                <Link to="/pesquisa" className="btn btn-ghost">Abrir painel</Link>
+                <Link to="/painel" className="btn btn-ghost">Abrir painel</Link>
                 <button type="button" className="btn btn-primary" onClick={handleLogout}>
                   Sair
                 </button>
@@ -89,7 +89,7 @@ export default function Navbar() {
           <ThemeToggle />
           {isAuthenticated ? (
             <>
-              <Link to="/pesquisa" className="btn btn-ghost">Abrir painel</Link>
+              <Link to="/painel" className="btn btn-ghost">Abrir painel</Link>
               <button type="button" className="btn btn-primary" onClick={handleLogout}>
                 Sair
               </button>

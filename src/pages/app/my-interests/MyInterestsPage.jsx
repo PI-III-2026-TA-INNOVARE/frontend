@@ -32,8 +32,14 @@ function formatMatchScore(value) {
 
 const tabs = [
   {
+    id: 'all',
+    label: 'Todas',
+    emptyTitle: 'Nenhuma candidatura encontrada.',
+    emptyText: 'Demonstre interesse em pesquisas ou aguarde sugestões da IA.',
+  },
+  {
     id: 'interests',
-    label: 'Seus interesses',
+    label: 'Meus interesses',
     emptyTitle: 'Você ainda não demonstrou interesse em nenhum projeto.',
     emptyText: 'Use a busca semântica para encontrar pesquisas aderentes ao seu perfil.',
   },
@@ -51,12 +57,22 @@ const tabs = [
   },
 ]
 
-const interestStatusOptions = [
+const statusFilterOptions = [
   { value: 'all', label: 'Todos' },
+  { value: 'suggested', label: 'Sugerido' },
   { value: 'interested', label: 'Interessado' },
-  { value: 'approved', label: 'Aceito' },
+  { value: 'under_review', label: 'Em análise' },
+  { value: 'approved', label: 'Aprovado' },
   { value: 'rejected', label: 'Negado' },
 ]
+
+function getCandidateStatusBadgeClass(status) {
+  if (status === 'approved') return 'mi-candidate-badge mi-candidate-badge--approved'
+  if (status === 'rejected') return 'mi-candidate-badge mi-candidate-badge--rejected'
+  if (status === 'under_review') return 'mi-candidate-badge mi-candidate-badge--review'
+  if (status === 'interested') return 'mi-candidate-badge mi-candidate-badge--interested'
+  return 'mi-candidate-badge'
+}
 
 function formatCurrency(value) {
   const parsed = Number(value)
@@ -127,9 +143,10 @@ function buildLookup(items, idKey) {
 export default function MyInterestsPage() {
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
-  const [activeTab, setActiveTab] = useState('interests')
-  const [activeInterestStatus, setActiveInterestStatus] = useState('all')
+  const [activeTab, setActiveTab] = useState('all')
+  const [activeStatusFilter, setActiveStatusFilter] = useState('all')
   const [selectedResearch, setSelectedResearch] = useState(null)
+  const [expandedItemId, setExpandedItemId] = useState(null)
   const [catalog, setCatalog] = useState({
     interests: [],
     recommendations: [],
@@ -317,33 +334,39 @@ export default function MyInterestsPage() {
     [buildItem, catalog.suggestions]
   )
 
-  const interestStatusCounts = useMemo(() => (
-    interestedItems.reduce((lookup, item) => {
+  const allItems = useMemo(
+    () => [...interestedItems, ...aiItems, ...suggestionItems],
+    [interestedItems, aiItems, suggestionItems]
+  )
+
+  const baseItemsForTab = useMemo(() => {
+    if (activeTab === 'all') return allItems
+    if (activeTab === 'ai') return aiItems
+    if (activeTab === 'suggestions') return suggestionItems
+    return interestedItems
+  }, [activeTab, allItems, aiItems, interestedItems, suggestionItems])
+
+  const statusCountsForTab = useMemo(() => (
+    baseItemsForTab.reduce((lookup, item) => {
       lookup.all += 1
       lookup[item.candidateStatus] = (lookup[item.candidateStatus] || 0) + 1
       return lookup
     }, { all: 0 })
-  ), [interestedItems])
+  ), [baseItemsForTab])
 
   const tabItems = useMemo(() => {
-    if (activeTab === 'ai') return aiItems
-    if (activeTab === 'suggestions') return suggestionItems
+    if (activeStatusFilter === 'all') return baseItemsForTab
+    return baseItemsForTab.filter((item) => item.candidateStatus === activeStatusFilter)
+  }, [activeStatusFilter, baseItemsForTab])
 
-    if (activeInterestStatus === 'all') return interestedItems
-    return interestedItems.filter((item) => item.candidateStatus === activeInterestStatus)
-  }, [activeInterestStatus, activeTab, aiItems, interestedItems, suggestionItems])
-
-  const interestCount = useMemo(
-    () => interestedItems.length,
-    [interestedItems]
-  )
-
+  const allCount = useMemo(() => allItems.length, [allItems])
+  const interestCount = useMemo(() => interestedItems.length, [interestedItems])
   const aiCount = useMemo(() => aiItems.length, [aiItems])
   const suggestionsCount = useMemo(() => suggestionItems.length, [suggestionItems])
 
   const activeTabContent = tabs.find((tab) => tab.id === activeTab) || tabs[0]
   const activeStatusLabel = (
-    interestStatusOptions.find((item) => item.value === activeInterestStatus)?.label || ''
+    statusFilterOptions.find((item) => item.value === activeStatusFilter)?.label || ''
   )
 
   return (
@@ -364,20 +387,31 @@ export default function MyInterestsPage() {
             <button
               type="button"
               role="tab"
+              aria-selected={activeTab === 'all'}
+              className={`my-interests-tab${activeTab === 'all' ? ' active' : ''}`}
+              onClick={() => { setActiveTab('all'); setExpandedItemId(null); setActiveStatusFilter('all') }}
+            >
+              Todas ({allCount})
+            </button>
+            <button
+              type="button"
+              role="tab"
               aria-selected={activeTab === 'interests'}
               className={`my-interests-tab${activeTab === 'interests' ? ' active' : ''}`}
               onClick={() => {
                 setActiveTab('interests')
+                setExpandedItemId(null)
+                setActiveStatusFilter('all')
               }}
             >
-              Seus interesses ({interestCount})
+              Meus interesses ({interestCount})
             </button>
             <button
               type="button"
               role="tab"
               aria-selected={activeTab === 'ai'}
               className={`my-interests-tab${activeTab === 'ai' ? ' active' : ''}`}
-              onClick={() => setActiveTab('ai')}
+              onClick={() => { setActiveTab('ai'); setExpandedItemId(null); setActiveStatusFilter('all') }}
             >
               Sugeridos pela IA ({aiCount})
             </button>
@@ -386,7 +420,7 @@ export default function MyInterestsPage() {
               role="tab"
               aria-selected={activeTab === 'suggestions'}
               className={`my-interests-tab${activeTab === 'suggestions' ? ' active' : ''}`}
-              onClick={() => setActiveTab('suggestions')}
+              onClick={() => { setActiveTab('suggestions'); setExpandedItemId(null); setActiveStatusFilter('all') }}
             >
               Indicados por empresas ({suggestionsCount})
             </button>
@@ -430,20 +464,20 @@ export default function MyInterestsPage() {
           </div>
         ) : null}
 
-        {!loading && !errorMessage && activeTab === 'interests' ? (
-          <div className="my-interests-status-tabs" aria-label="Filtrar interesses por status">
-            {interestStatusOptions.map((statusOption) => (
-              <button
-                type="button"
-                key={statusOption.value}
-                className={`my-interests-status-tab${
-                  activeInterestStatus === statusOption.value ? ' active' : ''
-                }`}
-                onClick={() => setActiveInterestStatus(statusOption.value)}
-              >
-                {statusOption.label} ({interestStatusCounts[statusOption.value] || 0})
-              </button>
-            ))}
+        {!loading && !errorMessage ? (
+          <div className="my-interests-status-tabs" aria-label="Filtrar por status da candidatura">
+            {statusFilterOptions
+              .filter((opt) => opt.value === 'all' || (statusCountsForTab[opt.value] || 0) > 0)
+              .map((statusOption) => (
+                <button
+                  type="button"
+                  key={statusOption.value}
+                  className={`my-interests-status-tab${activeStatusFilter === statusOption.value ? ' active' : ''}`}
+                  onClick={() => { setActiveStatusFilter(statusOption.value); setExpandedItemId(null) }}
+                >
+                  {statusOption.label} ({statusOption.value === 'all' ? statusCountsForTab.all : (statusCountsForTab[statusOption.value] || 0)})
+                </button>
+              ))}
           </div>
         ) : null}
 
@@ -464,99 +498,138 @@ export default function MyInterestsPage() {
         {!loading && !errorMessage && tabItems.length === 0 ? (
           <div className="my-interests-feedback">
             <h2>
-              {activeTab === 'interests' && activeInterestStatus !== 'all'
-                ? `Nenhum projeto com status ${activeStatusLabel.toLowerCase()}.`
+              {activeStatusFilter !== 'all'
+                ? `Nenhum projeto com situação ${activeStatusLabel.toLowerCase()}.`
                 : activeTabContent.emptyTitle}
             </h2>
             <p>
-              {activeTab === 'interests' && activeInterestStatus !== 'all'
-                ? 'Altere o filtro de status para ver outras candidaturas.'
+              {activeStatusFilter !== 'all'
+                ? 'Altere o filtro de situação para ver outras candidaturas.'
                 : activeTabContent.emptyText}
             </p>
           </div>
         ) : null}
 
         {!loading && !errorMessage && tabItems.length > 0 ? (
-          <div className="my-interests-list">
-            {tabItems.map((item) => (
-              <article className="my-interest-card" key={item.id}>
-                <div className="my-interest-card__head">
-                  <div>
-                    <span className="section-label">Projeto</span>
-                    <h2>{item.title}</h2>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn btn-primary my-interest-card__button"
-                    onClick={() => setSelectedResearch(item)}
+          <div className="mi-table">
+            <div className="mi-table__head">
+              <span>Pesquisa</span>
+              <span>Área</span>
+              <span>Prazo</span>
+              <span>Fonte</span>
+              <span>Situação</span>
+              <span>Ações</span>
+            </div>
+
+            {tabItems.map((item) => {
+              const isOpen = expandedItemId === item.id
+              const hasPanel = (
+                item.source === 'ai' && (item.llmReason || item.matchReasons.length > 0)
+              ) || item.source === 'manual'
+
+              return (
+                <div key={item.id} className={`mi-table__group${isOpen ? ' mi-table__group--open' : ''}`}>
+                  <div
+                    className="mi-table__row"
+                    onClick={() => hasPanel && setExpandedItemId(isOpen ? null : item.id)}
+                    role={hasPanel ? 'button' : undefined}
+                    tabIndex={hasPanel ? 0 : undefined}
+                    onKeyDown={hasPanel ? (e) => e.key === 'Enter' && setExpandedItemId(isOpen ? null : item.id) : undefined}
                   >
-                    Ver detalhes
-                  </button>
-                </div>
-
-                <dl className="my-interest-card__grid">
-                  <div>
-                    <dt>Empresa</dt>
-                    <dd>{item.companyLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Area</dt>
-                    <dd>{item.areaLabel}</dd>
-                  </div>
-                  <div>
-                    <dt>Prazo</dt>
-                    <dd>{formatDateTime(item.deadline)}</dd>
-                  </div>
-                  <div>
-                    <dt>Orcamento</dt>
-                    <dd>{formatCurrency(item.budget)}</dd>
-                  </div>
-                </dl>
-
-                <div className="my-interest-card__status-row">
-                  <span className="my-interest-status">
-                    {item.source === 'ai' ? 'Match da IA' : item.source === 'manual' ? 'Indicação da empresa' : 'Candidatura'}:{' '}
-                    {getCandidateStatusLabel(item.candidateStatus)}
-                  </span>
-                  <span className="my-interest-status my-interest-status--project">
-                    Projeto: {item.status}
-                  </span>
-                  {item.source === 'ai' && item.scoreMatch !== null ? (
-                    <span className="my-interest-status my-interest-status--score">
-                      Compatibilidade: {formatMatchScore(item.scoreMatch)}
+                    <span className="mi-table__title">
+                      {hasPanel && (
+                        <span className="mi-table__toggle" aria-hidden="true">
+                          {isOpen ? '▾' : '▸'}
+                        </span>
+                      )}
+                      {item.title}
                     </span>
+                    <span>{item.areaLabel}</span>
+                    <span>{formatDateTime(item.deadline)}</span>
+                    <span>
+                      {item.source === 'ai' && item.scoreMatch !== null ? (
+                        <span className="mi-source-badge mi-source-badge--ai">
+                          IA · {formatMatchScore(item.scoreMatch)}
+                        </span>
+                      ) : item.source === 'ai' ? (
+                        <span className="mi-source-badge mi-source-badge--ai">IA</span>
+                      ) : item.source === 'manual' ? (
+                        <span className="mi-source-badge mi-source-badge--company">Indicação</span>
+                      ) : (
+                        <span className="mi-source-badge">Interesse</span>
+                      )}
+                    </span>
+                    <span>
+                      <span className={getCandidateStatusBadgeClass(item.candidateStatus)}>
+                        {getCandidateStatusLabel(item.candidateStatus)}
+                      </span>
+                    </span>
+                    <span className="mi-table__actions" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="btn mi-table-btn"
+                        onClick={() => setSelectedResearch(item)}
+                      >
+                        Ver detalhes
+                      </button>
+                    </span>
+                  </div>
+
+                  {isOpen && hasPanel ? (
+                    <div className="mi-table__panel">
+                      {item.source === 'ai' && item.llmReason ? (
+                        <p className="mi-panel__llm-reason">
+                          <span className="mi-panel__llm-badge">IA</span>
+                          {item.llmReason}
+                        </p>
+                      ) : item.source === 'ai' && item.matchReasons.length > 0 ? (
+                        <div className="mi-panel__reasons">
+                          {item.matchReasons.map((reason) => (
+                            <span key={`${item.id}-${reason}`} className="mi-panel__reason-tag">
+                              {formatMatchReason(reason)}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+
+                      {item.source === 'manual' && item.candidateStatus === 'under_review' ? (
+                        <div className="mi-panel__respond">
+                          <p className="mi-panel__respond-hint">
+                            Uma empresa indicou seu perfil para esta pesquisa. Deseja participar?
+                          </p>
+                          <div className="mi-panel__respond-actions">
+                            <button
+                              type="button"
+                              className="btn btn-primary mi-panel__respond-btn"
+                              disabled={suggestionActionLoading === String(item.candidateId)}
+                              onClick={() => handleRespondSuggestion(item.candidateId, 'interested')}
+                            >
+                              {suggestionActionLoading === String(item.candidateId) ? 'Salvando...' : 'Aceitar'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost mi-panel__respond-btn mi-panel__respond-btn--reject"
+                              disabled={suggestionActionLoading === String(item.candidateId)}
+                              onClick={() => handleRespondSuggestion(item.candidateId, 'rejected')}
+                            >
+                              Recusar
+                            </button>
+                          </div>
+                        </div>
+                      ) : item.source === 'manual' ? (
+                        <p className="mi-panel__responded">
+                          {item.candidateStatus === 'interested'
+                            ? '✓ Você aceitou participar desta pesquisa.'
+                            : item.candidateStatus === 'rejected'
+                            ? '✗ Você recusou esta indicação.'
+                            : getCandidateStatusLabel(item.candidateStatus)}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
-
-                {item.source === 'ai' ? (
-                  item.llmReason ? (
-                    <p className="my-interest-card__llm-reason">
-                      <span className="my-interest-card__llm-badge">IA</span>
-                      {item.llmReason}
-                    </p>
-                  ) : item.matchReasons.length > 0 ? (
-                    <div className="my-interest-card__reasons" aria-label="Motivos do match">
-                      {item.matchReasons.map((reason) => (
-                        <span key={`${item.id}-${reason}`} className="my-interest-reason">
-                          {formatMatchReason(reason)}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null
-                ) : null}
-
-                {/* Resposta já dada */}
-                {item.source === 'manual' && item.candidateStatus !== 'under_review' ? (
-                  <p className="my-interest-card__responded">
-                    {item.candidateStatus === 'interested'
-                      ? '✓ Você aceitou participar desta pesquisa.'
-                      : item.candidateStatus === 'rejected'
-                      ? '✗ Você recusou esta indicação.'
-                      : null}
-                  </p>
-                ) : null}
-              </article>
-            ))}
+              )
+            })}
           </div>
         ) : null}
       </div>

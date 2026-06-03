@@ -26,7 +26,7 @@ const defaultResearcherForm = {
 }
 
 function getReturnPath(pathname) {
-  return typeof pathname === 'string' && pathname.trim() ? pathname : '/pesquisa'
+  return typeof pathname === 'string' && pathname.trim() ? pathname : '/painel'
 }
 
 function normalizeCnpjDigits(value) {

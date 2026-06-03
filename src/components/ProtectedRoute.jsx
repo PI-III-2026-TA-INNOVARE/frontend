@@ -23,7 +23,7 @@ export default function ProtectedRoute({ requiredType = null }) {
   }
 
   if (requiredType && user?.type !== requiredType) {
-    return <Navigate to="/pesquisa" replace />
+    return <Navigate to="/painel" replace />
   }
 
   return <Outlet />

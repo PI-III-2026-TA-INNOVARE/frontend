@@ -142,6 +142,12 @@ export function updateResearch(id, payload) {
   })
 }
 
+export function deleteResearch(id) {
+  return apiRequest(`/research/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export function createResearchInterest(researchId, payload = {}) {
   return apiRequest(`/research/${researchId}/interest/`, {
     method: 'POST',
@@ -212,6 +218,12 @@ export function updateResume(id, payload) {
   })
 }
 
+export function deleteResume(id) {
+  return apiRequest(`/resumes/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 export function listEducations() {
   return fetchPaginatedCollection('/educations/')
 }
@@ -219,6 +231,13 @@ export function listEducations() {
 export function createEducation(payload) {
   return apiRequest('/educations/', {
     method: 'POST',
+    body: payload,
+  })
+}
+
+export function updateEducation(id, payload) {
+  return apiRequest(`/educations/${id}`, {
+    method: 'PATCH',
     body: payload,
   })
 }
@@ -236,6 +255,13 @@ export function listExperiences() {
 export function createExperience(payload) {
   return apiRequest('/experiences/', {
     method: 'POST',
+    body: payload,
+  })
+}
+
+export function updateExperience(id, payload) {
+  return apiRequest(`/experiences/${id}`, {
+    method: 'PATCH',
     body: payload,
   })
 }

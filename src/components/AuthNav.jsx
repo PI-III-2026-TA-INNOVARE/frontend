@@ -8,17 +8,10 @@ export default function AuthNav() {
 
   const navItems = useMemo(() => {
     const items = [
-      { to: '/pesquisa', label: 'Painel' },
-      { to: '/app/indicadores', label: 'Indicadores' },
+      { to: '/painel', label: 'Painel' },
+      { to: '/indicadores/painel', label: 'Indicadores' },
+      { to: '/pesquisas', label: 'Pesquisas' },
     ]
-
-    if (user?.type === 'empresa') {
-      items.push({ to: '/desafios/novo', label: 'Pesquisas' })
-    }
-
-    if (user?.type === 'pesquisador') {
-      items.push({ to: '/meus-interesses', label: 'Pesquisas' })
-    }
 
     return items
   }, [user?.type])
