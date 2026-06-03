@@ -750,7 +750,13 @@ export default function ProfilePage() {
   return (
     <section className="app-page profile-page">
       <div className="container app-page__container">
-     
+        <header className="app-page__header">
+          <div>
+            <span className="section-label">{isEmpresa ? 'Empresa' : 'Pesquisador'}</span>
+            <h1 className="app-page__title">Perfil</h1>
+          </div>
+          <p className="app-page__subtitle">Gerencie suas informações e configurações.</p>
+        </header>
 
         {isEmpresa ? (
           <div className="profile-layout">

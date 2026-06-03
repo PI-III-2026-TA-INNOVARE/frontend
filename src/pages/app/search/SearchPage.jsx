@@ -879,11 +879,6 @@ export default function SearchPage() {
         <div className="app-search-layout">
           <aside className="semantic-panel">
             <div className="semantic-panel__block">
-              <h3 className="semantic-panel__title">Filtros</h3>
-            
-            </div>
-
-            <div className="semantic-panel__block">
               <h3 className="semantic-panel__title">Coleção ativa</h3>
               <div className="semantic-panel__chips">
                 <span className="semantic-chip semantic-chip--primary">

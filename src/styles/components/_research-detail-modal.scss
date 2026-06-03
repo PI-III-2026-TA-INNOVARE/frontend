@@ -215,6 +215,31 @@
   background: rgba(185, 64, 64, 0.06);
 }
 
+.research-detail-modal__actions--company {
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0 4px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.research-detail-modal__delete-btn {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba(185, 64, 64, 0.35);
+  border-radius: 10px;
+  background: transparent;
+  color: #b94040;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.research-detail-modal__delete-btn:hover {
+  background: rgba(185, 64, 64, 0.07);
+}
+
 /* ── responsive ────────────────────────────────────────── */
 
 @include media-down(md) {

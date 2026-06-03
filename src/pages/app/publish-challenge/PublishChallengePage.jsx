@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext'
 import { buildPageLabel, paginateItems } from '../../../lib/domain'
 import {
   createResearch,
+  deleteResearch,
   getResearcher,
   getResearcherResume,
   getUniversity,
@@ -257,6 +258,8 @@ export default function PublishChallengePage() {
   const [candidateLoadingIds, setCandidateLoadingIds] = useState(() => new Set())
   const [candidateActionLoading, setCandidateActionLoading] = useState('')
   const [expandedResearchId, setExpandedResearchId] = useState(null)
+  const [candidatePageByResearch, setCandidatePageByResearch] = useState({})
+  const CANDIDATES_PAGE_SIZE = 6
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
@@ -266,6 +269,8 @@ export default function PublishChallengePage() {
   const [researcherLoadingId, setResearcherLoadingId] = useState(null)
   const [researcherErrorMessage, setResearcherErrorMessage] = useState('')
   const [editingResearchId, setEditingResearchId] = useState(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
   const [researchCandidateFilter, setResearchCandidateFilter] = useState('all')
   const [catalog, setCatalog] = useState({
     researches: [],
@@ -570,6 +575,25 @@ export default function PublishChallengePage() {
     setSuccessMessage('')
     setErrorMessage('')
     setActiveTab('create')
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return
+    setDeleteLoading(true)
+    try {
+      await deleteResearch(deleteConfirmId)
+      setCatalog((prev) => ({
+        ...prev,
+        researches: prev.researches.filter((r) => r.id_research !== deleteConfirmId),
+      }))
+      setDeleteConfirmId(null)
+      setSuccessMessage('Pesquisa excluída com sucesso.')
+    } catch (error) {
+      setErrorMessage(error.message || 'Não foi possível excluir a pesquisa.')
+      setDeleteConfirmId(null)
+    } finally {
+      setDeleteLoading(false)
+    }
   }
 
   const handleCancelEdit = () => {
@@ -903,13 +927,12 @@ export default function PublishChallengePage() {
               {errorMessage ? <p className="challenge-form-card__error">{errorMessage}</p> : null}
 
               {/* Tabela de pesquisas */}
+              <div className="challenge-research-table-wrap">
               <div className="challenge-research-table">
                 <div className="challenge-research-table__head">
                   <span>Pesquisa</span>
-                  <span>Área</span>
                   <span>Status</span>
-                  <span>Prazo</span>
-                  <span>Candidatos</span>
+                  <span>Cand.</span>
                   <span>Ações</span>
                 </div>
 
@@ -934,15 +957,18 @@ export default function PublishChallengePage() {
                         >
                           <span className="challenge-research-table__title">
                             <span className="challenge-research-table__toggle">{isExpanded ? '▾' : '▸'}</span>
-                            {item.title}
+                            <span className="challenge-research-table__title-content">
+                              <span className="challenge-research-table__title-name">{item.title}</span>
+                              <span className="challenge-research-table__title-meta">
+                                {researchAreaLookup[item.area] || '—'} · {formatDeadlineLabel(item.deadline)}
+                              </span>
+                            </span>
                           </span>
-                          <span>{researchAreaLookup[item.area] || '—'}</span>
                           <span>
                             <span className={`challenge-status-badge challenge-status-badge--${item.status}`}>
                               {item.status || '—'}
                             </span>
                           </span>
-                          <span>{formatDeadlineLabel(item.deadline)}</span>
                           <span>
                             <span className="challenge-candidates-badge">
                               {isLoadingCandidates ? '…' : candidates.length}
@@ -952,7 +978,7 @@ export default function PublishChallengePage() {
                             <button
                               type="button"
                               className="btn btn-outline challenge-table-btn"
-                              onClick={() => setSelectedResearch(buildResearchModalPayload(item, researchAreaLookup, user))}
+                              onClick={() => setSelectedResearch({ ...buildResearchModalPayload(item, researchAreaLookup, user), _isCompanyView: true })}
                             >
                               Detalhes
                             </button>
@@ -963,72 +989,104 @@ export default function PublishChallengePage() {
                             >
                               Editar
                             </button>
-                            <button
-                              type="button"
-                              className="btn btn-ghost challenge-table-btn"
-                              onClick={() => handleRunMatch(item.id_research)}
-                              disabled={candidateActionLoading === `match-${item.id_research}`}
-                            >
-                              {candidateActionLoading === `match-${item.id_research}` ? '...' : 'Match'}
-                            </button>
                           </span>
                         </div>
 
-                        {isExpanded ? (
-                          <div className="challenge-research-table__panel">
-                            {matchResultByResearch[item.id_research] ? (
-                              <p className={`challenge-match-result challenge-match-result--${matchResultByResearch[item.id_research].type}`}>
-                                {matchResultByResearch[item.id_research].text}
-                              </p>
-                            ) : null}
+                        {isExpanded ? (() => {
+                          const candPage = candidatePageByResearch[item.id_research] || 1
+                          const totalCandPages = Math.max(1, Math.ceil(candidates.length / CANDIDATES_PAGE_SIZE))
+                          const paginatedCandidates = candidates.slice(
+                            (candPage - 1) * CANDIDATES_PAGE_SIZE,
+                            candPage * CANDIDATES_PAGE_SIZE
+                          )
+                          const setCandPage = (page) => setCandidatePageByResearch((prev) => ({ ...prev, [item.id_research]: page }))
 
-                            {isLoadingCandidates ? (
-                              <span className="challenge-research-table__hint">Carregando candidatos...</span>
-                            ) : candidates.length > 0 ? (
-                              candidates.map((candidate) => (
-                                <div key={candidate.id_candidate} className="challenge-candidate">
-                                  <div className="challenge-candidate__info">
-                                    <button
-                                      type="button"
-                                      className="challenge-candidate__name"
-                                      onClick={() => handleViewResearcher(candidate)}
-                                      disabled={researcherLoadingId === candidate.id_candidate}
-                                    >
-                                      {researcherLoadingId === candidate.id_candidate
-                                        ? 'Carregando...'
-                                        : candidate.researcher_name || 'Pesquisador não identificado'}
-                                    </button>
-                                    <span>
-                                      {getCandidateSourceLabel(candidate.source)} ·{' '}
-                                      {getCandidateStatusLabel(candidate.status)}
-                                      {candidate.score_match ? ` · ${Math.round(candidate.score_match * 100)}%` : ''}
+                          return (
+                            <div className="challenge-research-table__panel">
+                              {matchResultByResearch[item.id_research] ? (
+                                <p className={`challenge-match-result challenge-match-result--${matchResultByResearch[item.id_research].type}`}>
+                                  {matchResultByResearch[item.id_research].text}
+                                </p>
+                              ) : null}
+
+                              {isLoadingCandidates ? (
+                                <span className="challenge-research-table__hint">Carregando candidatos...</span>
+                              ) : candidates.length > 0 ? (
+                                <>
+                                  {paginatedCandidates.map((candidate) => (
+                                    <div key={candidate.id_candidate} className="challenge-candidate">
+                                      <div className="challenge-candidate__info">
+                                        <button
+                                          type="button"
+                                          className="challenge-candidate__name"
+                                          onClick={() => handleViewResearcher(candidate)}
+                                          disabled={researcherLoadingId === candidate.id_candidate}
+                                        >
+                                          {researcherLoadingId === candidate.id_candidate
+                                            ? 'Carregando...'
+                                            : candidate.researcher_name || 'Pesquisador não identificado'}
+                                        </button>
+                                        <span>
+                                          {getCandidateSourceLabel(candidate.source)} ·{' '}
+                                          {getCandidateStatusLabel(candidate.status)}
+                                          {candidate.score_match ? ` · ${Math.round(candidate.score_match * 100)}%` : ''}
+                                        </span>
+                                        <MatchExplanation
+                                          llmReason={candidate.score_features?.llm_reason || null}
+                                          matchReasons={candidate.match_reasons}
+                                        />
+                                      </div>
+                                      <select
+                                        value=""
+                                        onChange={(event) => {
+                                          if (event.target.value) {
+                                            handleCandidateStatusChange(item.id_research, candidate.id_candidate, event.target.value)
+                                          }
+                                        }}
+                                        disabled={candidateActionLoading === `candidate-${candidate.id_candidate}`}
+                                      >
+                                        <option value="">Alterar status</option>
+                                        {candidateStatusOptions.map((option) => (
+                                          <option key={option.value} value={option.value}>{option.label}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                  ))}
+
+                                  {totalCandPages > 1 ? (
+                                    <div className="challenge-candidates-pagination">
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost challenge-candidates-pagination__btn"
+                                        disabled={candPage === 1}
+                                        onClick={() => setCandPage(candPage - 1)}
+                                      >
+                                        Anterior
+                                      </button>
+                                      <span className="challenge-candidates-pagination__status">
+                                        {candPage} / {totalCandPages} · {candidates.length} candidato(s)
+                                      </span>
+                                      <button
+                                        type="button"
+                                        className="btn btn-ghost challenge-candidates-pagination__btn"
+                                        disabled={candPage === totalCandPages}
+                                        onClick={() => setCandPage(candPage + 1)}
+                                      >
+                                        Próxima
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="challenge-research-table__hint">
+                                      {candidates.length} candidato(s)
                                     </span>
-                                    <MatchExplanation
-                                      llmReason={candidate.score_features?.llm_reason || null}
-                                      matchReasons={candidate.match_reasons}
-                                    />
-                                  </div>
-                                  <select
-                                    value=""
-                                    onChange={(event) => {
-                                      if (event.target.value) {
-                                        handleCandidateStatusChange(item.id_research, candidate.id_candidate, event.target.value)
-                                      }
-                                    }}
-                                    disabled={candidateActionLoading === `candidate-${candidate.id_candidate}`}
-                                  >
-                                    <option value="">Alterar status</option>
-                                    {candidateStatusOptions.map((option) => (
-                                      <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                              ))
-                            ) : (
-                              <span className="challenge-research-table__hint">Nenhum candidato registrado ainda.</span>
-                            )}
-                          </div>
-                        ) : null}
+                                  )}
+                                </>
+                              ) : (
+                                <span className="challenge-research-table__hint">Nenhum candidato registrado ainda.</span>
+                              )}
+                            </div>
+                          )
+                        })() : null}
                       </div>
                     )
                   })
@@ -1046,6 +1104,7 @@ export default function PublishChallengePage() {
                     </span>
                   </div>
                 )}
+              </div>
               </div>
 
               {filteredOwnedResearches.length > PUBLISHED_RESEARCH_PAGE_SIZE ? (
@@ -1069,6 +1128,14 @@ export default function PublishChallengePage() {
         <ResearchDetailModal
           research={selectedResearch}
           onClose={() => setSelectedResearch(null)}
+          companyActions={selectedResearch._isCompanyView ? {
+            matchLoading: candidateActionLoading === `match-${selectedResearch.id_research}`,
+            onMatch: () => handleRunMatch(selectedResearch.id_research),
+            onDelete: () => {
+              setSelectedResearch(null)
+              setDeleteConfirmId(selectedResearch.id_research)
+            },
+          } : null}
         />
       ) : null}
 
@@ -1078,6 +1145,35 @@ export default function PublishChallengePage() {
           onClose={() => setSelectedResearcher(null)}
           hideSuggest
         />
+      ) : null}
+
+      {deleteConfirmId ? (
+        <div className="challenge-confirm-overlay" role="dialog" aria-modal="true">
+          <div className="challenge-confirm-dialog">
+            <h2 className="challenge-confirm-dialog__title">Excluir pesquisa?</h2>
+            <p className="challenge-confirm-dialog__message">
+              Ao excluir a pesquisa, isso não poderá ser desfeito. Todo o match em relação a essa pesquisa será perdido.
+            </p>
+            <div className="challenge-confirm-dialog__actions">
+              <button
+                type="button"
+                className="btn challenge-confirm-dialog__btn--delete"
+                onClick={handleConfirmDelete}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? 'Excluindo...' : 'Excluir'}
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={deleteLoading}
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {researcherErrorMessage ? (

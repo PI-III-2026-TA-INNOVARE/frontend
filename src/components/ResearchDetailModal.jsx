@@ -43,7 +43,7 @@ const TABS = [
   { id: 'resultados',   label: 'Resultados esperados', field: 'results',    fallback: 'Resultados esperados não informados.' },
 ]
 
-export default function ResearchDetailModal({ research, onClose, action = null, respond = null }) {
+export default function ResearchDetailModal({ research, onClose, action = null, respond = null, companyActions = null }) {
   const [activeTab, setActiveTab] = useState('escopo')
 
   if (!research) {
@@ -158,6 +158,26 @@ export default function ResearchDetailModal({ research, onClose, action = null, 
               disabled={action.disabled || action.loading}
             >
               {action.loading ? action.loadingLabel : action.label}
+            </button>
+          </footer>
+        ) : null}
+
+        {companyActions ? (
+          <footer className="research-detail-modal__actions research-detail-modal__actions--company">
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={companyActions.onMatch}
+              disabled={companyActions.matchLoading}
+            >
+              {companyActions.matchLoading ? 'Executando...' : 'Executar Match IA'}
+            </button>
+            <button
+              type="button"
+              className="research-detail-modal__delete-btn"
+              onClick={companyActions.onDelete}
+            >
+              Excluir pesquisa
             </button>
           </footer>
         ) : null}
