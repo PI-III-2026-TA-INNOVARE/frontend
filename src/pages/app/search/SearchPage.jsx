@@ -515,6 +515,7 @@ export default function SearchPage() {
         area,
         status,
         budget,
+        scoreHybrid: item.score_hybrid ?? null,
         subtitle: company,
         description: `Status: ${status}. Orcamento: ${formatCurrency(budget)}.`,
         tags: [
@@ -996,7 +997,7 @@ export default function SearchPage() {
                   </div>
                   <p className="search-results__meta">
                     {hasSearched
-                      ? `${buildPageLabel(resultsPage, visibleItems.length, SEARCH_RESULTS_PAGE_SIZE)} resultado(s) para "${activeQuery}".`
+                      ? `${buildPageLabel(resultsPage, visibleItems.length, SEARCH_RESULTS_PAGE_SIZE)} resultado(s) encontrado(s).`
                       : ''}
                   </p>
                 </div>
@@ -1032,64 +1033,79 @@ export default function SearchPage() {
 
               {!loading && !error && visibleItems.length > 0 ? (
                 <>
-                  <div className="search-results__list">
-                    {paginatedVisibleItems.map((item) => (
-                      <article key={item.id} className="search-result-card">
-                      {item.type === 'pesquisa' ? (
-                        <div className="search-result-card__top">
-                          <span className={`search-result-card__type search-result-card__type--${item.type}`}>
-                            Pesquisa
-                          </span>
-                        </div>
-                      ) : null}
-
-                      {item.type === 'pesquisador' ? (
-                        <div className="search-result-card__researcher-heading">
-                          <h3 className="search-result-card__title">{item.title}</h3>
-                          <span className="researcher-availability-badge">
-                            {item.availability === false ? 'Indisponivel' : item.availability === true ? 'Disponivel' : 'Disponibilidade nao informada'}
-                          </span>
-                        </div>
+                  <div className="sr-table">
+                    {/* Cabeçalho */}
+                    <div className={isCompanyUser ? 'sr-table__head sr-table__head--researcher' : 'sr-table__head sr-table__head--research'}>
+                      {isCompanyUser ? (
+                        <>
+                          <span>Nome</span>
+                          <span>Universidade</span>
+                          <span>Disponibilidade</span>
+                          <span>Relevância</span>
+                          <span>Ações</span>
+                        </>
                       ) : (
-                        <h3 className="search-result-card__title">{item.title}</h3>
+                        <>
+                          <span>Pesquisa</span>
+                          <span>Área</span>
+                          <span>Empresa</span>
+                          <span>Status</span>
+                          <span>Relevância</span>
+                          <span>Ações</span>
+                        </>
                       )}
-                      <p className="search-result-card__subtitle">{item.subtitle}</p>
+                    </div>
 
-                      {item.type === 'pesquisa' ? (
-                        <dl className="search-result-card__meta">
-                          <div>
-                            <dt>Status</dt>
-                            <dd>{item.status}</dd>
+                    {/* Linhas */}
+                    {paginatedVisibleItems.map((item) => (
+                      <div key={item.id} className="sr-table__group">
+                        {isCompanyUser ? (
+                          <div className="sr-table__row sr-table__row--researcher">
+                            <span className="sr-table__title">{item.title}</span>
+                            <span className="sr-table__cell">{item.subtitle || '—'}</span>
+                            <span className="sr-table__cell">
+                              <span className={`researcher-availability-badge researcher-availability-badge--${item.availability === true ? 'available' : item.availability === false ? 'unavailable' : 'unknown'}`}>
+                                {item.availability === true ? 'Disponível' : item.availability === false ? 'Indisponível' : 'N/A'}
+                              </span>
+                            </span>
+                            <span className="sr-table__cell sr-table__cell--score">
+                              {item.scoreHybrid != null ? `${Math.round(item.scoreHybrid * 100)}%` : '—'}
+                            </span>
+                            <span className="sr-table__actions">
+                              <button
+                                type="button"
+                                className="btn sr-table-btn"
+                                onClick={() => setSelectedResearcher(item)}
+                              >
+                                Ver detalhes
+                              </button>
+                            </span>
                           </div>
-                          <div>
-                            <dt>Orcamento</dt>
-                            <dd>{formatCurrency(item.budget)}</dd>
+                        ) : (
+                          <div className="sr-table__row sr-table__row--research">
+                            <span className="sr-table__title">{item.title}</span>
+                            <span className="sr-table__cell">{item.area}</span>
+                            <span className="sr-table__cell">{item.company}</span>
+                            <span className="sr-table__cell">
+                              <span className={`sr-status-badge sr-status-badge--${item.status}`}>
+                                {item.status}
+                              </span>
+                            </span>
+                            <span className="sr-table__cell sr-table__cell--score">
+                              {item.scoreHybrid != null ? `${Math.round(item.scoreHybrid * 100)}%` : '—'}
+                            </span>
+                            <span className="sr-table__actions">
+                              <button
+                                type="button"
+                                className="btn sr-table-btn"
+                                onClick={() => setSelectedResearch(item)}
+                              >
+                                Ver detalhes
+                              </button>
+                            </span>
                           </div>
-                        </dl>
-                      ) : null}
-
-                      {item.type === 'pesquisa' ? (
-                        <button
-                          type="button"
-                          className="btn btn-primary search-result-card__button"
-                          onClick={() => setSelectedResearch(item)}
-                        >
-                          Mais detalhes
-                        </button>
-                      ) : null}
-
-                      {item.type === 'pesquisador' ? (
-                        <button
-                          type="button"
-                          className="btn btn-primary search-result-card__button"
-                          onClick={() => setSelectedResearcher(item)}
-                        >
-                          Ver detalhes
-                        </button>
-                      ) : null}
-
-                     
-                      </article>
+                        )}
+                      </div>
                     ))}
                   </div>
 
@@ -1104,7 +1120,7 @@ export default function SearchPage() {
                         Anterior
                       </button>
                       <span className="search-pagination__status">
-                        Pagina {resultsPage} de {totalResultPages}
+                        Página {resultsPage} de {totalResultPages}
                       </span>
                       <button
                         type="button"
@@ -1112,7 +1128,7 @@ export default function SearchPage() {
                         onClick={() => setResultsPage((current) => Math.min(totalResultPages, current + 1))}
                         disabled={resultsPage === totalResultPages}
                       >
-                        Proxima
+                        Próxima
                       </button>
                     </div>
                   ) : null}

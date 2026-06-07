@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import ResearcherDetailModal from '../../../components/ResearcherDetailModal'
 import { useAuth } from '../../../context/AuthContext'
@@ -25,7 +26,7 @@ const candidateStatusOptions = [
 ]
 
 const PUBLISHED_RESEARCH_PAGE_SIZE = 5
-const MATCH_POLL_DELAYS = [4000, 8000, 15000, 30000, 60000]
+const MATCH_POLL_DELAYS = [3000, 5000, 8000, 12000, 20000]
 
 const researchCandidateFilterOptions = [
   { value: 'all', label: 'Todas as pesquisas' },
@@ -219,7 +220,9 @@ const MATCH_REASON_LABELS = {
   similaridade_semantica_moderada: 'Similaridade moderada',
   boa_aderencia_textual: 'Boa aderência textual',
   mesma_area_de_pesquisa: 'Mesma área',
-  disponibilidade_compativel: 'Disponibilidade compatível',
+  pesquisador_disponivel: 'Pesquisador disponível',
+  compatibilidade_geral: 'Compatibilidade geral',
+  gemini_rerank: 'Análise aprofundada por IA',
 }
 
 function formatMatchReason(reason) {
@@ -250,6 +253,7 @@ function MatchExplanation({ llmReason, matchReasons }) {
 
 export default function PublishChallengePage() {
   const { user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [activeTab, setActiveTab] = useState('create')
   const [publishedPage, setPublishedPage] = useState(1)
   const [researchAreasLoading, setResearchAreasLoading] = useState(true)
@@ -263,7 +267,6 @@ export default function PublishChallengePage() {
   const [errorMessage, setErrorMessage] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [candidateMessage, setCandidateMessage] = useState('')
-  const [matchResultByResearch, setMatchResultByResearch] = useState({})
   const [selectedResearch, setSelectedResearch] = useState(null)
   const [selectedResearcher, setSelectedResearcher] = useState(null)
   const [researcherLoadingId, setResearcherLoadingId] = useState(null)
@@ -420,6 +423,46 @@ export default function PublishChallengePage() {
     () => buildLookup(catalog.researchAreas, 'id_area', 'name'),
     [catalog.researchAreas]
   )
+
+  // Abre a pesquisa correspondente quando chega via notificação (?candidateId=)
+  useEffect(() => {
+    const candidateIdParam = searchParams.get('candidateId')
+    if (!candidateIdParam || researchesLoading) return
+
+    const candidateId = Number(candidateIdParam)
+    let foundResearchId = null
+
+    for (const [researchId, candidates] of Object.entries(catalog.candidatesByResearch)) {
+      if (candidates.some((candidate) => candidate.id_candidate === candidateId)) {
+        foundResearchId = Number(researchId)
+        break
+      }
+    }
+
+    if (foundResearchId === null && candidateLoadingIds.size > 0) return
+
+    if (foundResearchId !== null) {
+      const research = catalog.researches.find((item) => item.id_research === foundResearchId)
+      if (research) {
+        setActiveTab('published')
+        setExpandedResearchId(foundResearchId)
+        setSelectedResearch({ ...buildResearchModalPayload(research, researchAreaLookup, user), _isCompanyView: true })
+      }
+    }
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('candidateId')
+    setSearchParams(next, { replace: true })
+  }, [
+    searchParams,
+    setSearchParams,
+    researchesLoading,
+    candidateLoadingIds,
+    catalog.candidatesByResearch,
+    catalog.researches,
+    researchAreaLookup,
+    user,
+  ])
 
   const publishedStats = useMemo(() => {
     const totalCandidates = ownedResearches.reduce(
@@ -606,52 +649,25 @@ export default function PublishChallengePage() {
   const handleRunMatch = async (researchId) => {
     const loadingKey = `match-${researchId}`
     setCandidateActionLoading(loadingKey)
-    setMatchResultByResearch((prev) => ({ ...prev, [researchId]: null }))
     setErrorMessage('')
 
     try {
       const countBefore = (catalog.candidatesByResearch[researchId] || []).length
-      const result = await runResearchMatch(researchId)
 
-      if (result.status !== 'queued') {
-        await refreshCandidates(researchId)
-        setMatchResultByResearch((prev) => ({
-          ...prev,
-          [researchId]: result.updated === 0
-            ? { type: 'empty', text: 'Nenhum pesquisador compatível encontrado para esta pesquisa.' }
-            : { type: 'success', text: `${result.updated} pesquisador(es) compatível(is) encontrado(s).` },
-        }))
-        return
-      }
-
-      // Assíncrono — libera o botão e faz polling
-      setCandidateActionLoading('')
-      setMatchResultByResearch((prev) => ({
-        ...prev,
-        [researchId]: { type: 'queued', text: 'Match em processamento, verificando resultados...' },
-      }))
+      // O backend sempre processa o match de forma assíncrona (fila/Celery) e
+      // responde 202 imediatamente. Por isso disparamos e fazemos polling até
+      // aparecerem novos candidatos ou esgotar as tentativas, sem exigir reload.
+      await runResearchMatch(researchId)
 
       for (const delay of MATCH_POLL_DELAYS) {
         await new Promise((resolve) => setTimeout(resolve, delay))
         const candidates = await refreshCandidates(researchId)
         if (candidates.length > countBefore) {
-          setMatchResultByResearch((prev) => ({
-            ...prev,
-            [researchId]: { type: 'success', text: `${candidates.length - countBefore} pesquisador(es) compatível(is) encontrado(s).` },
-          }))
           return
         }
       }
-
-      setMatchResultByResearch((prev) => ({
-        ...prev,
-        [researchId]: { type: 'empty', text: 'Nenhum pesquisador compatível encontrado para esta pesquisa.' },
-      }))
     } catch (error) {
-      setMatchResultByResearch((prev) => ({
-        ...prev,
-        [researchId]: { type: 'error', text: error.message || 'Não foi possível executar o match desta pesquisa.' },
-      }))
+      setErrorMessage(error.message || 'Não foi possível executar o match desta pesquisa.')
     } finally {
       setCandidateActionLoading('')
     }
@@ -1003,11 +1019,6 @@ export default function PublishChallengePage() {
 
                           return (
                             <div className="challenge-research-table__panel">
-                              {matchResultByResearch[item.id_research] ? (
-                                <p className={`challenge-match-result challenge-match-result--${matchResultByResearch[item.id_research].type}`}>
-                                  {matchResultByResearch[item.id_research].text}
-                                </p>
-                              ) : null}
 
                               {isLoadingCandidates ? (
                                 <span className="challenge-research-table__hint">Carregando candidatos...</span>

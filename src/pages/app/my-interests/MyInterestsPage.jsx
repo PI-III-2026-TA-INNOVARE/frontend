@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import ResearchDetailModal from '../../../components/ResearchDetailModal'
 import {
+  acceptRecommendation,
+  acceptSuggestion,
   getCompany,
   getResearch,
   listMyRecommendations,
   listMyResearchInterests,
   listMySuggestions,
   listResearchAreas,
-  respondToSuggestion,
+  rejectRecommendation,
+  rejectSuggestion,
 } from '../../../services/pdConnectApi'
 import './MyInterestsPage.scss'
 
@@ -16,7 +20,9 @@ const MATCH_REASON_LABELS = {
   similaridade_semantica_moderada: 'Similaridade moderada',
   boa_aderencia_textual: 'Boa aderência textual',
   mesma_area_de_pesquisa: 'Mesma área',
-  disponibilidade_compativel: 'Disponibilidade compatível',
+  pesquisador_disponivel: 'Pesquisador disponível',
+  compatibilidade_geral: 'Compatibilidade geral',
+  gemini_rerank: 'Análise aprofundada por IA',
 }
 
 function formatMatchReason(reason) {
@@ -141,6 +147,7 @@ function buildLookup(items, idKey) {
 }
 
 export default function MyInterestsPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState('')
   const [activeTab, setActiveTab] = useState('all')
@@ -160,6 +167,9 @@ export default function MyInterestsPage() {
   const [suggestionActionLoading, setSuggestionActionLoading] = useState('')
   const [suggestionActionMessage, setSuggestionActionMessage] = useState('')
   const [suggestionActionError, setSuggestionActionError] = useState('')
+  const [aiActionLoading, setAiActionLoading] = useState('')
+  const [aiActionMessage, setAiActionMessage] = useState('')
+  const [aiActionError, setAiActionError] = useState('')
 
   const loadCatalog = useCallback(async ({ refreshRecommendations = false } = {}) => {
     const [interests, recommendations, suggestions, researchAreas] = await Promise.all([
@@ -246,29 +256,45 @@ export default function MyInterestsPage() {
     }
   }, [loadCatalog])
 
-  const handleRespondSuggestion = useCallback(async (candidateId, status) => {
+  const handleRespondSuggestion = useCallback(async (candidateId, accept) => {
     setSuggestionActionLoading(String(candidateId))
     setSuggestionActionMessage('')
     setSuggestionActionError('')
     try {
-      await respondToSuggestion(candidateId, status)
-      const label = status === 'interested' ? 'aceita' : 'recusada'
-      setSuggestionActionMessage(`Indicação ${label} com sucesso.`)
-      // atualiza localmente o status do candidato
+      const result = await (accept ? acceptSuggestion(candidateId) : rejectSuggestion(candidateId))
+      const newStatus = result?.status ?? (accept ? 'interested' : 'rejected')
+      setSuggestionActionMessage(`Indicação ${accept ? 'aceita' : 'recusada'} com sucesso.`)
       setCatalog((prev) => ({
         ...prev,
         suggestions: prev.suggestions.map((s) =>
-          s.id_candidate === candidateId ? { ...s, status } : s
+          s.id_candidate === candidateId ? { ...s, status: newStatus } : s
         ),
       }))
     } catch (err) {
-      setSuggestionActionError(
-        err?.status === 404
-          ? 'Esta funcionalidade ainda não está disponível no servidor.'
-          : err.message || 'Não foi possível registrar sua resposta.'
-      )
+      setSuggestionActionError(err.message || 'Não foi possível registrar sua resposta.')
     } finally {
       setSuggestionActionLoading('')
+    }
+  }, [])
+
+  const handleRespondRecommendation = useCallback(async (candidateId, accept) => {
+    setAiActionLoading(String(candidateId))
+    setAiActionMessage('')
+    setAiActionError('')
+    try {
+      const result = await (accept ? acceptRecommendation(candidateId) : rejectRecommendation(candidateId))
+      const newStatus = result?.status ?? (accept ? 'interested' : 'rejected')
+      setAiActionMessage(`Recomendação ${accept ? 'aceita' : 'recusada'} com sucesso.`)
+      setCatalog((prev) => ({
+        ...prev,
+        recommendations: prev.recommendations.map((r) =>
+          r.id_candidate === candidateId ? { ...r, status: newStatus } : r
+        ),
+      }))
+    } catch (err) {
+      setAiActionError(err.message || 'Não foi possível registrar sua resposta.')
+    } finally {
+      setAiActionLoading('')
     }
   }, [])
 
@@ -338,6 +364,20 @@ export default function MyInterestsPage() {
     () => [...interestedItems, ...aiItems, ...suggestionItems],
     [interestedItems, aiItems, suggestionItems]
   )
+
+  // Abre automaticamente os detalhes da pesquisa quando chega via notificação (?candidateId=)
+  useEffect(() => {
+    if (loading) return
+    const candidateIdParam = searchParams.get('candidateId')
+    if (!candidateIdParam) return
+
+    const target = allItems.find((item) => String(item.candidateId) === candidateIdParam)
+    if (target) setSelectedResearch(target)
+
+    const next = new URLSearchParams(searchParams)
+    next.delete('candidateId')
+    setSearchParams(next, { replace: true })
+  }, [loading, allItems, searchParams, setSearchParams])
 
   const baseItemsForTab = useMemo(() => {
     if (activeTab === 'all') return allItems
@@ -461,6 +501,16 @@ export default function MyInterestsPage() {
             {aiRefreshMessage ? (
               <span className="my-interests-ai-toolbar__message">{aiRefreshMessage}</span>
             ) : null}
+            {aiActionMessage ? (
+              <span className="my-interests-suggestion-feedback my-interests-suggestion-feedback--success">
+                {aiActionMessage}
+              </span>
+            ) : null}
+            {aiActionError ? (
+              <span className="my-interests-suggestion-feedback my-interests-suggestion-feedback--error">
+                {aiActionError}
+              </span>
+            ) : null}
           </div>
         ) : null}
 
@@ -523,9 +573,7 @@ export default function MyInterestsPage() {
 
             {tabItems.map((item) => {
               const isOpen = expandedItemId === item.id
-              const hasPanel = (
-                item.source === 'ai' && (item.llmReason || item.matchReasons.length > 0)
-              ) || item.source === 'manual'
+              const hasPanel = item.source === 'ai' || item.source === 'manual'
 
               return (
                 <div key={item.id} className={`mi-table__group${isOpen ? ' mi-table__group--open' : ''}`}>
@@ -592,6 +640,40 @@ export default function MyInterestsPage() {
                         </div>
                       ) : null}
 
+                      {item.source === 'ai' && item.candidateStatus === 'suggested' ? (
+                        <div className="mi-panel__respond">
+                          <p className="mi-panel__respond-hint">
+                            A IA identificou compatibilidade com seu perfil. Deseja demonstrar interesse?
+                          </p>
+                          <div className="mi-panel__respond-actions">
+                            <button
+                              type="button"
+                              className="btn btn-primary mi-panel__respond-btn"
+                              disabled={aiActionLoading === String(item.candidateId)}
+                              onClick={() => handleRespondRecommendation(item.candidateId, true)}
+                            >
+                              {aiActionLoading === String(item.candidateId) ? 'Salvando...' : 'Tenho interesse'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-ghost mi-panel__respond-btn mi-panel__respond-btn--reject"
+                              disabled={aiActionLoading === String(item.candidateId)}
+                              onClick={() => handleRespondRecommendation(item.candidateId, false)}
+                            >
+                              Não tenho interesse
+                            </button>
+                          </div>
+                        </div>
+                      ) : item.source === 'ai' && item.candidateStatus !== 'suggested' ? (
+                        <p className="mi-panel__responded">
+                          {item.candidateStatus === 'interested'
+                            ? '✓ Você demonstrou interesse nesta pesquisa.'
+                            : item.candidateStatus === 'rejected'
+                            ? '✗ Você recusou esta recomendação.'
+                            : getCandidateStatusLabel(item.candidateStatus)}
+                        </p>
+                      ) : null}
+
                       {item.source === 'manual' && item.candidateStatus === 'under_review' ? (
                         <div className="mi-panel__respond">
                           <p className="mi-panel__respond-hint">
@@ -602,7 +684,7 @@ export default function MyInterestsPage() {
                               type="button"
                               className="btn btn-primary mi-panel__respond-btn"
                               disabled={suggestionActionLoading === String(item.candidateId)}
-                              onClick={() => handleRespondSuggestion(item.candidateId, 'interested')}
+                              onClick={() => handleRespondSuggestion(item.candidateId, true)}
                             >
                               {suggestionActionLoading === String(item.candidateId) ? 'Salvando...' : 'Aceitar'}
                             </button>
@@ -610,7 +692,7 @@ export default function MyInterestsPage() {
                               type="button"
                               className="btn btn-ghost mi-panel__respond-btn mi-panel__respond-btn--reject"
                               disabled={suggestionActionLoading === String(item.candidateId)}
-                              onClick={() => handleRespondSuggestion(item.candidateId, 'rejected')}
+                              onClick={() => handleRespondSuggestion(item.candidateId, false)}
                             >
                               Recusar
                             </button>
@@ -642,8 +724,14 @@ export default function MyInterestsPage() {
             selectedResearch.source === 'manual' && selectedResearch.candidateStatus === 'under_review'
               ? {
                   loading: suggestionActionLoading === String(selectedResearch.candidateId),
-                  onAccept: () => handleRespondSuggestion(selectedResearch.candidateId, 'interested'),
-                  onReject: () => handleRespondSuggestion(selectedResearch.candidateId, 'rejected'),
+                  onAccept: () => handleRespondSuggestion(selectedResearch.candidateId, true),
+                  onReject: () => handleRespondSuggestion(selectedResearch.candidateId, false),
+                }
+              : selectedResearch.source === 'ai' && selectedResearch.candidateStatus === 'suggested'
+              ? {
+                  loading: aiActionLoading === String(selectedResearch.candidateId),
+                  onAccept: () => handleRespondRecommendation(selectedResearch.candidateId, true),
+                  onReject: () => handleRespondRecommendation(selectedResearch.candidateId, false),
                 }
               : null
           }

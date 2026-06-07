@@ -163,6 +163,14 @@ function ResearcherDashboard({ data }) {
     count: item.count,
   })), [data.by_status])
 
+  const statusCounts = useMemo(() => {
+    const lookup = {}
+    data.by_status.forEach((item) => {
+      lookup[item.status] = item.count
+    })
+    return lookup
+  }, [data.by_status])
+
   const [activeSources, toggleSource] = useActiveSet(allSources.map((s) => s.key))
   const [activeStatuses, toggleStatus] = useActiveSet(allStatuses.map((s) => s.key))
 
@@ -173,9 +181,9 @@ function ResearcherDashboard({ data }) {
     <div className="app-ind-content">
       <div className="app-ind-stats-grid">
         <StatCard label="Total de candidaturas" value={total} />
-        <StatCard label="Aprovado" value={data.summary.approved_candidates} />
-        <StatCard label="Em análise" value={data.summary.under_review_candidates} />
-        <StatCard label="Interessado" value={data.summary.interested_candidates} />
+        <StatCard label="Aprovado" value={statusCounts.approved || 0} />
+        <StatCard label="Em análise" value={statusCounts.under_review || 0} />
+        <StatCard label="Interessado" value={statusCounts.interested || 0} />
       </div>
 
       <div className="app-ind-charts-grid">

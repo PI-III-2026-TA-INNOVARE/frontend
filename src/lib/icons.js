@@ -4,6 +4,7 @@ import {
   faChevronLeft,
   faChevronRight,
   faClipboardCheck,
+  faEye,
   faGraduationCap,
   faHandshake,
   faMagnifyingGlass,
@@ -28,4 +29,5 @@ export const appIcons = {
   experience: faBriefcase,
   close: faXmark,
   emptySearch: faSearch,
+  markAsRead: faEye,
 }

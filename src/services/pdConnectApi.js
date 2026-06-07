@@ -107,16 +107,42 @@ export function listMySuggestions() {
   return fetchPaginatedCollection('/research/my-suggestions/')
 }
 
-export function respondToSuggestion(candidateId, status) {
-  return apiRequest(`/research/my-suggestions/${candidateId}/`, {
-    method: 'PATCH',
-    body: { status },
-  })
+export function acceptSuggestion(candidateId) {
+  return apiRequest(`/research/my-suggestions/${candidateId}/accept/`, { method: 'POST' })
+}
+
+export function rejectSuggestion(candidateId) {
+  return apiRequest(`/research/my-suggestions/${candidateId}/reject/`, { method: 'POST' })
 }
 
 export function listMyRecommendations({ refresh = false } = {}) {
   const suffix = refresh ? '?refresh=true' : ''
   return fetchPaginatedCollection(`/research/my-recommendations/${suffix}`)
+}
+
+export function acceptRecommendation(candidateId) {
+  return apiRequest(`/research/my-recommendations/${candidateId}/accept/`, { method: 'POST' })
+}
+
+export function rejectRecommendation(candidateId) {
+  return apiRequest(`/research/my-recommendations/${candidateId}/reject/`, { method: 'POST' })
+}
+
+export function listNotifications(params = {}) {
+  const suffix = buildQueryString(params)
+  return fetchPaginatedCollection(`/notifications/${suffix}`)
+}
+
+export function getUnreadNotificationsCount() {
+  return apiRequest('/notifications/unread-count/')
+}
+
+export function markNotificationAsRead(id) {
+  return apiRequest(`/notifications/${id}/mark-as-read/`, { method: 'POST' })
+}
+
+export function markAllNotificationsAsRead() {
+  return apiRequest('/notifications/mark-all-as-read/', { method: 'POST' })
 }
 
 export function getResearcherDashboard() {
