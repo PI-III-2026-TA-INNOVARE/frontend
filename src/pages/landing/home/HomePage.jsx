@@ -36,7 +36,7 @@ export default function HomePage() {
                     A empresa descreve seu desafio, o pesquisador mantém seu perfil atualizado e
                     a IA cruza informações para indicar conexões com maior potencial de colaboração.
                   </p>
-                  <div className="cta-box__buttons">
+                  <div className="cta-box__buttons2">
                     <Link to="/login#cadastro" className="btn btn-primary btn-lg">
                       Criar cadastro
                     </Link>

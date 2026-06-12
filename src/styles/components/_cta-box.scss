@@ -59,6 +59,15 @@
   gap: 12px;
 }
 
+.cta-box__buttons2 {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
 .cta-box .btn-lg {
   padding: 12px 28px;
   font-size: 0.96rem;
