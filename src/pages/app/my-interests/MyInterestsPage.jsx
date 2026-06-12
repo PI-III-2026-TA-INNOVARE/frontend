@@ -674,7 +674,7 @@ export default function MyInterestsPage() {
                         </p>
                       ) : null}
 
-                      {item.source === 'manual' && item.candidateStatus === 'under_review' ? (
+                      {item.source === 'manual' && (item.candidateStatus === 'under_review' || item.candidateStatus === 'suggested') ? (
                         <div className="mi-panel__respond">
                           <p className="mi-panel__respond-hint">
                             Uma empresa indicou seu perfil para esta pesquisa. Deseja participar?

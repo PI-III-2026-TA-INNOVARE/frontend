@@ -141,6 +141,7 @@ export default function NotificationBell() {
 
   const handleOpenNotification = useCallback((notif) => {
     if (!notif.is_read) handleMarkAsRead(notif.id)
+    setOpen(false)
     setViewingNotification(notif)
   }, [handleMarkAsRead])
 
